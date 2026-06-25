@@ -64,7 +64,7 @@ open -a BabelChrome "https://example.com/README.md"
 
 Markdown rendering uses `league/commonmark` inside the Markdown viewer module. Viewer frontend source assets and import-map metadata live in the module source workspace, and compiled runtime assets are served from that module's own `public/` directory.
 
-Markdown, OpenAPI, and JSON viewers share a common viewer header from the `babelforge/babelchrome-viewer-kit` package. The kit provides the document title area and an `Open with` control for local files. The control lists macOS applications that declare support for the current file extension, stores the selected application as a shared BabelChrome preference for that extension, and asks BabelChrome to open the original local file with that application.
+Markdown, OpenAPI, and JSON viewers share a common viewer header from the `babelforge/babel-chrome-viewer-kit` package. The kit provides the document title area and an `Open with` control for local files. The control lists macOS applications that declare support for the current file extension, stores the selected application as a shared BabelChrome preference for that extension, and asks BabelChrome to open the original local file with that application.
 
 The Markdown viewer resolves Markdown links and assets according to the opened document:
 
@@ -109,7 +109,7 @@ src/ExtensionHost/resources/
 
 BabelChrome includes the first LocalServiceHost module registry.
 
-No PHP module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome-modules` workspace, then installed like any other module.
+No PHP module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
 
 Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. Their PHP entrypoint classes, document renderers, view models, error classes, Twig templates, source frontend assets, import map metadata, compiled public assets, and Composer dependencies live in their own module package.
 
@@ -162,13 +162,13 @@ The older class-entrypoint runtime remains available for compatibility, but new 
 Editable BabelChrome module source packages live outside the app source tree, in the sibling workspace:
 
 ```text
-../babel-chrome-modules/src/
+../modules/
 ```
 
 Production module zips are generated into:
 
 ```text
-../babel-chrome-modules/zip/
+../zip/
 ```
 
 The macOS app build does not copy module packages into the application bundle. Module source packages are built independently into zip files, and those zips are installed explicitly from the modules page.
@@ -176,19 +176,19 @@ The macOS app build does not copy module packages into the application bundle. M
 The current module source packages are:
 
 ```text
-../babel-chrome-modules/src/json-viewer
-../babel-chrome-modules/src/markdown-viewer
-../babel-chrome-modules/src/openapi-viewer
-../babel-chrome-modules/src/project-launcher
-../babel-chrome-modules/src/demo-module
-../babel-chrome-modules/src/plain-php-module
-../babel-chrome-modules/src/laravel-module
+../modules/json-viewer-module
+../modules/markdown-viewer-module
+../modules/openapi-viewer-module
+../modules/project-launcher-module
+../modules/demo-module
+../modules/plain-php-module
+../modules/laravel-module
 ```
 
 Shared viewer UI code lives in its own Composer package:
 
 ```text
-babelforge/babelchrome-viewer-kit
+babelforge/babel-chrome-viewer-kit
 ```
 
 Viewer modules require this package through a GitHub VCS Composer repository and keep the resulting dependency inside their own module-local `vendor/` directory. The package is not bundled into BabelChrome itself.
@@ -370,7 +370,7 @@ All workspace modules can be packaged into the production zip directory with:
 
 This command compiles module assets when a module exposes `bin/console`, copies each module into a temporary build directory, refreshes the production `vendor/` from its own `composer.lock` in that temporary copy, and creates the zip package. The editable module remains a dev workspace with its full dev dependencies.
 
-From the sibling `../babel-chrome-modules` workspace, the equivalent module-oriented helper is:
+From the sibling `../babel-chrome` workspace, the equivalent module-oriented helper is:
 
 ```bash
 ./tools/dev2prod.sh
@@ -392,17 +392,17 @@ BABEL_CHROME_WORKSPACE=/path/to/babel-chrome ./tools/dev2prod.sh
 A minimal installable demo module is available at:
 
 ```text
-../babel-chrome-modules/src/demo-module
+../modules/demo-module
 ```
 
 It can be packaged for manual testing with:
 
 ```bash
-cd ../babel-chrome-modules
+cd ../babel-chrome
 ./tools/dev2prod.sh demo-module
 ```
 
-Then open `babelchrome://modules`, install `../babel-chrome-modules/zip/babelforge.demo-module-1.0.0.zip`, and use the module `Open` action.
+Then open `babelchrome://modules`, install `../zip/babelforge.demo-module-1.0.0.zip`, and use the module `Open` action.
 
 BabelChrome also supports grouped openings:
 

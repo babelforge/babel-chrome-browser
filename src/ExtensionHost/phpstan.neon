@@ -10,9 +10,9 @@ parameters:
         - tests
 
     scanDirectories:
-        - ../../../babel-chrome-modules/src/babelchrome-viewer-kit/src
-        - ../../../babel-chrome-modules/src/markdown-viewer/src
-        - ../../../babel-chrome-modules/src/openapi-viewer/src
+        - ../../../library/viewer-kit/src
+        - ../../../modules/markdown-viewer-module/src
+        - ../../../modules/openapi-viewer-module/src
 
     tmpDir: var/cache/phpstan
 

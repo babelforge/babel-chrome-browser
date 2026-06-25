@@ -42,8 +42,8 @@ final class ViewerControllerTest extends TestCase
             self::fail('Unable to create test state directory.');
         }
 
-        $this->linkViewerModule('markdown-viewer');
-        $this->linkViewerModule('openapi-viewer');
+        $this->linkViewerModule('markdown-viewer-module');
+        $this->linkViewerModule('openapi-viewer-module');
 
         putenv('BABELCHROME_VIEWER_STATE_DIR='.$this->stateDirectory);
         putenv('BABELCHROME_VIEWER_TOKEN=test-token');
@@ -607,7 +607,7 @@ final class ViewerControllerTest extends TestCase
      */
     private function linkViewerModule(string $moduleDirectoryName): void
     {
-        $sourceDirectory = dirname(__DIR__, 5).'/babel-chrome-modules/src/'.$moduleDirectoryName;
+        $sourceDirectory = dirname(__DIR__, 5).'/modules/'.$moduleDirectoryName;
         $manifestPath = $sourceDirectory.'/manifest.json';
         $manifest = json_decode((string) file_get_contents($manifestPath), true);
         if (!is_array($manifest) || !isset($manifest['id']) || !is_string($manifest['id'])) {

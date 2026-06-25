@@ -41,7 +41,7 @@ final class ModuleRegistryTest extends TestCase
      */
     public function testSourceModulesAreNotSynchronizedAsRuntimeModules(): void
     {
-        $registry = new ModuleRegistry(dirname(__DIR__, 5).'/babel-chrome-modules/src', $this->workspaceDirectory.'/Modules');
+        $registry = new ModuleRegistry(dirname(__DIR__, 5).'/modules', $this->workspaceDirectory.'/Modules');
 
         self::assertSame([], $registry->all());
         self::assertNull($registry->find('babelforge.markdown-viewer'));

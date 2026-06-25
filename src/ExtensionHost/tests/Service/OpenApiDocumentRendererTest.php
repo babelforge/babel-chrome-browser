@@ -36,7 +36,7 @@ final class OpenApiDocumentRendererTest extends TestCase
         class_exists(SourceRegistry::class);
 
         if (!class_exists(ViewerSource::class)) {
-            require_once dirname(__DIR__, 5).'/babel-chrome-modules/src/openapi-viewer/vendor/autoload.php';
+            require_once dirname(__DIR__, 5).'/modules/openapi-viewer-module/vendor/autoload.php';
         }
 
         spl_autoload_register(static function (string $class): void {
@@ -46,7 +46,7 @@ final class OpenApiDocumentRendererTest extends TestCase
             }
 
             $relativeClass = substr($class, strlen($prefix));
-            $path = dirname(__DIR__, 5).'/babel-chrome-modules/src/openapi-viewer/src/'.str_replace('\\', '/', $relativeClass).'.php';
+            $path = dirname(__DIR__, 5).'/modules/openapi-viewer-module/src/'.str_replace('\\', '/', $relativeClass).'.php';
             if (is_file($path)) {
                 require $path;
             }
@@ -460,7 +460,7 @@ final class OpenApiDocumentRendererTest extends TestCase
      */
     private function moduleManifest(): ModuleManifest
     {
-        $modulePath = dirname(__DIR__, 5).'/babel-chrome-modules/src/openapi-viewer';
+        $modulePath = dirname(__DIR__, 5).'/modules/openapi-viewer-module';
 
         return ModuleManifest::fromArray($this->manifestData($modulePath), $modulePath);
     }

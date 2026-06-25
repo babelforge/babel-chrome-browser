@@ -13,7 +13,7 @@ set(CMAKE_OSX_ARCHITECTURES "${PROJECT_ARCH}")
 
 set(DEFAULT_CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/var/cef/cef_binary_149.0.2+ged5b3fd+chromium-149.0.7827.53_macosx64")
 set(CEF_ROOT "${DEFAULT_CEF_ROOT}" CACHE PATH "Path to the CEF binary distribution.")
-set(BABEL_CHROME_MODULES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../babel-chrome-modules/src" CACHE PATH "Path to BabelChrome PHP module source packages.")
+set(BABEL_CHROME_MODULES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../modules" CACHE PATH "Path to BabelChrome PHP module source packages.")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CEF_ROOT}/cmake")
 
 find_package(CEF REQUIRED)

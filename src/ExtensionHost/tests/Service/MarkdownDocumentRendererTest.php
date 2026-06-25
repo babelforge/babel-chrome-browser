@@ -37,7 +37,7 @@ final class MarkdownDocumentRendererTest extends TestCase
         class_exists(SourceRegistry::class);
 
         if (!class_exists(ViewerSource::class) || !class_exists('League\\CommonMark\\GithubFlavoredMarkdownConverter')) {
-            require_once dirname(__DIR__, 5).'/babel-chrome-modules/src/markdown-viewer/vendor/autoload.php';
+            require_once dirname(__DIR__, 5).'/modules/markdown-viewer-module/vendor/autoload.php';
         }
 
         spl_autoload_register(static function (string $class): void {
@@ -47,7 +47,7 @@ final class MarkdownDocumentRendererTest extends TestCase
             }
 
             $relativeClass = substr($class, strlen($prefix));
-            $path = dirname(__DIR__, 5).'/babel-chrome-modules/src/markdown-viewer/src/'.str_replace('\\', '/', $relativeClass).'.php';
+            $path = dirname(__DIR__, 5).'/modules/markdown-viewer-module/src/'.str_replace('\\', '/', $relativeClass).'.php';
             if (is_file($path)) {
                 require $path;
             }
@@ -299,7 +299,7 @@ final class MarkdownDocumentRendererTest extends TestCase
      */
     private function moduleManifest(): ModuleManifest
     {
-        $modulePath = dirname(__DIR__, 5).'/babel-chrome-modules/src/markdown-viewer';
+        $modulePath = dirname(__DIR__, 5).'/modules/markdown-viewer-module';
 
         return ModuleManifest::fromArray($this->manifestData($modulePath), $modulePath);
     }

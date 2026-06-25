@@ -11,13 +11,13 @@ BabelChrome modules are installable PHP packages. They live outside the applicat
 The editable module sources live in the sibling workspace:
 
 ```text
-../babel-chrome-modules/src
+../modules
 ```
 
 Production module zips are generated into:
 
 ```text
-../babel-chrome-modules/zip
+../zip
 ```
 
 ## Manifest Contract
@@ -70,7 +70,7 @@ If no installed viewer can handle the source, BabelChrome shows a local error pa
 
 ## Shared Viewer Header
 
-Markdown, OpenAPI, and JSON viewers use `babelforge/babelchrome-viewer-kit` for the common page header.
+Markdown, OpenAPI, and JSON viewers use `babelforge/babel-chrome-viewer-kit` for the common page header.
 
 For local files, the header includes an `Open with` selector. It calls BabelChrome internal endpoints to:
 
