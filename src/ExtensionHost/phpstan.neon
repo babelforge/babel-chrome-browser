@@ -1,0 +1,23 @@
+includes:
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+
+parameters:
+    level: max
+
+    paths:
+        - src
+        - tests
+
+    scanDirectories:
+        - ../../../babel-chrome-modules/src/babelchrome-viewer-kit/src
+        - ../../../babel-chrome-modules/src/markdown-viewer/src
+        - ../../../babel-chrome-modules/src/openapi-viewer/src
+
+    tmpDir: var/cache/phpstan
+
+    excludePaths:
+        - var
+        - vendor
+
+    treatPhpDocTypesAsCertain: false

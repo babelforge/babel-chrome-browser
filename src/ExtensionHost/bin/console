@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use BabelForge\BabelChrome\LocalViewer\Kernel;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Input\ArgvInput;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$input = new ArgvInput();
+$environment = (string) $input->getParameterOption(['--env', '-e'], $_SERVER['APP_ENV'] ?? 'dev');
+$debug = !$input->hasParameterOption('--no-debug', true) && (bool) ($_SERVER['APP_DEBUG'] ?? ('prod' !== $environment));
+
+$kernel = new Kernel($environment, $debug);
+$application = new Application($kernel);
+$application->run($input);

@@ -1,0 +1,15 @@
+/**/.DS_Store
+/.idea
+/ai
+/var/
+/vendor/
+/src/ExtensionHost/vendor/
+/src/ExtensionHost/var/
+/src/ExtensionHost/config/reference.php
+/.phpunit.cache/
+.php-cs-fixer.cache
+/build/
+/build-xcode/
+/dist/
+/BabelChrome.app/
+BabelChrome.app.backup-*

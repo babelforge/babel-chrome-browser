@@ -1,0 +1,5 @@
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: BabelForge\BabelChrome\LocalViewer\Controller
+    type: attribute

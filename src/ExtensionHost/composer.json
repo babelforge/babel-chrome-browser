@@ -1,0 +1,53 @@
+{
+    "name": "babelforge/babel-chrome-extension-host",
+    "description": "Embedded extension host runtime for BabelChrome.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.4.1",
+        "symfony/framework-bundle": "^8.0",
+        "symfony/twig-bundle": "^8.0",
+        "symfony/yaml": "^8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "BabelForge\\BabelChrome\\LocalViewer\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BabelForge\\BabelChrome\\LocalViewer\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "symfony/flex": true,
+            "symfony/runtime": true
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "@php bin/console cache:clear --env=prod --no-debug"
+        ],
+        "post-update-cmd": [
+            "@php bin/console cache:clear --env=prod --no-debug"
+        ],
+        "cs": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
+        "test": "phpunit",
+        "analyse": "phpstan analyse --memory-limit=512M",
+        "qa": [
+            "@cs",
+            "@analyse",
+            "@test"
+        ]
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^12.5"
+    }
+}

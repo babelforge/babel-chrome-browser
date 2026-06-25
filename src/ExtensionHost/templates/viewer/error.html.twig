@@ -1,0 +1,18 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+    <style>{{ stylesheetContent|raw }}</style>
+{% endblock %}
+
+{% block body %}
+    <header>{{ title }}</header>
+    <main class="viewer-document viewer-error">
+      <h1>{{ heading }}</h1>
+      <p>{{ message }}</p>
+      {% if detail is not empty %}
+        <pre>{{ detail }}</pre>
+      {% endif %}
+    </main>
+{% endblock %}

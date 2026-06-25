@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+print_only=0
+group="default"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --print)
+      print_only=1
+      shift
+      ;;
+    --group)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --group" >&2
+        exit 64
+      fi
+      group="$2"
+      shift 2
+      ;;
+    --help|-h)
+      cat <<'USAGE'
+Usage:
+  babelchrome-open [--group <name>] [--print] <url>
+
+Examples:
+  babelchrome-open --group "Group n" "http://127.0.0.1:8772"
+  babelchrome-open --print --group "Group n" "http://127.0.0.1:8772"
+USAGE
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      exit 64
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [[ $# -ne 1 ]]; then
+  echo "Expected exactly one URL argument" >&2
+  exit 64
+fi
+
+target_url="$1"
+
+encode_component() {
+  osascript -l JavaScript \
+    -e 'function run(argv) { return encodeURIComponent(argv[0]); }' \
+    "$1"
+}
+
+encoded_group="$(encode_component "$group")"
+encoded_url="$(encode_component "$target_url")"
+
+babel_url="babelchrome://open?group=${encoded_group}&url=${encoded_url}"
+
+if [[ "$print_only" -eq 1 ]]; then
+  printf '%s\n' "$babel_url"
+  exit 0
+fi
+
+open "$babel_url"

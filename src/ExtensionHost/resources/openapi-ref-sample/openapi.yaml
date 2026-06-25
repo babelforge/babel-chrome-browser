@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: BabelChrome Multi-file OpenAPI Sample
+  version: 1.0.0
+  description: Sample OpenAPI document used to validate relative $ref rendering.
+servers:
+  - url: https://api.example.test
+paths:
+  /users:
+    get:
+      summary: List users
+      operationId: listUsers
+      tags:
+        - Users
+      responses:
+        '200':
+          description: User list.
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/user-list.yaml#/UserList'
+components:
+  schemas:
+    Error:
+      $ref: './schemas/error.yaml#/Error'

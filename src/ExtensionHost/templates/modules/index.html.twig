@@ -1,0 +1,87 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}BabelChrome Modules{% endblock %}
+
+{% block head %}
+    <style>{{ stylesheetContent|raw }}</style>
+{% endblock %}
+
+{% block body %}
+    <header>BabelChrome Modules</header>
+    <main class="modules-page">
+      <section class="modules-intro">
+        <h1>PHP Modules</h1>
+        <p>Modules extend BabelChrome local viewers and internal tools. Each module keeps its own Composer vendor directory.</p>
+        <p class="modules-path">{{ userModulesDirectory }}</p>
+      </section>
+
+      <section class="modules-list">
+        {% for module in modules %}
+          <article class="module-card">
+            <div class="module-card-header">
+              <div>
+                <h2>{{ module.name }}</h2>
+                <p>{{ module.id }}</p>
+              </div>
+              <span class="module-status {{ module.enabled ? 'module-status-enabled' : 'module-status-disabled' }}">
+                {{ module.enabled ? 'Enabled' : 'Disabled' }}
+              </span>
+            </div>
+            <p>{{ module.description }}</p>
+            <dl>
+              <div>
+                <dt>Installed version</dt>
+                <dd>{{ module.version }}</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>{{ module.type }}</dd>
+              </div>
+              <div>
+                <dt>Source</dt>
+                <dd>User-installed</dd>
+              </div>
+              <div>
+                <dt>Vendor</dt>
+                <dd>{{ module.hasIsolatedVendor ? 'Own vendor' : 'No module vendor' }}</dd>
+              </div>
+              <div>
+                <dt>PHP</dt>
+                <dd>{{ module.requirements.php }}</dd>
+              </div>
+            </dl>
+            {% if module.fileTypes is not empty %}
+              <div class="module-tags" aria-label="File types">
+                {% for fileType in module.fileTypes %}
+                  <span>{{ fileType }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+            {% if module.hooks is not empty %}
+              <div class="module-hooks">
+                {% for hook in module.hooks %}
+                  <code>{{ hook }}</code>
+                {% endfor %}
+              </div>
+            {% endif %}
+            {% if module.menuItems is not empty %}
+              <div class="module-menu-items">
+                <h3>Menu items</h3>
+                <ul>
+                  {% for menuItem in module.menuItems %}
+                    <li>
+                      <strong>{{ menuItem.label }}</strong>
+                      <code>{{ menuItem.hook }}</code>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+          </article>
+        {% else %}
+          <p>No module is registered.</p>
+        {% endfor %}
+      </section>
+
+    </main>
+{% endblock %}

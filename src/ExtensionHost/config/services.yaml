@@ -1,0 +1,10 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    BabelForge\BabelChrome\LocalViewer\:
+        resource: '../src/'
+        exclude:
+            - '../src/DocumentSource.php'
+            - '../src/Kernel.php'

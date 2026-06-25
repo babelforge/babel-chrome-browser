@@ -1,0 +1,9 @@
+framework:
+    secret: '%env(default:default_secret:APP_SECRET)%'
+    http_method_override: false
+    handle_all_throwables: true
+    php_errors:
+        log: true
+
+parameters:
+    default_secret: 'babel-chrome-local-viewer-dev-secret'
