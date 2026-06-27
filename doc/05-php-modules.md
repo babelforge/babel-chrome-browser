@@ -20,6 +20,65 @@ Production module zips are generated into:
 ../zip
 ```
 
+## Install Viewer Modules
+
+BabelChrome does not bundle Markdown, OpenAPI, JSON viewers, or the project launcher module into the `.app` bundle. Those capabilities appear only after installing the matching module zip from `babelchrome://modules`.
+
+If production zips already exist in the meta workspace, open BabelChrome and install the required files:
+
+```text
+../zip/babelforge.markdown-viewer-1.0.0.zip
+../zip/babelforge.openapi-viewer-1.0.0.zip
+../zip/babelforge.json-viewer-1.0.0.zip
+../zip/babelforge.project-launcher-1.0.0.zip
+```
+
+Manual install flow:
+
+1. Open `babelchrome://modules`.
+2. Click `Install Module`.
+3. Select the module zip.
+4. Confirm the module appears in the installed modules list.
+5. Keep the module enabled.
+
+After installing a viewer module, files declared by its `file-type-handler` block become available through:
+
+```text
+babelchrome://viewer/file/<encoded-path>
+babelchrome://viewer/url/<encoded-url>
+```
+
+The enabled file types are also advertised to HTTP and HTTPS pages with:
+
+```text
+X-BabelChrome-File-Types
+```
+
+If no enabled module supports a file, BabelChrome shows a `No viewer installed for this file type` page instead of pretending the viewer exists.
+
+## Build Module Zips From Source
+
+From the meta workspace root:
+
+```bash
+./tools/dev2prod.sh
+```
+
+To build only one module:
+
+```bash
+./tools/dev2prod.sh markdown-viewer-module
+./tools/dev2prod.sh babelforge.markdown-viewer
+```
+
+The generated archives are written to:
+
+```text
+zip/
+```
+
+The browser app build does not rebuild these zips automatically. Module packaging is intentionally separate from the native app build so browser releases and module releases can evolve independently.
+
 ## Manifest Contract
 
 Every module has a root `manifest.json`. The host reads this manifest to discover:
@@ -95,16 +154,22 @@ The host validates the envelope without interpreting the event. Compatible viewe
 
 ## Shipping
 
-From the modules workspace:
+From the browser workspace, low-level packaging is available for a single module directory:
 
 ```bash
-./tools/dev2prod.sh markdown-viewer
+php tools/ship-php-module.php <module-directory> [target.zip]
 ```
 
-From the BabelChrome workspace:
+From the browser workspace, all sibling workspace modules can be packaged with:
 
 ```bash
 ./tools/build-php-modules.sh
+```
+
+From the meta workspace, prefer:
+
+```bash
+./tools/dev2prod.sh
 ```
 
 The production shipper keeps module runtime files, Composer dependencies, compiled public assets, templates, and manifests. It excludes development-only files such as tests, source assets, caches, and `ai/`.

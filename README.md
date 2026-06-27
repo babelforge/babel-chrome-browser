@@ -8,8 +8,7 @@ It behaves like a separate Chrome-like application: it has its own profile, grou
 
 - Opens web pages in an isolated BabelForge browser profile.
 - Accepts URLs from macOS commands such as `open -a BabelChrome "https://example.com"`.
-- Accepts local Markdown, Mermaid, OpenAPI, and HTML files from macOS.
-- Routes local or remote Markdown, OpenAPI, and JSON documents through installable PHP viewer modules.
+- Accepts local files from macOS and routes supported files through installed viewer modules.
 - Organizes tabs by groups.
 - Keeps groups and tabs between launches.
 - Restores the main window position, size, and maximized state between launches.
@@ -18,7 +17,24 @@ It behaves like a separate Chrome-like application: it has its own profile, grou
 - Shows page favicons in tabs when Chromium exposes one.
 - Supports browser extensions from the Chrome Web Store.
 - Provides internal pages for settings, history, extensions, and modules.
-- Exposes viewer-aware headers to local web projects through `X-BabelChrome-File-Types`.
+- Exposes viewer-aware headers to local web projects through `X-BabelChrome-File-Types` when enabled modules declare file handlers.
+
+## Core Versus Modules
+
+BabelChrome itself is the native browser shell: CEF, tabs, groups, address bar, profile isolation, extension management, internal pages, and the local ExtensionHost runtime.
+
+Document viewers are not built into the browser bundle. Markdown, Mermaid, OpenAPI, JSON, and project-launcher behavior come from installable PHP modules. A file type is handled only when a matching module is installed and enabled from `babelchrome://modules`.
+
+Common modules are packaged from the meta workspace into zip files:
+
+```text
+../zip/babelforge.markdown-viewer-1.0.0.zip
+../zip/babelforge.openapi-viewer-1.0.0.zip
+../zip/babelforge.json-viewer-1.0.0.zip
+../zip/babelforge.project-launcher-1.0.0.zip
+```
+
+See [doc/05-php-modules.md](doc/05-php-modules.md) for the full install workflow.
 
 ## Common Commands
 
@@ -34,7 +50,7 @@ Open a URL:
 open -a BabelChrome "https://example.com"
 ```
 
-Open a local Markdown, Mermaid, OpenAPI, or HTML file:
+Open a local file:
 
 ```bash
 open -a BabelChrome ./README.md
@@ -43,15 +59,19 @@ open -a BabelChrome ./openapi.yaml
 open -a BabelChrome ./index.html
 ```
 
-Open a remote Markdown URL through the local viewer:
+HTML files can open as direct Chromium `file://` pages. Markdown, Mermaid, OpenAPI, and JSON files require the corresponding viewer module.
+
+Open a remote Markdown URL through the local viewer, when the Markdown viewer module is installed:
 
 ```bash
 open -a BabelChrome "https://example.com/README.md"
 ```
 
-Markdown is rendered by the Markdown PHP module with `league/commonmark` on the backend. The viewer resolves relative Markdown links to stable `babelchrome://markdown/...` URLs, keeps regular non-Markdown links navigable, serves local relative images through the local service, generates a table of contents from headings, renders Mermaid code fences and standalone Mermaid documents with locally bundled JavaScript, supports selectable themes from Settings, auto-refreshes local files when they change, and exposes source-file actions from the context menu. OpenAPI and Swagger YAML/JSON files are rendered by the OpenAPI PHP module through a bundled Swagger UI viewer, with support for internal and relative `$ref` documents and auto-refresh when local referenced files change. JSON files are rendered by the JSON viewer module with `andypf/json-viewer`.
+When installed, the Markdown viewer module renders Markdown with `league/commonmark`, resolves relative Markdown links to stable `babelchrome://markdown/...` URLs, serves local relative images through the local service, generates a table of contents from headings, renders Mermaid code fences and standalone Mermaid documents with locally bundled JavaScript, supports selectable themes from Settings, auto-refreshes local files when they change, and exposes source-file actions from the context menu.
 
-Viewer tabs are stored with stable `babelchrome://markdown/...`, `babelchrome://openapi/...`, `babelchrome://json/...`, or generic `babelchrome://viewer/...` URLs. The temporary `http://127.0.0.1:<port>/...` viewer URL is only an internal runtime URL and is regenerated after each restart.
+When installed, the OpenAPI viewer module renders OpenAPI and Swagger YAML/JSON documents through bundled Swagger UI, with support for internal and relative `$ref` documents and auto-refresh when local referenced files change. When installed, the JSON viewer module renders JSON documents with `andypf/json-viewer`.
+
+Viewer tabs are stored with stable `babelchrome://markdown/...`, `babelchrome://openapi/...`, `babelchrome://json/...`, or generic `babelchrome://viewer/...` URLs only when the relevant module exists. The temporary `http://127.0.0.1:<port>/...` viewer URL is only an internal runtime URL and is regenerated after each restart.
 
 Open a URL in a named group:
 

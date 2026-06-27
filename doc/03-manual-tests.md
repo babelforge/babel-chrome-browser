@@ -65,6 +65,27 @@ Expected result:
 - Plain HTTP and HTTPS URLs open in the `default` group.
 - `babelchrome://open` URLs create or select the named group.
 - compact `babelchrome://command/group:...::|::url:...` URLs create or select the named group.
+- HTML files opened with `open -a BabelChrome ./file.html` open as direct `file://` tabs.
+- Reopening an existing URL in the same group refocuses its tab instead of duplicating it.
+- Rapid cold-start URL sequences return without LaunchServices `-1712` errors.
+- The left panel remains visible and shows groups from top to bottom.
+- Only the selected group's tabs are visible.
+- Inactive tabs shrink when many tabs are opened.
+- The selected tab remains wider than inactive tabs.
+- No visible horizontal tab scrollbar is shown.
+- Groups can be reordered by dragging them in the left panel and keep that order after restart.
+- Tabs can be reordered by dragging them in the tab bar and keep that order after restart.
+- Tabs can be moved to another group by dragging over a group until that group's tab list appears, then dropping on the group to append the tab.
+- Tabs can be moved to another group at a specific position by dragging over the group until its tab list appears, then dropping into the visible tab bar at the desired position.
+- The profile directory is created automatically.
+- Group state is saved to `~/Library/Application Support/BabelForge/BabelChrome/groups.json`.
+
+## Viewer Module Validation
+
+Prerequisite: install and enable the Markdown, OpenAPI, and JSON viewer modules from `babelchrome://modules`. Without those modules, BabelChrome should show `No viewer installed for this file type` for viewer-only sources.
+
+Expected result:
+
 - Markdown and Mermaid files opened with `open -a BabelChrome ./file.md` or `open -a BabelChrome ./diagram.mmd` open through the local Symfony viewer service and render as HTML.
 - Markdown links to relative Markdown files keep using the local viewer, preserve URL fragments, and can display local relative images.
 - Markdown fenced Mermaid blocks render as diagrams without requiring a CDN.
@@ -79,23 +100,9 @@ Expected result:
 - A missing linked image displays an inline missing-image placeholder instead of silently disappearing.
 - Remote Markdown URLs such as `open -a BabelChrome "https://example.com/README.md"` open through the local viewer service.
 - Markdown and OpenAPI viewer tabs display and persist stable `babelchrome://markdown/...` or `babelchrome://openapi/...` URLs, not stale `127.0.0.1:<port>` URLs.
-- HTML files opened with `open -a BabelChrome ./file.html` open as direct `file://` tabs.
 - OpenAPI-like files such as `open -a BabelChrome ./openapi.yaml` open through the local OpenAPI viewer and render with bundled Swagger UI.
 - Multi-file OpenAPI examples under `src/ExtensionHost/resources/openapi-ref-sample/` render with their relative `$ref` schemas resolved.
 - Editing a local OpenAPI `$ref` file refreshes the rendered OpenAPI page automatically after the viewer detects the referenced file timestamp change.
-- Reopening an existing URL in the same group refocuses its tab instead of duplicating it.
-- Rapid cold-start URL sequences return without LaunchServices `-1712` errors.
-- The left panel remains visible and shows groups from top to bottom.
-- Only the selected group's tabs are visible.
-- Inactive tabs shrink when many tabs are opened.
-- The selected tab remains wider than inactive tabs.
-- No visible horizontal tab scrollbar is shown.
-- Groups can be reordered by dragging them in the left panel and keep that order after restart.
-- Tabs can be reordered by dragging them in the tab bar and keep that order after restart.
-- Tabs can be moved to another group by dragging over a group until that group's tab list appears, then dropping on the group to append the tab.
-- Tabs can be moved to another group at a specific position by dragging over the group until its tab list appears, then dropping into the visible tab bar at the desired position.
-- The profile directory is created automatically.
-- Group state is saved to `~/Library/Application Support/BabelForge/BabelChrome/groups.json`.
 
 ## Keyboard and Address Bar Validation
 

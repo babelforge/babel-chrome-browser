@@ -14,7 +14,7 @@ BabelChrome owns only the local browser shell for BabelForge. It does not own Ba
 - `BrowserModels` contains the native tab, group, and closed-tab state objects shared by the window controller and browser client.
 - `BrowserViews` contains the reusable AppKit controls used by the browser shell, including tab items, group items, browser host views, resize handles, and hand-cursor buttons.
 - `BrowserClient` receives CEF callbacks for titles, address changes, browser creation, browser close, and load errors.
-- `LocalServiceHost` starts and stops the loopback PHP service used by built-in document viewers.
+- `LocalServiceHost` starts and stops the loopback PHP service used by installed modules and optional document viewers.
 - `Configuration` centralizes application name and profile path.
 
 ## Profile
@@ -55,18 +55,18 @@ The main window state, left panel state, Developer Tools dock settings, tab open
 2. `ApplicationDelegate` queues URLs until the browser window is ready.
 3. `main_mac.mm` runs a temporary pre-CEF `NSApplication` event loop so rapid cold-start `open -a` calls can return before Chromium initialization begins.
 4. Each startup URL event resets a short quiet timer; when the queue has been quiet long enough, the delegate stops the temporary AppKit loop.
-5. Plain HTTP or HTTPS URLs are routed to the `default` group unless a built-in document viewer supports their path extension.
+5. Plain HTTP or HTTPS URLs are routed to the `default` group unless an enabled viewer module declares support for their path extension.
 6. `babelchrome://open?group=...&url=...` URLs create or select the named group, then create or refocus the matching tab.
 7. `babelchrome://command/group:...::|::url:...` compact command URLs provide a shell-friendly alternative for grouped openings.
 8. CEF browser child views are created immediately for explicit selected tabs, while keyboard tab cycling and adjacent-tab preloading are delayed and cancellable.
 
 ## Local Viewer Service
 
-BabelChrome can route supported document URLs through a local loopback viewer service instead of sending them directly to CEF.
+BabelChrome can route supported document URLs through a local loopback viewer service instead of sending them directly to CEF. The viewer support comes from installed and enabled PHP modules.
 
 The native shell starts the service on `127.0.0.1` with a random port and a per-process token. The service is an embedded Symfony 8 application bundled in the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, and source registrations are not written inside `/Applications/BabelChrome.app`.
 
-Viewer-backed tabs are represented by stable BabelChrome URLs:
+Viewer-backed tabs are represented by stable BabelChrome URLs when the matching module is installed:
 
 - `babelchrome://markdown/file/<encoded-path>`;
 - `babelchrome://markdown/url/<encoded-url>`;
@@ -75,20 +75,20 @@ Viewer-backed tabs are represented by stable BabelChrome URLs:
 
 Those stable URLs are what BabelChrome stores in tab state and shows in the address bar. The loopback URL `http://127.0.0.1:<port>/...` is only a runtime navigation URL. It is regenerated from the stable source URL when the app starts or when the tab is opened, so a previous random port is never required after restart.
 
-The Markdown and OpenAPI viewers are built-in PHP modules registered in the LocalServiceHost module registry. The native shell asks the LocalServiceHost which enabled viewer module can handle a source URL through the module manifest capabilities instead of keeping hardcoded Markdown/OpenAPI extension lists in Objective-C++. The stable legacy routes `/markdown` and `/openapi` remain available, but they now dispatch to `babelforge.markdown-viewer` and `babelforge.openapi-viewer` through the same module route dispatcher used by installable modules.
+The Markdown and OpenAPI viewers are regular PHP modules registered in the LocalServiceHost module registry after installation. The native shell asks the LocalServiceHost which enabled viewer module can handle a source URL through the module manifest capabilities instead of keeping hardcoded Markdown/OpenAPI extension lists in Objective-C++. The stable legacy routes `/markdown` and `/openapi` remain available when the corresponding module is installed, but they dispatch to `babelforge.markdown-viewer` and `babelforge.openapi-viewer` through the same module route dispatcher used by every installable module.
 
 The Markdown module renders server-side HTML with `league/commonmark`. The OpenAPI module parses JSON or YAML sources with Symfony components, resolves internal and relative `$ref` values before rendering, and renders the resulting contract through a bundled Swagger UI frontend. Viewer frontend code is written in TypeScript, compiled without Node through `sensiolabs/typescript-bundle`, and exposed through Symfony AssetMapper.
 
-Routing rules:
+Example routing rules provided by the current viewer modules:
 
 - `file://.../*.md`, `file://.../*.markdown`, `file://.../*.mmd`, and `file://.../*.mermaid` open through the Markdown viewer;
 - `http://.../*.md`, `https://.../*.md`, and equivalent Markdown extensions also open through the Markdown viewer;
 - `file://.../openapi.yaml`, `file://.../swagger.yaml`, and equivalent YAML, YML, or JSON OpenAPI names open through the OpenAPI viewer;
 - HTML files remain normal Chromium `file://` pages.
 
-Those rules come from module manifest fields such as `fileTypes` and `fileNameContains`. For example, the OpenAPI module declares YAML, YML, and JSON extensions, then constrains matching filenames to fragments such as `openapi` and `swagger` so regular YAML files are not captured.
+Those rules come from installed module manifest fields such as `fileTypes` and `fileNameContains`. For example, the OpenAPI module declares YAML, YML, and JSON extensions, then constrains matching filenames to fragments such as `openapi` and `swagger` so regular YAML files are not captured.
 
-The viewer handles links according to their source. Relative links from a local Markdown file are resolved from the source file directory. Relative Markdown links are routed back through the Markdown viewer, while images and other local assets are served through the local asset endpoint. Relative links from a remote Markdown URL are resolved from the remote URL. Absolute HTTP and HTTPS links remain normal web navigations unless their extension is explicitly routed to a built-in viewer.
+The viewer handles links according to their source. Relative links from a local Markdown file are resolved from the source file directory. Relative Markdown links are routed back through the Markdown viewer when that module is installed, while images and other local assets are served through the local asset endpoint. Relative links from a remote Markdown URL are resolved from the remote URL. Absolute HTTP and HTTPS links remain normal web navigations unless their extension is explicitly routed to an enabled viewer module.
 
 ## Browser Lifecycle
 

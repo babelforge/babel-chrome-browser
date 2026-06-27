@@ -46,7 +46,7 @@ open -a BabelChrome "https://example.com"
 
 Plain HTTP and HTTPS URLs open in the `default` group.
 
-BabelChrome is also declared as a viewer for local Markdown, Mermaid, OpenAPI, and HTML files:
+BabelChrome is also declared as an opener for local Markdown, Mermaid, OpenAPI, JSON, and HTML files:
 
 ```bash
 open -a BabelChrome ./README.md
@@ -54,19 +54,19 @@ open -a BabelChrome ./diagram.mmd
 open -a BabelChrome ./index.html
 ```
 
-Supported local file extensions are `md`, `markdown`, `mdown`, `mkd`, `mmd`, `mermaid`, `yaml`, `yml`, `json`, `html`, and `htm`. HTML files open as direct `file://` tabs. Markdown and Mermaid files open through the local Symfony viewer service. YAML, YML, and JSON files are routed to the OpenAPI viewer only when their filename contains `openapi` or `swagger`.
+Supported local file extensions are `md`, `markdown`, `mdown`, `mkd`, `mmd`, `mermaid`, `yaml`, `yml`, `json`, `html`, and `htm`. HTML files open as direct `file://` tabs. Markdown, Mermaid, OpenAPI, and JSON rendering require the matching installed viewer module. If no enabled module handles the file type, BabelChrome displays a `No viewer installed for this file type` page.
 
-Remote Markdown URLs also open through the local viewer service:
+Remote Markdown URLs open through the local viewer service when the Markdown viewer module is installed:
 
 ```bash
 open -a BabelChrome "https://example.com/README.md"
 ```
 
-Markdown rendering uses `league/commonmark` inside the Markdown viewer module. Viewer frontend source assets and import-map metadata live in the module source workspace, and compiled runtime assets are served from that module's own `public/` directory.
+Markdown rendering uses `league/commonmark` inside the optional Markdown viewer module. Viewer frontend source assets and import-map metadata live in the module source workspace, and compiled runtime assets are served from that module's own `public/` directory.
 
-Markdown, OpenAPI, and JSON viewers share a common viewer header from the `babelforge/babel-chrome-viewer-kit` package. The kit provides the document title area and an `Open with` control for local files. The control lists macOS applications that declare support for the current file extension, stores the selected application as a shared BabelChrome preference for that extension, and asks BabelChrome to open the original local file with that application.
+Markdown, OpenAPI, and JSON viewer modules share a common viewer header from the `babelforge/babel-chrome-viewer-kit` package. The kit provides the document title area and an `Open with` control for local files. The control lists macOS applications that declare support for the current file extension, stores the selected application as a shared BabelChrome preference for that extension, and asks BabelChrome to open the original local file with that application.
 
-The Markdown viewer resolves Markdown links and assets according to the opened document:
+When installed, the Markdown viewer resolves Markdown links and assets according to the opened document:
 
 - relative links to Markdown-like files are exposed as stable `babelchrome://markdown/file/...` links and opened through the local Markdown viewer;
 - remote links to Markdown-like files are exposed as stable `babelchrome://markdown/url/...` links and opened through the local Markdown viewer;
@@ -89,13 +89,13 @@ The Markdown page context menu includes source actions for local files:
 
 If a Markdown source cannot be loaded, BabelChrome displays a local viewer error page instead of a blank page. If a linked image cannot be loaded through the local asset endpoint, the viewer returns an inline SVG placeholder that names the missing asset.
 
-OpenAPI-like files named with `openapi` or `swagger` and ending in `yaml`, `yml`, or `json` are routed to the OpenAPI viewer when opened explicitly:
+OpenAPI-like files named with `openapi` or `swagger` and ending in `yaml`, `yml`, or `json` are routed to the OpenAPI viewer when the OpenAPI viewer module is installed:
 
 ```bash
 open -a BabelChrome ./openapi.yaml
 ```
 
-OpenAPI rendering uses the bundled Swagger UI frontend. The local viewer accepts JSON and YAML sources, validates that they expose the usual `openapi` or `swagger`, `info`, and `paths` root fields, resolves internal and relative `$ref` documents, and shows a visible local error page when the source cannot be parsed as a usable OpenAPI specification.
+OpenAPI rendering uses the Swagger UI frontend bundled inside the optional OpenAPI viewer module. The local viewer accepts JSON and YAML sources, validates that they expose the usual `openapi` or `swagger`, `info`, and `paths` root fields, resolves internal and relative `$ref` documents, and shows a visible local error page when the source cannot be parsed as a usable OpenAPI specification.
 
 OpenAPI viewer tabs use stable app URLs such as `babelchrome://openapi/file/<encoded-path>` or `babelchrome://openapi/url/<encoded-url>`. Local OpenAPI files auto-refresh when the source timestamp changes on disk, including local files loaded through relative `$ref` values.
 
