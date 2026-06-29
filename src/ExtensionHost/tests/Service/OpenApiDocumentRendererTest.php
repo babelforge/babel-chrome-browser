@@ -35,22 +35,39 @@ final class OpenApiDocumentRendererTest extends TestCase
         class_exists(ModuleRuntimeContext::class);
         class_exists(SourceRegistry::class);
 
+        $modulePath = dirname(__DIR__, 5).'/modules/openapi-viewer-module';
+        self::compileModuleAssets($modulePath);
+
         if (!class_exists(ViewerSource::class)) {
-            require_once dirname(__DIR__, 5).'/modules/openapi-viewer-module/vendor/autoload.php';
+            require_once $modulePath.'/vendor/autoload.php';
         }
 
-        spl_autoload_register(static function (string $class): void {
+        spl_autoload_register(static function (string $class) use ($modulePath): void {
             $prefix = 'BabelForge\\BabelChromeOpenApiViewerModule\\';
             if (!str_starts_with($class, $prefix)) {
                 return;
             }
 
             $relativeClass = substr($class, strlen($prefix));
-            $path = dirname(__DIR__, 5).'/modules/openapi-viewer-module/src/'.str_replace('\\', '/', $relativeClass).'.php';
+            $path = $modulePath.'/src/'.str_replace('\\', '/', $relativeClass).'.php';
             if (is_file($path)) {
                 require $path;
             }
         });
+    }
+
+    /**
+     * Compiles module assets required by renderer integration tests.
+     *
+     * @param string $modulePath the module root path
+     */
+    private static function compileModuleAssets(string $modulePath): void
+    {
+        $command = escapeshellarg(PHP_BINARY).' '.escapeshellarg($modulePath.'/bin/console').' asset-map:compile --env=prod --no-debug';
+        exec($command, $output, $exitCode);
+        if (0 !== $exitCode) {
+            self::fail('Unable to compile OpenAPI viewer assets: '.implode("\n", $output));
+        }
     }
 
     /**

@@ -36,22 +36,39 @@ final class MarkdownDocumentRendererTest extends TestCase
         class_exists(SourceLoader::class);
         class_exists(SourceRegistry::class);
 
+        $modulePath = dirname(__DIR__, 5).'/modules/markdown-viewer-module';
+        self::compileModuleAssets($modulePath);
+
         if (!class_exists(ViewerSource::class) || !class_exists('League\\CommonMark\\GithubFlavoredMarkdownConverter')) {
-            require_once dirname(__DIR__, 5).'/modules/markdown-viewer-module/vendor/autoload.php';
+            require_once $modulePath.'/vendor/autoload.php';
         }
 
-        spl_autoload_register(static function (string $class): void {
+        spl_autoload_register(static function (string $class) use ($modulePath): void {
             $prefix = 'BabelForge\\BabelChromeMarkdownViewerModule\\';
             if (!str_starts_with($class, $prefix)) {
                 return;
             }
 
             $relativeClass = substr($class, strlen($prefix));
-            $path = dirname(__DIR__, 5).'/modules/markdown-viewer-module/src/'.str_replace('\\', '/', $relativeClass).'.php';
+            $path = $modulePath.'/src/'.str_replace('\\', '/', $relativeClass).'.php';
             if (is_file($path)) {
                 require $path;
             }
         });
+    }
+
+    /**
+     * Compiles module assets required by renderer integration tests.
+     *
+     * @param string $modulePath the module root path
+     */
+    private static function compileModuleAssets(string $modulePath): void
+    {
+        $command = escapeshellarg(PHP_BINARY).' '.escapeshellarg($modulePath.'/bin/console').' asset-map:compile --env=prod --no-debug';
+        exec($command, $output, $exitCode);
+        if (0 !== $exitCode) {
+            self::fail('Unable to compile Markdown viewer assets: '.implode("\n", $output));
+        }
     }
 
     /**
