@@ -42,7 +42,7 @@ BabelChrome currently provides:
 - native routing from module-declared `babelchrome://<host>` URLs to LocalServiceHost module routes;
 - viewer capability detection through `X-BabelChrome-File-Types`;
 - module public asset serving from each module's own `public/` directory;
-- a tested `ModulePackageShipper` service exposed by `tools/ship-php-module.php`, `tools/build-php-modules.sh`, and the sibling `../tools/dev2prod.sh` helper for packaging PHP modules as zip archives with their own Composer locks and real module-local `vendor/`;
+- a tested `ModulePackageShipper` service exposed by `tools/ship-php-module.php`, `tools/build-php-modules.sh`, and the meta workspace `tools/dev2prod.sh` helper for packaging PHP modules as zip archives with their own Composer locks and real module-local `vendor/`;
 - installable Markdown, OpenAPI, JSON, project launcher, demo, no-framework PHP, and Laravel modules under the sibling `../modules/` workspace;
 - lazy session restoration that rebuilds native groups and tabs before starting the active CEF browser;
 - a left AppKit panel containing the BabelForge placeholder and the groups list;

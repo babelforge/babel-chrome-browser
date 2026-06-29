@@ -25,7 +25,7 @@ BabelChrome itself is the native browser shell: CEF, tabs, groups, address bar, 
 
 Document viewers are not built into the browser bundle. Markdown, Mermaid, OpenAPI, JSON, and project-launcher behavior come from installable PHP modules. A file type is handled only when a matching module is installed and enabled from `babelchrome://modules`.
 
-Common module sources live in the meta workspace under `modules/`. Before installation, build production zip files from the meta workspace:
+When the browser repository is checked out through the `babel-chrome` meta workspace, common module sources live under the sibling `modules/` directory. Before installation, build production zip files from the meta workspace root:
 
 ```bash
 ./tools/dev2prod.sh
@@ -34,10 +34,10 @@ Common module sources live in the meta workspace under `modules/`. Before instal
 That command produces installable archives such as:
 
 ```text
-../zip/babelforge.markdown-viewer-1.0.0.zip
-../zip/babelforge.openapi-viewer-1.0.0.zip
-../zip/babelforge.json-viewer-1.0.0.zip
-../zip/babelforge.project-launcher-1.0.0.zip
+zip/babelforge.markdown-viewer-1.0.0.zip
+zip/babelforge.openapi-viewer-1.0.0.zip
+zip/babelforge.json-viewer-1.0.0.zip
+zip/babelforge.project-launcher-1.0.0.zip
 ```
 
 See [doc/05-php-modules.md](doc/05-php-modules.md) for the full install workflow.

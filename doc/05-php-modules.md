@@ -8,13 +8,13 @@ BabelChrome modules are installable PHP packages. They live outside the applicat
 ~/Library/Application Support/BabelForge/BabelChrome/Modules
 ```
 
-The editable module sources live in the sibling workspace:
+When this browser repository is checked out through the `babel-chrome` meta workspace, editable module sources live in:
 
 ```text
 ../modules
 ```
 
-Production module zips are generated into:
+Production module zips are generated into the meta workspace root:
 
 ```text
 ../zip

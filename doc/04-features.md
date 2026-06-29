@@ -159,7 +159,7 @@ BABELCHROME_SOURCE_URL
 
 The older class-entrypoint runtime remains available for compatibility, but new modules should use `runtime.type = web`.
 
-Editable BabelChrome module source packages live outside the app source tree, in the sibling workspace:
+When this browser repository is checked out through the `babel-chrome` meta workspace, editable BabelChrome module source packages live outside the app source tree, in the sibling workspace:
 
 ```text
 ../modules/
@@ -379,7 +379,7 @@ From the sibling `../babel-chrome` workspace, the equivalent module-oriented hel
 It accepts one module directory name or manifest id:
 
 ```bash
-./tools/dev2prod.sh markdown-viewer
+./tools/dev2prod.sh markdown-viewer-module
 ./tools/dev2prod.sh babelforge.openapi-viewer
 ```
 
