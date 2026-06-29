@@ -56,13 +56,23 @@ final class Kernel extends BaseKernel
      */
     private function cacheKey(): string
     {
-        $cacheKey = $this->environmentString('BABELCHROME_VIEWER_CACHE_KEY', 'default');
+        $cacheKey = $this->environmentString('BABELCHROME_VIEWER_CACHE_KEY', $this->defaultCacheKey());
         $safeCacheKey = preg_replace('/[^A-Za-z0-9_.-]/', '_', $cacheKey);
         if (!is_string($safeCacheKey) || '' === $safeCacheKey) {
-            return 'default';
+            return $this->defaultCacheKey();
         }
 
         return $safeCacheKey;
+    }
+
+    /**
+     * Returns the checkout-specific fallback cache key.
+     *
+     * @return string the fallback cache key
+     */
+    private function defaultCacheKey(): string
+    {
+        return 'project-'.substr(hash('sha256', $this->getProjectDir()), 0, 16);
     }
 
     /**
