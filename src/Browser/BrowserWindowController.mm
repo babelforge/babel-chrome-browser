@@ -3371,6 +3371,25 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   }
 
   if ([commandName isEqualToString:@"modules"]) {
+    BOOL didRequestUpdateInstall = NO;
+    NSMutableArray<NSString*>* updateIdentifiers = [NSMutableArray array];
+    for (NSURLQueryItem* item in components.queryItems) {
+      if ([item.name isEqualToString:@"installSelectedUpdates"] && item.value.length > 0) {
+        didRequestUpdateInstall = YES;
+      }
+      if ([item.name isEqualToString:@"installUpdates"] && item.value.length > 0) {
+        didRequestUpdateInstall = YES;
+        [updateIdentifiers addObject:item.value];
+      }
+    }
+    if (didRequestUpdateInstall) {
+      [self installPHPModuleUpdatesWithIdentifiers:updateIdentifiers];
+      [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
+                                    title:@"Module Updates"
+                                     html:[self moduleUpdatesPageHTML]];
+      return YES;
+    }
+
     for (NSURLQueryItem* item in components.queryItems) {
       if ([item.name isEqualToString:@"installZip"] && item.value.length > 0) {
         [self installPHPModuleZipFromPanel];
@@ -3774,6 +3793,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       BOOL hasIsolatedVendor = [module[@"hasIsolatedVendor"] boolValue];
       NSString* settingsRoute =
           [module[@"settingsRoute"] isKindOfClass:NSString.class] ? module[@"settingsRoute"] : @"";
+      BOOL hasSettingsPage = settingsRoute.length > 0 && ![settingsRoute isEqualToString:@"babelchrome://modules"];
       NSString* enabledLabel = enabled ? @"Enabled" : @"Disabled";
       NSString* vendorLabel = hasIsolatedVendor ? @"Own vendor" : @"No module vendor";
       NSString* versionLabel = [NSString stringWithFormat:@"Installed %@", moduleVersion];
@@ -3783,7 +3803,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
             @"<a class='smallButton' href='babelchrome://modules?module=%@'>Details</a>",
             [self queryEscapedString:moduleIdentifier]];
       }
-      if (settingsRoute.length > 0) {
+      if (hasSettingsPage) {
         [actionsHTML appendFormat:@"<a class='smallButton' href='%@'>Settings</a>",
                                   [self htmlEscapedString:settingsRoute]];
       }
@@ -3822,12 +3842,17 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       @"<h1>PHP Modules</h1>"
        "<section>"
        "<h2>Installed Modules</h2>"
-       "<p class='buttonRow'>"
+       "<div class='buttonRow'>"
        "<a class='primaryButton' href='babelchrome://modules?installZip=1'>Install or Update Module Zip</a>"
-       "<a class='smallButton primarySmallButton' href='babelchrome://modules?checkUpdates=1'>Check Updates</a>"
+       "<a class='primaryButton' href='babelchrome://modules?checkUpdates=1'>Check Updates</a>"
+       "<details class='gearMenu'>"
+       "<summary title='Update source settings' aria-label='Update source settings'>&#9881;</summary>"
+       "<div class='gearMenuPanel'>"
        "<a class='smallButton' href='babelchrome://modules?configureUpdateURL=1'>Set Update URL</a>"
        "<a class='smallButton' href='babelchrome://modules?configureUpdateLocal=1'>Set Local Update Folder</a>"
-       "</p>"
+       "</div>"
+       "</details>"
+       "</div>"
        "<dl>"
        "<dt>Update URL</dt><dd>%@</dd>"
        "<dt>Local update folder</dt><dd>%@</dd>"
@@ -3986,6 +4011,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSArray* installedModules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
 
   NSMutableString* rowsHTML = [NSMutableString string];
+  NSUInteger updateCount = 0;
   if (snapshotError) {
     [rowsHTML appendFormat:@"<p class='empty'>%@</p>",
                            [self htmlEscapedString:snapshotError.localizedDescription]];
@@ -3997,7 +4023,13 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   } else if (installedModules.count == 0) {
     [rowsHTML appendString:@"<p class='empty'>No installed module was found.</p>"];
   } else {
-    [rowsHTML appendString:@"<ul class='stripedList'>"];
+    [rowsHTML appendString:@"<form class='updatesForm' action='babelchrome://modules' method='get'>"
+                           "<input type='hidden' name='installSelectedUpdates' value='1'>"
+                           "<div class='updatesToolbar'>"
+                           "<label><input id='selectAllUpdates' type='checkbox'> Select all</label>"
+                           "<button class='primaryButton' type='submit'>Install Updates</button>"
+                           "</div>"
+                           "<ul class='stripedList updateList'>"];
     for (NSDictionary* module in installedModules) {
       if (![module isKindOfClass:NSDictionary.class]) {
         continue;
@@ -4016,8 +4048,9 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
         if (comparison == NSOrderedDescending) {
           status = @"Update available";
           actionHTML = [NSString stringWithFormat:
-              @"<a class='smallButton primarySmallButton' href='babelchrome://modules?installUpdate=%@'>Install Update</a>",
+              @"<label class='updateCheckbox'><input class='updateItemCheckbox' type='checkbox' name='installUpdates' value='%@'> Update</label>",
               [self queryEscapedString:moduleIdentifier]];
+          updateCount++;
         } else if (comparison == NSOrderedSame) {
           status = @"Up to date";
         } else {
@@ -4037,11 +4070,19 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           [self htmlEscapedString:status],
           wrappedActionsHTML];
     }
-    [rowsHTML appendString:@"</ul>"];
+    [rowsHTML appendString:@"</ul></form>"];
   }
 
   NSString* updateURLString = [self moduleUpdateURLString];
   NSString* localDirectory = [self moduleUpdateLocalDirectoryPath];
+  NSString* updateScriptHTML = updateCount > 0
+      ? @"<script>"
+         "const selectAllUpdates=document.getElementById('selectAllUpdates');"
+         "if(selectAllUpdates){selectAllUpdates.addEventListener('change',()=>{"
+         "document.querySelectorAll('.updateItemCheckbox').forEach((checkbox)=>{checkbox.checked=selectAllUpdates.checked;});"
+         "});}"
+         "</script>"
+      : @"";
   NSString* body = [NSString stringWithFormat:
       @"<h1>Module Updates</h1>"
        "<section>"
@@ -4051,20 +4092,22 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<dt>URL source</dt><dd>%@</dd>"
        "<dt>Local fallback</dt><dd>%@</dd>"
        "</dl>"
-       "<p class='buttonRow'>"
+       "<div class='buttonRow'>"
        "<a class='smallButton' href='babelchrome://modules?configureUpdateURL=1'>Set Update URL</a>"
        "<a class='smallButton' href='babelchrome://modules?configureUpdateLocal=1'>Set Local Update Folder</a>"
        "<a class='smallButton' href='babelchrome://modules'>Back to modules</a>"
-       "</p>"
+       "</div>"
        "</section>"
        "<section>"
        "<h2>Available Updates</h2>"
        "%@"
-       "</section>",
+       "</section>"
+       "%@",
       [self htmlEscapedString:sourceLabel],
       [self htmlEscapedString:updateURLString.length > 0 ? updateURLString : @"Not configured"],
       [self htmlEscapedString:localDirectory.length > 0 ? localDirectory : @"Not configured"],
-      rowsHTML];
+      rowsHTML,
+      updateScriptHTML];
   return [self internalPageHTMLWithTitle:@"Module Updates" body:body];
 }
 
@@ -4115,32 +4158,67 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 }
 
 - (void)installPHPModuleUpdateWithIdentifier:(NSString*)moduleIdentifier {
-  NSDictionary* updateResult = [self moduleUpdateReleaseManifestResult];
-  NSDictionary* releaseModule = [self releaseModuleWithIdentifier:moduleIdentifier updateResult:updateResult];
-  if (!releaseModule) {
+  [self installPHPModuleUpdatesWithIdentifiers:moduleIdentifier.length > 0 ? @[moduleIdentifier] : @[]];
+}
+
+- (void)installPHPModuleUpdatesWithIdentifiers:(NSArray<NSString*>*)moduleIdentifiers {
+  if (moduleIdentifiers.count == 0) {
     [self showModuleActionAlertWithError:
         [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
                             code:1
-                        userInfo:@{NSLocalizedDescriptionKey : @"The selected module update was not found."}]];
+                        userInfo:@{NSLocalizedDescriptionKey : @"Select at least one module update to install."}]];
     return;
   }
 
-  NSError* error = nil;
-  NSString* zipPath = [self resolvedUpdateZipPathForReleaseModule:releaseModule
-                                                     updateResult:updateResult
-                                                            error:&error];
-  if (zipPath.length == 0) {
-    [self showModuleActionAlertWithError:error];
-    return;
+  NSDictionary* updateResult = [self moduleUpdateReleaseManifestResult];
+  BOOL didInstallAtLeastOneModule = NO;
+  NSMutableSet<NSString*>* seenModuleIdentifiers = [NSMutableSet set];
+  NSMutableArray<NSString*>* errors = [NSMutableArray array];
+
+  for (NSString* moduleIdentifier in moduleIdentifiers) {
+    NSString* trimmedModuleIdentifier =
+        [moduleIdentifier stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if (trimmedModuleIdentifier.length == 0 || [seenModuleIdentifiers containsObject:trimmedModuleIdentifier]) {
+      continue;
+    }
+    [seenModuleIdentifiers addObject:trimmedModuleIdentifier];
+
+    NSDictionary* releaseModule = [self releaseModuleWithIdentifier:trimmedModuleIdentifier updateResult:updateResult];
+    if (!releaseModule) {
+      [errors addObject:[NSString stringWithFormat:@"%@: update was not found.", trimmedModuleIdentifier]];
+      continue;
+    }
+
+    NSError* error = nil;
+    NSString* zipPath = [self resolvedUpdateZipPathForReleaseModule:releaseModule
+                                                       updateResult:updateResult
+                                                              error:&error];
+    if (zipPath.length == 0) {
+      NSString* message = error.localizedDescription ?: @"Unable to resolve the update zip.";
+      [errors addObject:[NSString stringWithFormat:@"%@: %@", trimmedModuleIdentifier, message]];
+      continue;
+    }
+
+    NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:zipPath error:&error];
+    if (!response) {
+      NSString* message = error.localizedDescription ?: @"The module operation failed.";
+      [errors addObject:[NSString stringWithFormat:@"%@: %@", trimmedModuleIdentifier, message]];
+      continue;
+    }
+
+    didInstallAtLeastOneModule = YES;
   }
 
-  NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:zipPath error:&error];
-  if (!response) {
-    [self showModuleActionAlertWithError:error];
-    return;
+  if (didInstallAtLeastOneModule) {
+    [self refreshBabelChromeFileTypeCapabilities];
   }
 
-  [self refreshBabelChromeFileTypeCapabilities];
+  if (errors.count > 0) {
+    [self showModuleActionAlertWithError:
+        [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                            code:2
+                        userInfo:@{NSLocalizedDescriptionKey : [errors componentsJoinedByString:@"\n"]}]];
+  }
 }
 
 - (NSDictionary*)moduleUpdateReleaseManifestResult {
@@ -5554,6 +5632,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".primaryButton{background:#1473e6;border-color:#1473e6;color:#fff;}.smallButton{min-height:26px;font-size:12px;}"
        ".primarySmallButton{border-color:#1473e6;background:#1473e6;color:#fff;}"
        ".buttonRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
+       ".gearMenu{position:relative;}.gearMenu summary{display:inline-flex;align-items:center;justify-content:center;width:34px;min-height:32px;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;font-size:17px;font-weight:700;cursor:pointer;list-style:none;}"
+       ".gearMenu summary::-webkit-details-marker{display:none;}.gearMenuPanel{position:absolute;z-index:10;right:0;top:38px;display:grid;gap:8px;min-width:190px;padding:10px;background:#fff;border:1px solid #d8dde3;border-radius:8px;box-shadow:0 10px 28px rgba(20,32,45,.18);}"
+       ".updatesForm{display:grid;gap:10px;}.updatesToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #d8dde3;border-radius:8px;padding:10px 12px;}"
+       ".updatesToolbar label,.updateCheckbox{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:#243447;cursor:pointer;}.updateList input{cursor:pointer;}"
        "li>.note{grid-column:1 / 3;margin:0;}"
        "li>.actions{grid-column:3;grid-row:1 / span 2;}"
        ".actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;flex-wrap:wrap;}"
@@ -5577,6 +5659,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "body.dark .stripedList li:nth-child(odd){background:#1e2227;}body.dark .stripedList li:nth-child(even){background:#202a35;}"
        "body.dark .primaryButton,body.dark .smallButton,body.dark button{border-color:#46515d;background:#242a31;color:#f4f7fb;}"
        "body.dark .primaryButton,body.dark .primarySmallButton{background:#2f7de1;border-color:#2f7de1;color:#fff;}"
+       "body.dark .gearMenu summary,body.dark .gearMenuPanel,body.dark .updatesToolbar{border-color:#343b44;background:#1e2227;color:#f4f7fb;}"
+       "body.dark .gearMenuPanel{box-shadow:0 10px 28px rgba(0,0,0,.32);}body.dark .updatesToolbar label,body.dark .updateCheckbox{color:#dbe5f0;}"
        "body.dark .dangerButton{border-color:#7f3a43;color:#ffb6bf;background:#321d22;}"
        "body.dark input{background:#1e2227;border-color:#46515d;color:#f4f7fb;}"
        "body.dark .routeList code{background:#20252b;border-color:#343b44;color:#dbe5f0;}"
