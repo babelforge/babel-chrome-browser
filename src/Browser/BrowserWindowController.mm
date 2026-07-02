@@ -3764,9 +3764,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSError* error = nil;
   NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&error];
   NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
-  NSString* modulesPath = [snapshot[@"userModulesDirectory"] isKindOfClass:NSString.class]
-      ? snapshot[@"userModulesDirectory"]
-      : [self userModulesDirectoryPath];
   NSString* updateURLString = [self moduleUpdateURLString];
   NSString* updateLocalDirectory = [self moduleUpdateLocalDirectoryPath];
   NSString* updateURLLabel = updateURLString.length > 0 ? updateURLString : @"Not configured";
@@ -3778,7 +3775,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   } else if (modules.count == 0) {
     [moduleListHTML appendString:@"<p class='empty'>No PHP module is registered.</p>"];
   } else {
-    [moduleListHTML appendString:@"<ul class='stripedList'>"];
+    [moduleListHTML appendString:@"<ul class='stripedList moduleList'>"];
     for (NSDictionary* module in modules) {
       if (![module isKindOfClass:NSDictionary.class]) {
         continue;
@@ -3797,20 +3794,21 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       NSString* enabledLabel = enabled ? @"Enabled" : @"Disabled";
       NSString* vendorLabel = hasIsolatedVendor ? @"Own vendor" : @"No module vendor";
       NSString* versionLabel = [NSString stringWithFormat:@"Installed %@", moduleVersion];
-      NSMutableString* actionsHTML = [NSMutableString string];
+      NSMutableString* primaryActionsHTML = [NSMutableString string];
+      NSMutableString* secondaryActionsHTML = [NSMutableString string];
       if (moduleIdentifier.length > 0) {
-        [actionsHTML appendFormat:
+        [primaryActionsHTML appendFormat:
             @"<a class='smallButton' href='babelchrome://modules?module=%@'>Details</a>",
             [self queryEscapedString:moduleIdentifier]];
       }
       if (hasSettingsPage) {
-        [actionsHTML appendFormat:@"<a class='smallButton' href='%@'>Settings</a>",
-                                  [self htmlEscapedString:settingsRoute]];
+        [primaryActionsHTML appendFormat:@"<a class='smallButton' href='%@'>Settings</a>",
+                                         [self htmlEscapedString:settingsRoute]];
       }
       if (moduleIdentifier.length > 0) {
         NSString* toggleAction = enabled ? @"disable" : @"enable";
         NSString* toggleLabel = enabled ? @"Disable" : @"Enable";
-        [actionsHTML appendFormat:
+        [secondaryActionsHTML appendFormat:
             @"<a class='smallButton' href='babelchrome://modules?%@=%@'>%@</a>"
              "<a class='smallButton dangerButton iconTextButton' href='babelchrome://modules?remove=%@' title='Remove'>%@<span>Remove</span></a>",
             toggleAction,
@@ -3819,13 +3817,13 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
             [self queryEscapedString:moduleIdentifier],
             [self trashIconHTML]];
       }
-      NSString* wrappedActionsHTML = actionsHTML.length > 0
-          ? [NSString stringWithFormat:@"<div class='actions'>%@</div>", actionsHTML]
-          : @"";
 
       [moduleListHTML appendFormat:
-          @"<li><span>%@</span><small>%@ - %@ - %@ - %@</small><em>%@</em>"
-           "<p class='note'>%@</p>%@</li>",
+          @"<li class='moduleItem'>"
+           "<div class='moduleText'><span>%@</span><small>%@ - %@ - %@ - %@</small><em>%@</em>"
+           "<p class='note'>%@</p></div>"
+           "<div class='moduleButtons'><div>%@</div><div>%@</div></div>"
+           "</li>",
           [self htmlEscapedString:moduleName],
           [self htmlEscapedString:moduleIdentifier],
           [self htmlEscapedString:versionLabel],
@@ -3833,7 +3831,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           [self htmlEscapedString:enabledLabel],
           [self htmlEscapedString:vendorLabel],
           [self htmlEscapedString:moduleDescription],
-          wrappedActionsHTML];
+          primaryActionsHTML,
+          secondaryActionsHTML];
     }
     [moduleListHTML appendString:@"</ul>"];
   }
@@ -3858,25 +3857,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<dt>Local update folder</dt><dd>%@</dd>"
        "</dl>"
        "%@"
-       "</section>"
-       "<section>"
-       "<h2>Module Runtime</h2>"
-       "<p class='note'>BabelChrome modules are local PHP applications registered by the LocalServiceHost. "
-       "Each module owns its Composer vendor directory; BabelChrome does not mix module vendors.</p>"
-       "<dl>"
-       "<dt>User modules directory</dt><dd>%@</dd>"
-       "<dt>Vendor isolation</dt><dd>Per module</dd>"
-       "</dl>"
-       "</section>"
-       "<section>"
-       "<h2>Packaging</h2>"
-       "<p class='note'>Use <code>php tools/ship-php-module.php &lt;module-directory&gt;</code> to produce a dev2prod zip. "
-       "The module must ship its own <code>vendor/</code> directory.</p>"
        "</section>",
       [self htmlEscapedString:updateURLLabel],
       [self htmlEscapedString:updateLocalLabel],
-      moduleListHTML,
-      [self htmlEscapedString:modulesPath]];
+      moduleListHTML];
   return [self internalPageHTMLWithTitle:@"Modules" body:body];
 }
 
@@ -4092,16 +4076,12 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<dt>URL source</dt><dd>%@</dd>"
        "<dt>Local fallback</dt><dd>%@</dd>"
        "</dl>"
-       "<div class='buttonRow'>"
-       "<a class='smallButton' href='babelchrome://modules?configureUpdateURL=1'>Set Update URL</a>"
-       "<a class='smallButton' href='babelchrome://modules?configureUpdateLocal=1'>Set Local Update Folder</a>"
-       "<a class='smallButton' href='babelchrome://modules'>Back to modules</a>"
-       "</div>"
        "</section>"
        "<section>"
        "<h2>Available Updates</h2>"
        "%@"
        "</section>"
+       "<div class='bottomButtonRow'><a class='smallButton' href='babelchrome://modules'>Back to modules</a></div>"
        "%@",
       [self htmlEscapedString:sourceLabel],
       [self htmlEscapedString:updateURLString.length > 0 ? updateURLString : @"Not configured"],
@@ -5636,6 +5616,12 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".gearMenu summary::-webkit-details-marker{display:none;}.gearMenuPanel{position:absolute;z-index:10;right:0;top:42px;display:grid;gap:8px;min-width:190px;padding:10px;background:#fff;border:1px solid #d8dde3;border-radius:8px;box-shadow:0 10px 28px rgba(20,32,45,.18);}"
        ".updatesForm{display:grid;gap:10px;}.updatesToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #d8dde3;border-radius:8px;padding:10px 12px;}"
        ".updatesToolbar label,.updateCheckbox{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:#243447;cursor:pointer;}.updateList input{cursor:pointer;}"
+       ".moduleList .moduleItem{grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:center;}"
+       ".moduleText{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 14px;align-items:center;}"
+       ".moduleText span,.moduleText small{min-width:0;}.moduleText span,.moduleText small{display:block;}.moduleText em{text-align:right;}"
+       ".moduleText .note{grid-column:1 / -1;margin:0;}"
+       ".moduleButtons{display:grid;gap:8px;align-content:center;}.moduleButtons>div{display:flex;justify-content:flex-end;gap:8px;min-height:26px;}"
+       ".bottomButtonRow{display:flex;justify-content:flex-start;margin-top:14px;}"
        "li>.note{grid-column:1 / 3;margin:0;}"
        "li>.actions{grid-column:3;grid-row:1 / span 2;}"
        ".actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;flex-wrap:wrap;}"
