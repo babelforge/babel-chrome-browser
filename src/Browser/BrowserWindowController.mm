@@ -3852,31 +3852,48 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSOpenPanel* panel = [NSOpenPanel openPanel];
   panel.canChooseFiles = YES;
   panel.canChooseDirectories = NO;
-  panel.allowsMultipleSelection = NO;
-  panel.title = @"Install PHP Module";
+  panel.allowsMultipleSelection = YES;
+  panel.title = @"Install PHP Modules";
   if ([panel runModal] != NSModalResponseOK) {
     return;
   }
 
-  if (![panel.URL.pathExtension.lowercaseString isEqualToString:@"zip"]) {
+  BOOL didInstallAtLeastOneModule = NO;
+  NSMutableArray<NSString*>* errors = [NSMutableArray array];
+  for (NSURL* url in panel.URLs) {
+    if (![url.pathExtension.lowercaseString isEqualToString:@"zip"]) {
+      [errors addObject:[NSString stringWithFormat:@"%@: selected package must be a zip archive.",
+                                                   url.lastPathComponent ?: url.path ?: @"Unknown file"]];
+      continue;
+    }
+
+    NSError* error = nil;
+    NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:url.path
+                                                                                error:&error];
+    if (!response) {
+      NSString* message = error.localizedDescription ?: @"The module operation failed.";
+      [errors addObject:[NSString stringWithFormat:@"%@: %@",
+                                                   url.lastPathComponent ?: url.path ?: @"Unknown file",
+                                                   message]];
+      continue;
+    }
+
+    didInstallAtLeastOneModule = YES;
+  }
+
+  if (didInstallAtLeastOneModule) {
+    [self refreshBabelChromeFileTypeCapabilities];
+  }
+
+  if (errors.count > 0) {
     [self showModuleActionAlertWithError:
         [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
                             code:1
                         userInfo:@{
-                          NSLocalizedDescriptionKey : @"Selected module package must be a zip archive."
+                          NSLocalizedDescriptionKey : [errors componentsJoinedByString:@"\n"]
                         }]];
     return;
   }
-
-  NSError* error = nil;
-  NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:panel.URL.path
-                                                                              error:&error];
-  if (!response) {
-    [self showModuleActionAlertWithError:error];
-    return;
-  }
-
-  [self refreshBabelChromeFileTypeCapabilities];
 }
 
 - (void)setPHPModuleWithIdentifier:(NSString*)moduleIdentifier enabled:(BOOL)enabled {
