@@ -3754,7 +3754,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<p class='note'>BabelChrome loads configured unpacked extension folders at startup. Changes require restarting BabelChrome.</p>"
        "<p><a class='primaryButton' href='babelchrome://extensions?addUnpacked=1'>Add unpacked extension folder</a></p>"
        "%@"
-       "</section>",
+       "</section>"
+       "<div class='bottomButtonRow'><a class='smallButton' href='babelchrome://settings'>Back to Settings</a></div>",
       profileListHTML,
       unpackedListHTML];
   return [self internalPageHTMLWithTitle:@"Extensions" body:body];
@@ -3865,7 +3866,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<dt>Local update folder</dt><dd>%@</dd>"
        "</dl>"
        "%@"
-       "</section>",
+       "</section>"
+       "<div class='bottomButtonRow'><a class='smallButton' href='babelchrome://settings'>Back to Settings</a></div>",
       [self resourceSVGIconHTMLNamed:@"settings-gear" fallback:@"&#9881;"],
       [self htmlEscapedString:updateURLLabel],
       [self htmlEscapedString:updateLocalLabel],
