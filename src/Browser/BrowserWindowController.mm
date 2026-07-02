@@ -335,6 +335,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSView* rootView_;
   NSSplitView* splitView_;
   NSView* sidebarView_;
+  BabelDeveloperToolsResizeHandleView* sidebarResizeHandleView_;
   NSTextField* sidebarTitle_;
   NSButton* sidebarCollapseButton_;
   NSButton* newGroupButton_;
@@ -439,17 +440,34 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     tabDragHoverGeneration_ = 0;
     googleSuggestGeneration_ = 0;
     selectedOmniboxSuggestionIndex_ = -1;
-    [self restoreSessionWindowFrame];
     [self restoreProfileExtensionsMovedByOlderVersions];
     [self clearPendingProfileExtensionRestartStates];
     window.delegate = self;
     [self buildInterface];
     [self restoreFaviconStore];
-    [self restoreSessionGroupsAndTabs];
-    [self restoreSessionInitialBrowsers];
-    [self restoreSessionModulesLifecycle];
+    [self restoreSessionByPriority];
   }
   return self;
+}
+
+- (void)restoreSessionByPriority {
+  [self restoreSessionPositionState];
+
+  NSData* stateData = [self persistedGroupsAndTabsStateData];
+  NSDictionary* state = [self persistedGroupsAndTabsStateFromData:stateData];
+
+  isRestoringSession_ = YES;
+  [self restoreSessionTabsFromState:state];
+  [self restoreSessionGroupsFromState:state];
+  isRestoringSession_ = NO;
+
+  [self restoreSessionInitialBrowsers];
+  [self restoreSessionModulesLifecycle];
+}
+
+- (void)restoreSessionPositionState {
+  [self restoreSessionWindowFrame];
+  [self restoreSessionSidebarState];
 }
 
 - (void)restoreSessionWindowFrame {
@@ -489,12 +507,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 - (void)restoreSessionSidebarAfterInitialLayout {
   [self restoreSessionSidebarState];
   [self applySessionSidebarDividerPosition];
-}
-
-- (void)restoreSessionGroupsAndTabs {
-  isRestoringSession_ = YES;
-  [self restoreGroupsState];
-  isRestoringSession_ = NO;
 }
 
 - (void)restoreSessionInitialBrowsers {
@@ -584,6 +596,12 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   groupsListView_ = [[BabelFlippedView alloc] initWithFrame:NSMakeRect(5, 24, 230, 740)];
   groupsListView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   [sidebarView_ addSubview:groupsListView_];
+
+  sidebarResizeHandleView_ =
+      [[BabelDeveloperToolsResizeHandleView alloc] initWithFrame:NSMakeRect(initialSidebarWidth, 0, 7, 820)];
+  sidebarResizeHandleView_.resizeTarget = self;
+  sidebarResizeHandleView_.resizeAction = @selector(resizeSidebarFromHandle:);
+  [rootView_ addSubview:sidebarResizeHandleView_];
 
   rightView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1040, 820)];
   rightView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -686,35 +704,39 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   isBuildingInterface_ = NO;
 }
 
-- (void)restoreGroupsState {
-  NSData* data = [NSData dataWithContentsOfURL:BabelChromeConfiguration.groupsStateFileURL];
-  if (data.length > 0) {
-    NSError* error = nil;
-    NSDictionary* state = [NSJSONSerialization JSONObjectWithData:data
-                                                          options:0
-                                                            error:&error];
-    if ([state isKindOfClass:NSDictionary.class]) {
-      [self restoreGroupsFromState:state];
-    }
+- (NSData*)persistedGroupsAndTabsStateData {
+  return [NSData dataWithContentsOfURL:BabelChromeConfiguration.groupsStateFileURL];
+}
+
+- (NSDictionary*)persistedGroupsAndTabsStateFromData:(NSData*)data {
+  if (data.length == 0) {
+    return @{};
   }
 
+  NSError* error = nil;
+  NSDictionary* state = [NSJSONSerialization JSONObjectWithData:data
+                                                        options:0
+                                                          error:&error];
+  return [state isKindOfClass:NSDictionary.class] ? state : @{};
+}
+
+- (void)restoreSessionTabsFromState:(NSDictionary*)state {
+  [self restoreGroupsFromState:state];
+}
+
+- (void)restoreSessionGroupsFromState:(NSDictionary*)state {
   BabelBrowserGroup* defaultGroup = [self groupWithIdentifier:kDefaultGroupIdentifier];
   if (!defaultGroup) {
     defaultGroup = [self createGroupWithName:kDefaultGroupName identifier:kDefaultGroupIdentifier];
   }
 
-  NSString* selectedGroupIdentifier = [self persistedSelectedGroupIdentifierFromData:data];
+  NSString* selectedGroupIdentifier = [self persistedSelectedGroupIdentifierFromState:state];
   BabelBrowserGroup* groupToSelect = [self groupWithIdentifier:selectedGroupIdentifier] ?: defaultGroup;
   [self selectGroup:groupToSelect];
   [self saveGroupsState];
 }
 
-- (NSString*)persistedSelectedGroupIdentifierFromData:(NSData*)data {
-  if (data.length == 0) {
-    return kDefaultGroupIdentifier;
-  }
-
-  NSDictionary* state = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+- (NSString*)persistedSelectedGroupIdentifierFromState:(NSDictionary*)state {
   NSString* selectedGroupIdentifier = state[@"selectedGroupId"];
   return selectedGroupIdentifier.length > 0 ? selectedGroupIdentifier : kDefaultGroupIdentifier;
 }
@@ -6036,6 +6058,15 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   [self layoutInterfaceForCurrentSplitViewSize];
 }
 
+- (void)resizeSidebarFromHandle:(BabelDeveloperToolsResizeHandleView*)sender {
+  if (sidebarCollapsed_) {
+    return;
+  }
+
+  [self saveExpandedSidebarWidth:expandedSidebarWidth_ + sender.dragDelta];
+  [self layoutInterfaceForCurrentSplitViewSize];
+}
+
 - (void)toggleSidebarCollapsed:(id)sender {
   if (!sidebarCollapsed_) {
     [self saveExpandedSidebarWidth:sidebarView_.frame.size.width];
@@ -7795,6 +7826,11 @@ doCommandBySelector:(SEL)commandSelector {
   CGFloat rightWidth = MAX(0.0, totalWidth - sidebarWidth - dividerThickness);
 
   sidebarView_.frame = NSMakeRect(0, 0, sidebarWidth, totalHeight);
+  sidebarResizeHandleView_.hidden = sidebarCollapsed_;
+  sidebarResizeHandleView_.frame = NSMakeRect(MAX(0.0, sidebarWidth - 3.0),
+                                              0,
+                                              7.0,
+                                              totalHeight);
   sidebarTitle_.hidden = sidebarCollapsed_;
   newGroupButton_.hidden = sidebarCollapsed_;
   CGFloat headerY = MAX(0.0, totalHeight - 42);
