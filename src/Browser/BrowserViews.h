@@ -122,6 +122,7 @@ NSButton* BabelButton(NSString* title, id target, SEL action);
 
 @property(nonatomic, strong) NSString* identifier;
 @property(nonatomic, strong) NSString* title;
+@property(nonatomic, strong) NSColor* accentColor;
 @property(nonatomic, assign, getter=isSelected) BOOL selected;
 @property(nonatomic, assign, getter=isCollapsed) BOOL collapsed;
 @property(nonatomic, weak) id renameTarget;

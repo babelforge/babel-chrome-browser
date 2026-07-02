@@ -6342,6 +6342,7 @@ doCommandBySelector:(SEL)commandSelector {
   CGFloat y = 0.0;
   CGFloat width = MAX(0.0, groupsListView_.bounds.size.width);
   for (BabelBrowserGroup* group in groups_) {
+    group.groupItemView.accentColor = [self accentColorForGroup:group];
     group.groupItemView.collapsed = sidebarCollapsed_;
     group.groupItemView.frame = NSMakeRect(0, y, width, 30);
     y += 34.0;

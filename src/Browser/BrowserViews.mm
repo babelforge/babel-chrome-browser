@@ -494,6 +494,7 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 
 @synthesize identifier;
 @synthesize title;
+@synthesize accentColor;
 @synthesize selected;
 @synthesize collapsed;
 @synthesize renameTarget;
@@ -510,6 +511,7 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
   if (self) {
     self.identifier = identifierValue;
     self.title = titleValue;
+    self.accentColor = NSColor.controlAccentColor;
     self.wantsLayer = YES;
 
     titleLabel_ = [NSTextField labelWithString:titleValue];
@@ -533,7 +535,16 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 
 - (void)setSelected:(BOOL)selectedValue {
   selected = selectedValue;
-  titleLabel_.textColor = selectedValue ? NSColor.controlAccentColor : NSColor.labelColor;
+  titleLabel_.textColor = selectedValue ? (self.accentColor ?: NSColor.controlAccentColor)
+                                        : NSColor.labelColor;
+  [self setNeedsDisplay:YES];
+}
+
+- (void)setAccentColor:(NSColor*)accentColorValue {
+  accentColor = accentColorValue ?: NSColor.controlAccentColor;
+  if (self.isSelected) {
+    titleLabel_.textColor = accentColor;
+  }
   [self setNeedsDisplay:YES];
 }
 
@@ -690,11 +701,16 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
     return;
   }
 
-  [[NSColor colorWithWhite:0.88 alpha:1.0] setFill];
+  NSColor* accent = self.accentColor ?: NSColor.controlAccentColor;
+  [[accent colorWithAlphaComponent:0.14] setFill];
   NSBezierPath* path = [NSBezierPath bezierPathWithRoundedRect:[self selectionBackgroundRect]
                                                        xRadius:6
                                                        yRadius:6];
   [path fill];
+
+  [[accent colorWithAlphaComponent:0.30] setStroke];
+  path.lineWidth = 1.0;
+  [path stroke];
 }
 
 - (NSRect)selectionBackgroundRect {
