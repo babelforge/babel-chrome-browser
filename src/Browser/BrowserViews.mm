@@ -515,11 +515,11 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
     self.wantsLayer = YES;
 
     titleLabel_ = [NSTextField labelWithString:titleValue];
-    titleLabel_.font = [NSFont systemFontOfSize:13 weight:NSFontWeightMedium];
     titleLabel_.lineBreakMode = NSLineBreakByTruncatingTail;
     titleLabel_.frame = NSMakeRect(6, 7, 192, 16);
     titleLabel_.autoresizingMask = NSViewWidthSizable;
     [self addSubview:titleLabel_];
+    [self updateTitleStyle];
   }
   return self;
 }
@@ -535,16 +535,13 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 
 - (void)setSelected:(BOOL)selectedValue {
   selected = selectedValue;
-  titleLabel_.textColor = selectedValue ? (self.accentColor ?: NSColor.controlAccentColor)
-                                        : NSColor.labelColor;
+  [self updateTitleStyle];
   [self setNeedsDisplay:YES];
 }
 
 - (void)setAccentColor:(NSColor*)accentColorValue {
   accentColor = accentColorValue ?: NSColor.controlAccentColor;
-  if (self.isSelected) {
-    titleLabel_.textColor = accentColor;
-  }
+  [self updateTitleStyle];
   [self setNeedsDisplay:YES];
 }
 
@@ -566,6 +563,16 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 
 - (void)updateDisplayedTitle {
   titleLabel_.stringValue = self.isCollapsed ? [self initialsForTitle:title] : (title ?: @"");
+}
+
+- (void)updateTitleStyle {
+  if (!titleLabel_) {
+    return;
+  }
+
+  titleLabel_.textColor = self.accentColor ?: NSColor.controlAccentColor;
+  titleLabel_.font = [NSFont systemFontOfSize:13
+                                       weight:self.isSelected ? NSFontWeightBold : NSFontWeightMedium];
 }
 
 - (NSString*)initialsForTitle:(NSString*)value {
