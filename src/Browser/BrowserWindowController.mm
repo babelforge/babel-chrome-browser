@@ -17,10 +17,9 @@
 
 static const CGFloat kSidebarInitialWidth = 240.0;
 static const CGFloat kSidebarHeaderButtonSize = 28.0;
-static const CGFloat kSidebarHeaderLeadingInset = 18.0;
+static const CGFloat kSidebarHeaderLeadingInset = 10.0;
 static const CGFloat kSidebarHeaderButtonGap = 8.0;
-static const CGFloat kSidebarMinimumWidth =
-    kSidebarHeaderLeadingInset + (kSidebarHeaderButtonSize * 2.0) + kSidebarHeaderButtonGap;
+static const CGFloat kSidebarHeaderTrailingInset = 12.0;
 static const CGFloat kSidebarMaximumWidth = 360.0;
 static const CGFloat kSidebarCollapsedWidth = 48.0;
 static const CGFloat kTabBarHeight = 40.0;
@@ -7527,7 +7526,13 @@ doCommandBySelector:(SEL)commandSelector {
   if (sidebarCollapsed_) {
     return kSidebarCollapsedWidth;
   }
-  return MIN(kSidebarMaximumWidth, MAX(kSidebarMinimumWidth, sidebarView_.frame.size.width));
+  return MIN(kSidebarMaximumWidth, MAX([self minimumExpandedSidebarWidth], sidebarView_.frame.size.width));
+}
+
+- (CGFloat)minimumExpandedSidebarWidth {
+  CGFloat titleWidth = sidebarTitle_ ? [sidebarTitle_ intrinsicContentSize].width : 0.0;
+  return kSidebarHeaderLeadingInset + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap +
+      titleWidth + kSidebarHeaderButtonGap + kSidebarHeaderButtonSize + kSidebarHeaderTrailingInset;
 }
 
 - (CGFloat)targetSidebarWidth {
@@ -7684,14 +7689,16 @@ doCommandBySelector:(SEL)commandSelector {
   ConfigureIconButton(sidebarCollapseButton_,
                       sidebarCollapsed_ ? @"collapse-right" : @"collapse-left",
                       sidebarCollapsed_ ? @">>" : @"<<");
+  CGFloat titleX = collapseButtonX + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap;
+  CGFloat titleIntrinsicWidth = [sidebarTitle_ intrinsicContentSize].width;
+  CGFloat titleRightEdge = titleX + titleIntrinsicWidth;
+  CGFloat minimumAddButtonX = titleRightEdge + kSidebarHeaderButtonGap;
   CGFloat addButtonX =
-      MAX(collapseButtonX + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap, sidebarWidth - 40);
+      MAX(minimumAddButtonX, sidebarWidth - kSidebarHeaderButtonSize - kSidebarHeaderTrailingInset);
   newGroupButton_.frame = NSMakeRect(addButtonX,
                                      headerY,
                                      kSidebarHeaderButtonSize,
                                      kSidebarHeaderButtonSize);
-  CGFloat titleX = collapseButtonX + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap;
-  CGFloat titleIntrinsicWidth = [sidebarTitle_ intrinsicContentSize].width;
   CGFloat titleAvailableWidth = MAX(0.0, addButtonX - titleX - kSidebarHeaderButtonGap);
   sidebarTitle_.frame = NSMakeRect(titleX,
                                    MAX(0.0, totalHeight - 40),
@@ -7794,7 +7801,7 @@ doCommandBySelector:(SEL)commandSelector {
   if (sidebarCollapsed_) {
     return kSidebarCollapsedWidth;
   }
-  return kSidebarMinimumWidth;
+  return [self minimumExpandedSidebarWidth];
 }
 
 - (CGFloat)splitView:(NSSplitView*)splitView
