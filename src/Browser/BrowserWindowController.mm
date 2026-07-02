@@ -348,6 +348,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   BOOL isReorderingTabs_;
   BOOL isDraggingTabAcrossGroups_;
   BOOL isRestoringSession_;
+  BOOL isBuildingInterface_;
   BOOL needsInitialRestoredBrowserCreation_;
   NSUInteger deferredBrowserCreationGeneration_;
   NSUInteger adjacentTabPreloadGeneration_;
@@ -396,6 +397,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     isReorderingTabs_ = NO;
     isDraggingTabAcrossGroups_ = NO;
     isRestoringSession_ = NO;
+    isBuildingInterface_ = NO;
     needsInitialRestoredBrowserCreation_ = NO;
     deferredBrowserCreationGeneration_ = 0;
     adjacentTabPreloadGeneration_ = 0;
@@ -444,6 +446,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 }
 
 - (void)buildInterface {
+  isBuildingInterface_ = YES;
   BabelThemeRootView* themeRootView = [[BabelThemeRootView alloc] initWithFrame:self.window.contentView.bounds];
   themeRootView.themeTarget = self;
   themeRootView.themeAction = @selector(applyThemeColors);
@@ -456,7 +459,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   splitView_.vertical = YES;
   splitView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
-  sidebarView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, kSidebarInitialWidth, 820)];
+  CGFloat initialSidebarWidth = [self targetSidebarWidth];
+  sidebarView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, initialSidebarWidth, 820)];
   sidebarView_.wantsLayer = YES;
 
   sidebarTitle_ = [NSTextField labelWithString:@"BabelForge"];
@@ -583,8 +587,9 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   [rootView_ addSubview:splitView_ positioned:NSWindowBelow relativeTo:tabsBarPanel_];
   [self.window setContentView:rootView_];
   [self applyThemeColors];
-  [splitView_ setPosition:[self targetSidebarWidth] ofDividerAtIndex:0];
+  [splitView_ setPosition:initialSidebarWidth ofDividerAtIndex:0];
   [self layoutInterfaceForCurrentSplitViewSize];
+  isBuildingInterface_ = NO;
 }
 
 - (void)restoreGroupsState {
@@ -7831,7 +7836,7 @@ doCommandBySelector:(SEL)commandSelector {
 
 - (void)splitView:(NSSplitView*)splitView resizeSubviewsWithOldSize:(NSSize)oldSize {
   [self layoutInterfaceForCurrentSplitViewSize];
-  if (!sidebarCollapsed_) {
+  if (!isBuildingInterface_ && !sidebarCollapsed_) {
     [self saveExpandedSidebarWidth:sidebarView_.frame.size.width];
   }
 }
