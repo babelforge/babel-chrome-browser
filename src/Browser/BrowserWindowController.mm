@@ -47,6 +47,8 @@ static NSString* const kTabOpeningStrategyDefaultsKey = @"TabOpeningStrategy";
 static NSString* const kMarkdownThemeDefaultsKey = @"MarkdownTheme";
 static NSString* const kMainWindowFrameDefaultsKey = @"MainWindowFrame";
 static NSString* const kMainWindowZoomedDefaultsKey = @"MainWindowZoomed";
+static NSString* const kModuleUpdateURLDefaultsKey = @"ModuleUpdateURL";
+static NSString* const kModuleUpdateLocalDirectoryDefaultsKey = @"ModuleUpdateLocalDirectory";
 static NSString* const kDeveloperToolsDockModeBottom = @"bottom";
 static NSString* const kDeveloperToolsDockModeTop = @"top";
 static NSString* const kDeveloperToolsDockModeLeft = @"left";
@@ -3375,6 +3377,33 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
         return YES;
       }
 
+      if ([item.name isEqualToString:@"configureUpdateURL"] && item.value.length > 0) {
+        [self configureModuleUpdateURLFromPrompt];
+        [self openModulesPage];
+        return YES;
+      }
+
+      if ([item.name isEqualToString:@"configureUpdateLocal"] && item.value.length > 0) {
+        [self configureModuleUpdateLocalDirectoryFromPanel];
+        [self openModulesPage];
+        return YES;
+      }
+
+      if ([item.name isEqualToString:@"checkUpdates"] && item.value.length > 0) {
+        [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
+                                      title:@"Module Updates"
+                                       html:[self moduleUpdatesPageHTML]];
+        return YES;
+      }
+
+      if ([item.name isEqualToString:@"installUpdate"] && item.value.length > 0) {
+        [self installPHPModuleUpdateWithIdentifier:item.value];
+        [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
+                                      title:@"Module Updates"
+                                       html:[self moduleUpdatesPageHTML]];
+        return YES;
+      }
+
       if ([item.name isEqualToString:@"enable"] && item.value.length > 0) {
         [self setPHPModuleWithIdentifier:item.value enabled:YES];
         [self openModulesPage];
@@ -3718,6 +3747,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSString* modulesPath = [snapshot[@"userModulesDirectory"] isKindOfClass:NSString.class]
       ? snapshot[@"userModulesDirectory"]
       : [self userModulesDirectoryPath];
+  NSString* updateURLString = [self moduleUpdateURLString];
+  NSString* updateLocalDirectory = [self moduleUpdateLocalDirectoryPath];
+  NSString* updateURLLabel = updateURLString.length > 0 ? updateURLString : @"Not configured";
+  NSString* updateLocalLabel = updateLocalDirectory.length > 0 ? updateLocalDirectory : @"Not configured";
   NSMutableString* moduleListHTML = [NSMutableString string];
   if (error) {
     [moduleListHTML appendFormat:@"<p class='empty'>%@</p>",
@@ -3788,7 +3821,16 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       @"<h1>PHP Modules</h1>"
        "<section>"
        "<h2>Installed Modules</h2>"
-       "<p><a class='primaryButton' href='babelchrome://modules?installZip=1'>Install or Update Module Zip</a></p>"
+       "<p class='buttonRow'>"
+       "<a class='primaryButton' href='babelchrome://modules?installZip=1'>Install or Update Module Zip</a>"
+       "<a class='smallButton primarySmallButton' href='babelchrome://modules?checkUpdates=1'>Check Updates</a>"
+       "<a class='smallButton' href='babelchrome://modules?configureUpdateURL=1'>Set Update URL</a>"
+       "<a class='smallButton' href='babelchrome://modules?configureUpdateLocal=1'>Set Local Update Folder</a>"
+       "</p>"
+       "<dl>"
+       "<dt>Update URL</dt><dd>%@</dd>"
+       "<dt>Local update folder</dt><dd>%@</dd>"
+       "</dl>"
        "%@"
        "</section>"
        "<section>"
@@ -3805,6 +3847,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<p class='note'>Use <code>php tools/ship-php-module.php &lt;module-directory&gt;</code> to produce a dev2prod zip. "
        "The module must ship its own <code>vendor/</code> directory.</p>"
        "</section>",
+      [self htmlEscapedString:updateURLLabel],
+      [self htmlEscapedString:updateLocalLabel],
       moduleListHTML,
       [self htmlEscapedString:modulesPath]];
   return [self internalPageHTMLWithTitle:@"Modules" body:body];
@@ -3922,6 +3966,403 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       tagsHTML.length > 0 ? tagsHTML : @"<span class='empty'>No capability declared.</span>"];
 
   return [self internalPageHTMLWithTitle:moduleName body:body];
+}
+
+- (NSString*)moduleUpdatesPageHTML {
+  NSDictionary* updateResult = [self moduleUpdateReleaseManifestResult];
+  NSDictionary* manifest = [updateResult[@"manifest"] isKindOfClass:NSDictionary.class]
+      ? updateResult[@"manifest"]
+      : @{};
+  NSString* sourceLabel = [updateResult[@"sourceLabel"] isKindOfClass:NSString.class]
+      ? updateResult[@"sourceLabel"]
+      : @"No source";
+  NSString* errorMessage = [updateResult[@"error"] isKindOfClass:NSString.class] ? updateResult[@"error"] : @"";
+  NSArray* releaseModules = [manifest[@"modules"] isKindOfClass:NSArray.class] ? manifest[@"modules"] : @[];
+  NSDictionary* releaseModulesByIdentifier = [self releaseModulesByIdentifier:releaseModules];
+
+  NSError* snapshotError = nil;
+  NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&snapshotError];
+  NSArray* installedModules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
+
+  NSMutableString* rowsHTML = [NSMutableString string];
+  if (snapshotError) {
+    [rowsHTML appendFormat:@"<p class='empty'>%@</p>",
+                           [self htmlEscapedString:snapshotError.localizedDescription]];
+  } else if (manifest.count == 0) {
+    NSString* message = errorMessage.length > 0
+        ? errorMessage
+        : @"Configure an update URL or a local update folder containing modules-release-manifest.json.";
+    [rowsHTML appendFormat:@"<p class='empty'>%@</p>", [self htmlEscapedString:message]];
+  } else if (installedModules.count == 0) {
+    [rowsHTML appendString:@"<p class='empty'>No installed module was found.</p>"];
+  } else {
+    [rowsHTML appendString:@"<ul class='stripedList'>"];
+    for (NSDictionary* module in installedModules) {
+      if (![module isKindOfClass:NSDictionary.class]) {
+        continue;
+      }
+
+      NSString* moduleIdentifier = [module[@"id"] isKindOfClass:NSString.class] ? module[@"id"] : @"";
+      NSString* moduleName = [module[@"name"] isKindOfClass:NSString.class] ? module[@"name"] : moduleIdentifier;
+      NSString* installedVersion = [module[@"version"] isKindOfClass:NSString.class] ? module[@"version"] : @"";
+      NSDictionary* releaseModule = releaseModulesByIdentifier[moduleIdentifier];
+      NSString* availableVersion =
+          [releaseModule[@"version"] isKindOfClass:NSString.class] ? releaseModule[@"version"] : @"";
+      NSString* status = @"Not found in update source";
+      NSString* actionHTML = @"";
+      if (availableVersion.length > 0) {
+        NSComparisonResult comparison = [self compareVersion:availableVersion toVersion:installedVersion];
+        if (comparison == NSOrderedDescending) {
+          status = @"Update available";
+          actionHTML = [NSString stringWithFormat:
+              @"<a class='smallButton primarySmallButton' href='babelchrome://modules?installUpdate=%@'>Install Update</a>",
+              [self queryEscapedString:moduleIdentifier]];
+        } else if (comparison == NSOrderedSame) {
+          status = @"Up to date";
+        } else {
+          status = @"Installed version is newer";
+        }
+      }
+
+      NSString* wrappedActionsHTML = actionHTML.length > 0
+          ? [NSString stringWithFormat:@"<div class='actions'>%@</div>", actionHTML]
+          : @"";
+      [rowsHTML appendFormat:
+          @"<li><span>%@</span><small>%@ - Installed %@ - Available %@</small><em>%@</em>%@</li>",
+          [self htmlEscapedString:moduleName],
+          [self htmlEscapedString:moduleIdentifier],
+          [self htmlEscapedString:installedVersion.length > 0 ? installedVersion : @"Unknown"],
+          [self htmlEscapedString:availableVersion.length > 0 ? availableVersion : @"None"],
+          [self htmlEscapedString:status],
+          wrappedActionsHTML];
+    }
+    [rowsHTML appendString:@"</ul>"];
+  }
+
+  NSString* updateURLString = [self moduleUpdateURLString];
+  NSString* localDirectory = [self moduleUpdateLocalDirectoryPath];
+  NSString* body = [NSString stringWithFormat:
+      @"<h1>Module Updates</h1>"
+       "<section>"
+       "<h2>Source</h2>"
+       "<dl>"
+       "<dt>Used source</dt><dd>%@</dd>"
+       "<dt>URL source</dt><dd>%@</dd>"
+       "<dt>Local fallback</dt><dd>%@</dd>"
+       "</dl>"
+       "<p class='buttonRow'>"
+       "<a class='smallButton' href='babelchrome://modules?configureUpdateURL=1'>Set Update URL</a>"
+       "<a class='smallButton' href='babelchrome://modules?configureUpdateLocal=1'>Set Local Update Folder</a>"
+       "<a class='smallButton' href='babelchrome://modules'>Back to modules</a>"
+       "</p>"
+       "</section>"
+       "<section>"
+       "<h2>Available Updates</h2>"
+       "%@"
+       "</section>",
+      [self htmlEscapedString:sourceLabel],
+      [self htmlEscapedString:updateURLString.length > 0 ? updateURLString : @"Not configured"],
+      [self htmlEscapedString:localDirectory.length > 0 ? localDirectory : @"Not configured"],
+      rowsHTML];
+  return [self internalPageHTMLWithTitle:@"Module Updates" body:body];
+}
+
+- (void)configureModuleUpdateURLFromPrompt {
+  NSAlert* alert = [[NSAlert alloc] init];
+  alert.messageText = @"Module Update URL";
+  alert.informativeText =
+      @"Enter either the direct modules-release-manifest.json URL or a base URL containing that file.";
+  [alert addButtonWithTitle:@"Save"];
+  [alert addButtonWithTitle:@"Cancel"];
+  NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 520, 28)];
+  textField.stringValue = [self moduleUpdateURLString];
+  alert.accessoryView = textField;
+  if ([alert runModal] != NSAlertFirstButtonReturn) {
+    return;
+  }
+
+  NSString* value = [textField.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  if (value.length == 0) {
+    [NSUserDefaults.standardUserDefaults removeObjectForKey:kModuleUpdateURLDefaultsKey];
+  } else {
+    [NSUserDefaults.standardUserDefaults setObject:value forKey:kModuleUpdateURLDefaultsKey];
+  }
+  [NSUserDefaults.standardUserDefaults synchronize];
+}
+
+- (void)configureModuleUpdateLocalDirectoryFromPanel {
+  NSOpenPanel* panel = [NSOpenPanel openPanel];
+  panel.canChooseFiles = NO;
+  panel.canChooseDirectories = YES;
+  panel.allowsMultipleSelection = NO;
+  panel.title = @"Choose Module Update Folder";
+  NSString* currentPath = [self moduleUpdateLocalDirectoryPath];
+  if (currentPath.length > 0) {
+    panel.directoryURL = [NSURL fileURLWithPath:currentPath];
+  }
+  if ([panel runModal] != NSModalResponseOK) {
+    return;
+  }
+
+  NSString* path = panel.URL.path ?: @"";
+  if (path.length == 0) {
+    return;
+  }
+
+  [NSUserDefaults.standardUserDefaults setObject:path forKey:kModuleUpdateLocalDirectoryDefaultsKey];
+  [NSUserDefaults.standardUserDefaults synchronize];
+}
+
+- (void)installPHPModuleUpdateWithIdentifier:(NSString*)moduleIdentifier {
+  NSDictionary* updateResult = [self moduleUpdateReleaseManifestResult];
+  NSDictionary* releaseModule = [self releaseModuleWithIdentifier:moduleIdentifier updateResult:updateResult];
+  if (!releaseModule) {
+    [self showModuleActionAlertWithError:
+        [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                            code:1
+                        userInfo:@{NSLocalizedDescriptionKey : @"The selected module update was not found."}]];
+    return;
+  }
+
+  NSError* error = nil;
+  NSString* zipPath = [self resolvedUpdateZipPathForReleaseModule:releaseModule
+                                                     updateResult:updateResult
+                                                            error:&error];
+  if (zipPath.length == 0) {
+    [self showModuleActionAlertWithError:error];
+    return;
+  }
+
+  NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:zipPath error:&error];
+  if (!response) {
+    [self showModuleActionAlertWithError:error];
+    return;
+  }
+
+  [self refreshBabelChromeFileTypeCapabilities];
+}
+
+- (NSDictionary*)moduleUpdateReleaseManifestResult {
+  NSString* updateURLString = [self moduleUpdateURLString];
+  NSError* urlError = nil;
+  if (updateURLString.length > 0) {
+    NSDictionary* result = [self releaseManifestResultFromURLString:updateURLString error:&urlError];
+    if (result) {
+      return result;
+    }
+  }
+
+  NSString* localDirectory = [self moduleUpdateLocalDirectoryPath];
+  if (localDirectory.length > 0) {
+    NSError* error = nil;
+    NSDictionary* result = [self releaseManifestResultFromLocalPath:localDirectory error:&error];
+    if (result) {
+      return result;
+    }
+    return @{
+      @"sourceLabel" : [NSString stringWithFormat:@"Local fallback: %@", localDirectory],
+      @"error" : error.localizedDescription ?: @"Unable to read the local update manifest."
+    };
+  }
+
+  if (updateURLString.length > 0) {
+    return @{
+      @"sourceLabel" : [NSString stringWithFormat:@"URL: %@", updateURLString],
+      @"error" : urlError.localizedDescription ?: @"Unable to read the update URL and no local fallback is configured."
+    };
+  }
+
+  return @{
+    @"sourceLabel" : @"No source configured",
+    @"error" : @"Configure an update URL or a local update folder."
+  };
+}
+
+- (NSDictionary*)releaseManifestResultFromURLString:(NSString*)urlString error:(NSError**)error {
+  NSURL* manifestURL = [self moduleUpdateManifestURLForURLString:urlString];
+  if (!manifestURL) {
+    if (error) {
+      *error = [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                                   code:1
+                               userInfo:@{NSLocalizedDescriptionKey : @"The configured update URL is invalid."}];
+    }
+    return nil;
+  }
+
+  NSData* data = [NSData dataWithContentsOfURL:manifestURL options:0 error:error];
+  if (!data) {
+    return nil;
+  }
+
+  NSDictionary* manifest = [self releaseManifestFromData:data error:error];
+  if (!manifest) {
+    return nil;
+  }
+
+  return @{
+    @"manifest" : manifest,
+    @"sourceKind" : @"url",
+    @"sourceLabel" : manifestURL.absoluteString ?: @"URL",
+    @"baseURL" : [manifestURL URLByDeletingLastPathComponent].absoluteString ?: @""
+  };
+}
+
+- (NSDictionary*)releaseManifestResultFromLocalPath:(NSString*)path error:(NSError**)error {
+  NSString* manifestPath = [self moduleUpdateManifestPathForLocalPath:path];
+  NSData* data = [NSData dataWithContentsOfFile:manifestPath options:0 error:error];
+  if (!data) {
+    return nil;
+  }
+
+  NSDictionary* manifest = [self releaseManifestFromData:data error:error];
+  if (!manifest) {
+    return nil;
+  }
+
+  NSString* basePath = manifestPath.stringByDeletingLastPathComponent ?: @"";
+  return @{
+    @"manifest" : manifest,
+    @"sourceKind" : @"local",
+    @"sourceLabel" : [NSString stringWithFormat:@"Local: %@", manifestPath],
+    @"basePath" : basePath
+  };
+}
+
+- (NSDictionary*)releaseManifestFromData:(NSData*)data error:(NSError**)error {
+  id decoded = [NSJSONSerialization JSONObjectWithData:data options:0 error:error];
+  if (![decoded isKindOfClass:NSDictionary.class]) {
+    if (error) {
+      *error = [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                                   code:2
+                               userInfo:@{NSLocalizedDescriptionKey : @"The update manifest is not a JSON object."}];
+    }
+    return nil;
+  }
+
+  return decoded;
+}
+
+- (NSDictionary*)releaseModulesByIdentifier:(NSArray*)releaseModules {
+  NSMutableDictionary* modulesByIdentifier = [NSMutableDictionary dictionary];
+  for (NSDictionary* releaseModule in releaseModules) {
+    if (![releaseModule isKindOfClass:NSDictionary.class]) {
+      continue;
+    }
+
+    NSString* moduleIdentifier = [releaseModule[@"id"] isKindOfClass:NSString.class] ? releaseModule[@"id"] : @"";
+    if (moduleIdentifier.length > 0) {
+      modulesByIdentifier[moduleIdentifier] = releaseModule;
+    }
+  }
+
+  return modulesByIdentifier;
+}
+
+- (NSDictionary*)releaseModuleWithIdentifier:(NSString*)moduleIdentifier updateResult:(NSDictionary*)updateResult {
+  NSDictionary* manifest = [updateResult[@"manifest"] isKindOfClass:NSDictionary.class]
+      ? updateResult[@"manifest"]
+      : @{};
+  NSArray* releaseModules = [manifest[@"modules"] isKindOfClass:NSArray.class] ? manifest[@"modules"] : @[];
+  return [self releaseModulesByIdentifier:releaseModules][moduleIdentifier ?: @""];
+}
+
+- (NSString*)resolvedUpdateZipPathForReleaseModule:(NSDictionary*)releaseModule
+                                      updateResult:(NSDictionary*)updateResult
+                                             error:(NSError**)error {
+  NSString* zipName = [releaseModule[@"zip"] isKindOfClass:NSString.class] ? releaseModule[@"zip"] : @"";
+  if (zipName.length == 0) {
+    if (error) {
+      *error = [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                                   code:3
+                               userInfo:@{NSLocalizedDescriptionKey : @"The update manifest entry does not declare a zip file."}];
+    }
+    return @"";
+  }
+
+  NSString* sourceKind = [updateResult[@"sourceKind"] isKindOfClass:NSString.class] ? updateResult[@"sourceKind"] : @"";
+  if ([sourceKind isEqualToString:@"local"]) {
+    NSString* basePath = [updateResult[@"basePath"] isKindOfClass:NSString.class] ? updateResult[@"basePath"] : @"";
+    NSString* zipPath = [basePath stringByAppendingPathComponent:zipName];
+    if ([NSFileManager.defaultManager fileExistsAtPath:zipPath]) {
+      return zipPath;
+    }
+    if (error) {
+      *error = [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                                   code:4
+                               userInfo:@{NSLocalizedDescriptionKey : [NSString stringWithFormat:@"Update zip not found: %@", zipPath]}];
+    }
+    return @"";
+  }
+
+  NSString* baseURLString = [updateResult[@"baseURL"] isKindOfClass:NSString.class] ? updateResult[@"baseURL"] : @"";
+  NSURL* baseURL = [NSURL URLWithString:baseURLString];
+  NSURL* zipURL = [NSURL URLWithString:zipName relativeToURL:baseURL];
+  if (!zipURL) {
+    if (error) {
+      *error = [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                                   code:5
+                               userInfo:@{NSLocalizedDescriptionKey : @"The update zip URL is invalid."}];
+    }
+    return @"";
+  }
+
+  NSData* data = [NSData dataWithContentsOfURL:zipURL options:0 error:error];
+  if (!data) {
+    return @"";
+  }
+
+  NSString* targetPath = [NSTemporaryDirectory() stringByAppendingPathComponent:zipName.lastPathComponent];
+  if (![data writeToFile:targetPath options:NSDataWritingAtomic error:error]) {
+    return @"";
+  }
+
+  return targetPath;
+}
+
+- (NSURL*)moduleUpdateManifestURLForURLString:(NSString*)urlString {
+  NSString* trimmedString =
+      [urlString stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  if (trimmedString.length == 0) {
+    return nil;
+  }
+
+  NSURL* sourceURL = [NSURL URLWithString:trimmedString];
+  if (!sourceURL.scheme.length) {
+    return nil;
+  }
+
+  if ([sourceURL.path.lastPathComponent isEqualToString:@"modules-release-manifest.json"] ||
+      [sourceURL.pathExtension.lowercaseString isEqualToString:@"json"]) {
+    return sourceURL;
+  }
+
+  NSString* separator = [trimmedString hasSuffix:@"/"] ? @"" : @"/";
+  return [NSURL URLWithString:[NSString stringWithFormat:@"%@%@modules-release-manifest.json",
+                                                         trimmedString,
+                                                         separator]];
+}
+
+- (NSString*)moduleUpdateManifestPathForLocalPath:(NSString*)path {
+  BOOL isDirectory = NO;
+  if ([NSFileManager.defaultManager fileExistsAtPath:path isDirectory:&isDirectory] && !isDirectory) {
+    return path;
+  }
+
+  return [path stringByAppendingPathComponent:@"modules-release-manifest.json"];
+}
+
+- (NSComparisonResult)compareVersion:(NSString*)leftVersion toVersion:(NSString*)rightVersion {
+  return [leftVersion compare:rightVersion options:NSNumericSearch];
+}
+
+- (NSString*)moduleUpdateURLString {
+  NSString* value = [NSUserDefaults.standardUserDefaults stringForKey:kModuleUpdateURLDefaultsKey];
+  return [value stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] ?: @"";
+}
+
+- (NSString*)moduleUpdateLocalDirectoryPath {
+  NSString* value = [NSUserDefaults.standardUserDefaults stringForKey:kModuleUpdateLocalDirectoryDefaultsKey];
+  return [value stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] ?: @"";
 }
 
 - (NSDictionary*)moduleRouteForBabelChromeComponents:(NSURLComponents*)components
@@ -4926,6 +5367,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".primaryButton,.smallButton,button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;text-decoration:none;font-weight:700;min-height:32px;padding:0 12px;cursor:pointer;}"
        ".primaryButton{background:#1473e6;border-color:#1473e6;color:#fff;}.smallButton{min-height:26px;font-size:12px;}"
        ".primarySmallButton{border-color:#1473e6;background:#1473e6;color:#fff;}"
+       ".buttonRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
        "li>.note{grid-column:1 / 3;margin:0;}"
        "li>.actions{grid-column:3;grid-row:1 / span 2;}"
        ".actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;flex-wrap:wrap;}"
