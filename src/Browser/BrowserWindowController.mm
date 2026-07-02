@@ -5632,8 +5632,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".primaryButton{background:#1473e6;border-color:#1473e6;color:#fff;}.smallButton{min-height:26px;font-size:12px;}"
        ".primarySmallButton{border-color:#1473e6;background:#1473e6;color:#fff;}"
        ".buttonRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
-       ".gearMenu{position:relative;}.gearMenu summary{display:inline-flex;align-items:center;justify-content:center;width:34px;min-height:32px;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;font-size:17px;font-weight:700;cursor:pointer;list-style:none;}"
-       ".gearMenu summary::-webkit-details-marker{display:none;}.gearMenuPanel{position:absolute;z-index:10;right:0;top:38px;display:grid;gap:8px;min-width:190px;padding:10px;background:#fff;border:1px solid #d8dde3;border-radius:8px;box-shadow:0 10px 28px rgba(20,32,45,.18);}"
+       ".gearMenu{position:relative;}.gearMenu summary{display:inline-flex;align-items:center;justify-content:center;width:42px;min-height:34px;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;font-size:22px;font-weight:700;line-height:1;cursor:pointer;list-style:none;}"
+       ".gearMenu summary::-webkit-details-marker{display:none;}.gearMenuPanel{position:absolute;z-index:10;right:0;top:42px;display:grid;gap:8px;min-width:190px;padding:10px;background:#fff;border:1px solid #d8dde3;border-radius:8px;box-shadow:0 10px 28px rgba(20,32,45,.18);}"
        ".updatesForm{display:grid;gap:10px;}.updatesToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #d8dde3;border-radius:8px;padding:10px 12px;}"
        ".updatesToolbar label,.updateCheckbox{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:#243447;cursor:pointer;}.updateList input{cursor:pointer;}"
        "li>.note{grid-column:1 / 3;margin:0;}"
@@ -5664,7 +5664,17 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "body.dark .dangerButton{border-color:#7f3a43;color:#ffb6bf;background:#321d22;}"
        "body.dark input{background:#1e2227;border-color:#46515d;color:#f4f7fb;}"
        "body.dark .routeList code{background:#20252b;border-color:#343b44;color:#dbe5f0;}"
-       "</style></head><body class='%@'><main>%@</main></body></html>",
+       "</style></head><body class='%@'><main>%@</main>"
+       "<script>"
+       "document.addEventListener('click',(event)=>{"
+       "document.querySelectorAll('.gearMenu[open]').forEach((menu)=>{"
+       "if(!menu.contains(event.target)){menu.removeAttribute('open');}"
+       "});"
+       "});"
+       "document.addEventListener('keydown',(event)=>{"
+       "if(event.key==='Escape'){document.querySelectorAll('.gearMenu[open]').forEach((menu)=>menu.removeAttribute('open'));}"
+       "});"
+       "</script></body></html>",
       [self htmlEscapedString:title],
       bodyClass,
       body ?: @""];
