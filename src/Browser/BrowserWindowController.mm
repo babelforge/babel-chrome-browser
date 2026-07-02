@@ -341,6 +341,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   CefRefPtr<BabelBrowserClient> browserClient_;
   NSString* developerToolsDockMode_;
   CGFloat developerToolsSizeRatio_;
+  CGFloat expandedSidebarWidth_;
   BOOL sidebarCollapsed_;
   BOOL isTerminating_;
   BOOL didRestoreMainWindowState_;
@@ -390,6 +391,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     browserClient_ = new BabelBrowserClient(self);
     developerToolsDockMode_ = [self restoredDeveloperToolsDockMode];
     developerToolsSizeRatio_ = [self restoredDeveloperToolsSizeRatio];
+    expandedSidebarWidth_ = kSidebarInitialWidth;
     sidebarCollapsed_ = [NSUserDefaults.standardUserDefaults boolForKey:kSidebarCollapsedDefaultsKey];
     isTerminating_ = NO;
     didRestoreMainWindowState_ = NO;
@@ -459,8 +461,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   splitView_.vertical = YES;
   splitView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
-  CGFloat initialSidebarWidth = [self targetSidebarWidth];
-  sidebarView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, initialSidebarWidth, 820)];
+  sidebarView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, kSidebarInitialWidth, 820)];
   sidebarView_.wantsLayer = YES;
 
   sidebarTitle_ = [NSTextField labelWithString:@"BabelForge"];
@@ -473,6 +474,9 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
                                    24);
   sidebarTitle_.autoresizingMask = NSViewMinYMargin;
   [sidebarView_ addSubview:sidebarTitle_];
+  expandedSidebarWidth_ = [self restoredExpandedSidebarWidth];
+  CGFloat initialSidebarWidth = [self targetSidebarWidth];
+  sidebarView_.frame = NSMakeRect(0, 0, initialSidebarWidth, 820);
 
   sidebarCollapseButton_ = BabelButton(@"", self, @selector(toggleSidebarCollapsed:));
   sidebarCollapseButton_.bezelStyle = NSBezelStyleTexturedRounded;
@@ -7535,18 +7539,22 @@ doCommandBySelector:(SEL)commandSelector {
   if (sidebarCollapsed_) {
     return kSidebarCollapsedWidth;
   }
-  return MIN(kSidebarMaximumWidth, MAX([self minimumExpandedSidebarWidth], sidebarView_.frame.size.width));
+  return [self normalizedExpandedSidebarWidth:expandedSidebarWidth_];
 }
 
 - (CGFloat)restoredExpandedSidebarWidth {
   double storedWidth = [NSUserDefaults.standardUserDefaults doubleForKey:kSidebarWidthDefaultsKey];
   CGFloat width = storedWidth > 0.0 ? (CGFloat)storedWidth : kSidebarInitialWidth;
+  return [self normalizedExpandedSidebarWidth:width];
+}
+
+- (CGFloat)normalizedExpandedSidebarWidth:(CGFloat)width {
   return MIN(kSidebarMaximumWidth, MAX([self minimumExpandedSidebarWidth], width));
 }
 
 - (void)saveExpandedSidebarWidth:(CGFloat)width {
-  CGFloat normalizedWidth = MIN(kSidebarMaximumWidth, MAX([self minimumExpandedSidebarWidth], width));
-  [NSUserDefaults.standardUserDefaults setDouble:normalizedWidth forKey:kSidebarWidthDefaultsKey];
+  expandedSidebarWidth_ = [self normalizedExpandedSidebarWidth:width];
+  [NSUserDefaults.standardUserDefaults setDouble:expandedSidebarWidth_ forKey:kSidebarWidthDefaultsKey];
   [NSUserDefaults.standardUserDefaults synchronize];
 }
 
@@ -7560,7 +7568,7 @@ doCommandBySelector:(SEL)commandSelector {
   if (sidebarCollapsed_) {
     return kSidebarCollapsedWidth;
   }
-  return [self restoredExpandedSidebarWidth];
+  return [self normalizedExpandedSidebarWidth:expandedSidebarWidth_];
 }
 
 - (void)restoreMainWindowFrame {
@@ -7826,6 +7834,19 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (CGFloat)splitView:(NSSplitView*)splitView
+    constrainSplitPosition:(CGFloat)proposedPosition
+               ofSubviewAt:(NSInteger)dividerIndex {
+  if (sidebarCollapsed_) {
+    return kSidebarCollapsedWidth;
+  }
+  CGFloat normalizedPosition = [self normalizedExpandedSidebarWidth:proposedPosition];
+  if (!isBuildingInterface_) {
+    expandedSidebarWidth_ = normalizedPosition;
+  }
+  return normalizedPosition;
+}
+
+- (CGFloat)splitView:(NSSplitView*)splitView
     constrainMaxCoordinate:(CGFloat)proposedMaximumPosition
               ofSubviewAt:(NSInteger)dividerIndex {
   if (sidebarCollapsed_) {
@@ -7835,9 +7856,13 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (void)splitView:(NSSplitView*)splitView resizeSubviewsWithOldSize:(NSSize)oldSize {
+  CGFloat splitSidebarWidth = sidebarView_.frame.size.width;
+  if (!isBuildingInterface_ && !sidebarCollapsed_ && splitSidebarWidth > 0.0) {
+    expandedSidebarWidth_ = [self normalizedExpandedSidebarWidth:splitSidebarWidth];
+  }
   [self layoutInterfaceForCurrentSplitViewSize];
   if (!isBuildingInterface_ && !sidebarCollapsed_) {
-    [self saveExpandedSidebarWidth:sidebarView_.frame.size.width];
+    [self saveExpandedSidebarWidth:expandedSidebarWidth_];
   }
 }
 
