@@ -2,6 +2,7 @@
 
 #import "Browser/BrowserClient.h"
 #import "Browser/BrowserModels.h"
+#import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
 #import "Configuration/Configuration.h"
 #import "LocalServices/LocalServiceHost.h"
@@ -154,8 +155,9 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
 - (void)setSuggestionHighlighted:(BOOL)highlightedValue {
   suggestionHighlighted = highlightedValue;
-  self.layer.backgroundColor =
-      (highlightedValue ? [NSColor colorWithWhite:0.90 alpha:1.0] : NSColor.clearColor).CGColor;
+  self.layer.backgroundColor = (highlightedValue
+      ? [BabelTheme.sharedTheme cgColorForToken:@"omnibox.highlight.background" view:self]
+      : NSColor.clearColor.CGColor);
 }
 
 - (void)configureWithTitle:(NSString*)title subtitle:(NSString*)subtitle iconImage:(NSImage*)iconImageValue {
@@ -173,6 +175,27 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 - (void)resetCursorRects {
   [super resetCursorRects];
   [self addCursorRect:self.bounds cursor:NSCursor.pointingHandCursor];
+}
+
+@end
+
+@interface BabelThemeRootView : NSView
+
+@property(nonatomic, weak) id themeTarget;
+@property(nonatomic, assign) SEL themeAction;
+
+@end
+
+@implementation BabelThemeRootView
+
+@synthesize themeTarget;
+@synthesize themeAction;
+
+- (void)viewDidChangeEffectiveAppearance {
+  [super viewDidChangeEffectiveAppearance];
+  if (self.themeTarget && self.themeAction) {
+    [NSApp sendAction:self.themeAction to:self.themeTarget from:self];
+  }
 }
 
 @end
@@ -414,7 +437,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 }
 
 - (void)buildInterface {
-  rootView_ = [[NSView alloc] initWithFrame:self.window.contentView.bounds];
+  BabelThemeRootView* themeRootView = [[BabelThemeRootView alloc] initWithFrame:self.window.contentView.bounds];
+  themeRootView.themeTarget = self;
+  themeRootView.themeAction = @selector(applyThemeColors);
+  rootView_ = themeRootView;
   rootView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
   splitView_ = [[NSSplitView alloc] initWithFrame:rootView_.bounds];
@@ -425,7 +451,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
   sidebarView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, kSidebarInitialWidth, 820)];
   sidebarView_.wantsLayer = YES;
-  sidebarView_.layer.backgroundColor = [NSColor colorWithWhite:0.96 alpha:1.0].CGColor;
 
   sidebarTitle_ = [NSTextField labelWithString:@"BabelForge"];
   sidebarTitle_.font = [NSFont systemFontOfSize:15 weight:NSFontWeightSemibold];
@@ -453,12 +478,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   rightView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1040, 820)];
   rightView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   rightView_.wantsLayer = YES;
-  rightView_.layer.backgroundColor = NSColor.windowBackgroundColor.CGColor;
 
   tabsBarPanel_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 780, 1040, kTabBarHeight)];
   tabsBarPanel_.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
   tabsBarPanel_.wantsLayer = YES;
-  tabsBarPanel_.layer.backgroundColor = [NSColor colorWithWhite:0.90 alpha:1.0].CGColor;
   [rootView_ addSubview:tabsBarPanel_];
 
   tabsItemsPanel_ = [[NSView alloc] initWithFrame:NSMakeRect(8, 4, 990, 34)];
@@ -477,19 +500,15 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   addressBarPanel_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 736, 1040, kToolbarHeight)];
   addressBarPanel_.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
   addressBarPanel_.wantsLayer = YES;
-  addressBarPanel_.layer.backgroundColor = NSColor.windowBackgroundColor.CGColor;
   [rightView_ addSubview:addressBarPanel_];
 
   addressLabel_ = [NSTextField labelWithString:@"URL"];
   addressLabel_.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
-  addressLabel_.textColor = NSColor.secondaryLabelColor;
   addressLabel_.alignment = NSTextAlignmentRight;
   [addressBarPanel_ addSubview:addressLabel_];
 
   addressTextFieldContainer_ = [[NSView alloc] initWithFrame:NSMakeRect(50, 7, 978, 30)];
   addressTextFieldContainer_.wantsLayer = YES;
-  addressTextFieldContainer_.layer.backgroundColor = NSColor.textBackgroundColor.CGColor;
-  addressTextFieldContainer_.layer.borderColor = [NSColor colorWithWhite:0.72 alpha:1.0].CGColor;
   addressTextFieldContainer_.layer.borderWidth = 1.0;
   addressTextFieldContainer_.layer.cornerRadius = 6.0;
   addressTextFieldContainer_.autoresizingMask = NSViewWidthSizable;
@@ -524,10 +543,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   omniboxSuggestionsPanel_ = [[NSView alloc] initWithFrame:NSMakeRect(50, 520, 978, 0)];
   omniboxSuggestionsPanel_.hidden = YES;
   omniboxSuggestionsPanel_.wantsLayer = YES;
-  omniboxSuggestionsPanel_.layer.backgroundColor = NSColor.windowBackgroundColor.CGColor;
   omniboxSuggestionsPanel_.layer.cornerRadius = 8.0;
   omniboxSuggestionsPanel_.layer.borderWidth = 1.0;
-  omniboxSuggestionsPanel_.layer.borderColor = [NSColor colorWithWhite:0.78 alpha:1.0].CGColor;
   [rightView_ addSubview:omniboxSuggestionsPanel_];
 
   pagesPanel_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1040, 736)];
@@ -538,15 +555,12 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   linkStatusBarView_ = [[NSView alloc] initWithFrame:NSMakeRect(8, 8, 320, kLinkStatusBarHeight)];
   linkStatusBarView_.hidden = YES;
   linkStatusBarView_.wantsLayer = YES;
-  linkStatusBarView_.layer.backgroundColor = [NSColor colorWithWhite:0.84 alpha:0.96].CGColor;
-  linkStatusBarView_.layer.borderColor = [NSColor colorWithWhite:0.66 alpha:1.0].CGColor;
   linkStatusBarView_.layer.borderWidth = 1.0;
   linkStatusBarView_.layer.cornerRadius = 5.0;
   [rightView_ addSubview:linkStatusBarView_ positioned:NSWindowAbove relativeTo:pagesPanel_];
 
   linkStatusBarLabel_ = [NSTextField labelWithString:@""];
   linkStatusBarLabel_.font = [NSFont systemFontOfSize:12];
-  linkStatusBarLabel_.textColor = NSColor.blackColor;
   linkStatusBarLabel_.lineBreakMode = NSLineBreakByTruncatingMiddle;
   linkStatusBarLabel_.frame = NSMakeRect(8, 4, 304, 16);
   linkStatusBarLabel_.autoresizingMask = NSViewWidthSizable;
@@ -556,6 +570,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   [splitView_ addSubview:rightView_];
   [rootView_ addSubview:splitView_ positioned:NSWindowBelow relativeTo:tabsBarPanel_];
   [self.window setContentView:rootView_];
+  [self applyThemeColors];
   [splitView_ setPosition:[self targetSidebarWidth] ofDividerAtIndex:0];
   [self layoutInterfaceForCurrentSplitViewSize];
 }
@@ -1805,12 +1820,16 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   tab.developerToolsPanelView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   tab.developerToolsPanelView.hidden = YES;
   tab.developerToolsPanelView.wantsLayer = YES;
-  tab.developerToolsPanelView.layer.backgroundColor = NSColor.windowBackgroundColor.CGColor;
+  tab.developerToolsPanelView.layer.backgroundColor =
+      [BabelTheme.sharedTheme cgColorForToken:@"developerTools.panel.background"
+                                         view:tab.developerToolsPanelView];
 
   tab.developerToolsToolbarView = [[NSView alloc] initWithFrame:NSZeroRect];
   tab.developerToolsToolbarView.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
   tab.developerToolsToolbarView.wantsLayer = YES;
-  tab.developerToolsToolbarView.layer.backgroundColor = [NSColor colorWithWhite:0.92 alpha:1.0].CGColor;
+  tab.developerToolsToolbarView.layer.backgroundColor =
+      [BabelTheme.sharedTheme cgColorForToken:@"developerTools.toolbar.background"
+                                         view:tab.developerToolsToolbarView];
   [tab.developerToolsPanelView addSubview:tab.developerToolsToolbarView];
 
   tab.developerToolsResizeHandleView =
@@ -1818,13 +1837,17 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   tab.developerToolsResizeHandleView.resizeTarget = self;
   tab.developerToolsResizeHandleView.resizeAction = @selector(resizeDeveloperToolsFromHandle:);
   tab.developerToolsResizeHandleView.wantsLayer = YES;
-  tab.developerToolsResizeHandleView.layer.backgroundColor = [NSColor colorWithWhite:0.78 alpha:1.0].CGColor;
+  tab.developerToolsResizeHandleView.layer.backgroundColor =
+      [BabelTheme.sharedTheme cgColorForToken:@"developerTools.handle.background"
+                                         view:tab.developerToolsResizeHandleView];
   [tab.developerToolsPanelView addSubview:tab.developerToolsResizeHandleView];
 
   tab.developerToolsHostView = [[BabelBrowserHostView alloc] initWithFrame:NSZeroRect];
   tab.developerToolsHostView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   tab.developerToolsHostView.wantsLayer = YES;
-  tab.developerToolsHostView.layer.backgroundColor = NSColor.windowBackgroundColor.CGColor;
+  tab.developerToolsHostView.layer.backgroundColor =
+      [BabelTheme.sharedTheme cgColorForToken:@"developerTools.panel.background"
+                                         view:tab.developerToolsHostView];
   [tab.developerToolsPanelView addSubview:tab.developerToolsHostView];
   [self addDeveloperToolsControlsToTab:tab];
   tab.developerToolsVisible = NO;
@@ -6427,14 +6450,11 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (NSColor*)accentColorForGroup:(BabelBrowserGroup*)group {
-  NSArray<NSColor*>* palette = @[
-    [NSColor colorWithCalibratedRed:0.13 green:0.45 blue:0.93 alpha:1.0],
-    [NSColor colorWithCalibratedRed:0.13 green:0.62 blue:0.39 alpha:1.0],
-    [NSColor colorWithCalibratedRed:0.92 green:0.48 blue:0.16 alpha:1.0],
-    [NSColor colorWithCalibratedRed:0.55 green:0.32 blue:0.88 alpha:1.0],
-    [NSColor colorWithCalibratedRed:0.84 green:0.22 blue:0.42 alpha:1.0],
-    [NSColor colorWithCalibratedRed:0.13 green:0.60 blue:0.68 alpha:1.0]
-  ];
+  NSArray<NSColor*>* palette = [BabelTheme.sharedTheme colorListForToken:@"group.accentPalette"
+                                                                    view:rootView_ ?: self.window.contentView];
+  if (palette.count == 0) {
+    palette = @[NSColor.controlAccentColor];
+  }
 
   NSUInteger groupIndex = [groups_ indexOfObject:group];
   if (groupIndex == NSNotFound) {
@@ -6530,6 +6550,52 @@ doCommandBySelector:(SEL)commandSelector {
                                             forKey:kMainWindowFrameDefaultsKey];
   }
   [NSUserDefaults.standardUserDefaults synchronize];
+}
+
+- (void)applyThemeColors {
+  BabelTheme* theme = BabelTheme.sharedTheme;
+  sidebarView_.layer.backgroundColor = [theme cgColorForToken:@"sidebar.background" view:sidebarView_];
+  rightView_.layer.backgroundColor = [theme cgColorForToken:@"address.panel.background" view:rightView_];
+  tabsBarPanel_.layer.backgroundColor = [theme cgColorForToken:@"tabsBar.background" view:tabsBarPanel_];
+  addressBarPanel_.layer.backgroundColor =
+      [theme cgColorForToken:@"address.panel.background" view:addressBarPanel_];
+  addressLabel_.textColor = [theme colorForToken:@"address.title" view:addressLabel_];
+  addressTextFieldContainer_.layer.backgroundColor =
+      [theme cgColorForToken:@"address.container.background" view:addressTextFieldContainer_];
+  addressTextFieldContainer_.layer.borderColor =
+      [theme cgColorForToken:@"address.border" view:addressTextFieldContainer_];
+  urlTextField_.textColor = [theme colorForToken:@"address.text" view:urlTextField_];
+  omniboxSuggestionsPanel_.layer.backgroundColor =
+      [theme cgColorForToken:@"omnibox.panel.background" view:omniboxSuggestionsPanel_];
+  omniboxSuggestionsPanel_.layer.borderColor =
+      [theme cgColorForToken:@"omnibox.border" view:omniboxSuggestionsPanel_];
+  linkStatusBarView_.layer.backgroundColor =
+      [theme cgColorForToken:@"linkStatus.background" view:linkStatusBarView_];
+  linkStatusBarView_.layer.borderColor =
+      [theme cgColorForToken:@"linkStatus.border" view:linkStatusBarView_];
+  linkStatusBarLabel_.textColor = [theme colorForToken:@"linkStatus.text" view:linkStatusBarLabel_];
+
+  for (BabelBrowserGroup* group in groups_) {
+    [group.groupItemView setNeedsDisplay:YES];
+    for (BabelBrowserTab* tab in group.tabs) {
+      tab.developerToolsPanelView.layer.backgroundColor =
+          [theme cgColorForToken:@"developerTools.panel.background" view:tab.developerToolsPanelView];
+      tab.developerToolsToolbarView.layer.backgroundColor =
+          [theme cgColorForToken:@"developerTools.toolbar.background" view:tab.developerToolsToolbarView];
+      tab.developerToolsResizeHandleView.layer.backgroundColor =
+          [theme cgColorForToken:@"developerTools.handle.background" view:tab.developerToolsResizeHandleView];
+      tab.developerToolsHostView.layer.backgroundColor =
+          [theme cgColorForToken:@"developerTools.panel.background" view:tab.developerToolsHostView];
+      [tab.developerToolsResizeHandleView setNeedsDisplay:YES];
+      [tab.tabItemView setNeedsDisplay:YES];
+    }
+  }
+
+  for (NSView* suggestionRow in omniboxSuggestionsPanel_.subviews) {
+    if ([suggestionRow respondsToSelector:@selector(setSuggestionHighlighted:)]) {
+      [suggestionRow setNeedsDisplay:YES];
+    }
+  }
 }
 
 - (void)layoutInterfaceForCurrentSplitViewSize {

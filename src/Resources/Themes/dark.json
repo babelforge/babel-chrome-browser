@@ -1,0 +1,30 @@
+{
+  "address.border": "#4A4A4A",
+  "address.container.background": "#242424",
+  "address.panel.background": "system.windowBackground",
+  "address.text": "system.textColor",
+  "address.title": "system.secondaryLabel",
+  "developerTools.handle.background": "#3F3F3F",
+  "developerTools.panel.background": "system.windowBackground",
+  "developerTools.toolbar.background": "#242424",
+  "group.accentPalette": [
+    "#5EA1FF",
+    "#4CC985",
+    "#FF9B52",
+    "#B08AFF",
+    "#F06C93",
+    "#4EC1D3"
+  ],
+  "linkStatus.background": "#2E2E2EF5",
+  "linkStatus.border": "#555555",
+  "linkStatus.text": "system.label",
+  "omnibox.border": "#4A4A4A",
+  "omnibox.highlight.background": "#353535",
+  "omnibox.panel.background": "#202020",
+  "sidebar.background": "#1E1E1E",
+  "tab.inactive.background": "#303030",
+  "tab.inactive.border": "#4A4A4A",
+  "tab.selected.background": "system.windowBackground",
+  "tab.selected.border": "#626262",
+  "tabsBar.background": "#242424"
+}

@@ -14,6 +14,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserClient.mm
   Browser/BrowserModels.h
   Browser/BrowserModels.mm
+  Browser/BrowserTheme.h
+  Browser/BrowserTheme.mm
   Browser/BrowserViews.h
   Browser/BrowserViews.mm
   Browser/BrowserWindowController.h
@@ -42,6 +44,7 @@ set(BABEL_CHROME_RESOURCES
   Resources/devtools-dock-right.svg
   Resources/devtools-dock-top.svg
   Resources/tab-close.svg
+  Resources/toolbar-reload.svg
 )
 
 option(OPTION_USE_ARC "Build with ARC on macOS." ON)
@@ -74,9 +77,14 @@ add_custom_command(
           "${BABEL_CHROME_APP}/Contents/Resources/LocalServices"
   COMMAND ${CMAKE_COMMAND} -E remove_directory
           "${BABEL_CHROME_APP}/Contents/Resources/ExtensionHost"
+  COMMAND ${CMAKE_COMMAND} -E remove_directory
+          "${BABEL_CHROME_APP}/Contents/Resources/Themes"
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           "${CMAKE_CURRENT_SOURCE_DIR}/ExtensionHost"
           "${BABEL_CHROME_APP}/Contents/Resources/ExtensionHost"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Themes"
+          "${BABEL_CHROME_APP}/Contents/Resources/Themes"
   VERBATIM
 )
 

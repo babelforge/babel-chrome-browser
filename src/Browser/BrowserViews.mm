@@ -1,5 +1,7 @@
 #import "Browser/BrowserViews.h"
 
+#import "Browser/BrowserTheme.h"
+
 #include <cmath>
 
 static const CGFloat kBabelTabNormalWidth = 184.0;
@@ -225,6 +227,11 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
   return YES;
 }
 
+- (void)viewDidChangeEffectiveAppearance {
+  [super viewDidChangeEffectiveAppearance];
+  [self setNeedsDisplay:YES];
+}
+
 - (void)resetCursorRects {
   [super resetCursorRects];
   NSCursor* cursor = self.bounds.size.width > self.bounds.size.height
@@ -234,7 +241,7 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 }
 
 - (void)drawRect:(NSRect)dirtyRect {
-  [[NSColor colorWithWhite:0.78 alpha:1.0] setFill];
+  [[BabelTheme.sharedTheme colorForToken:@"developerTools.handle.background" view:self] setFill];
   NSRectFill(self.bounds);
 }
 
@@ -305,6 +312,11 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 
 - (BOOL)isFlipped {
   return YES;
+}
+
+- (void)viewDidChangeEffectiveAppearance {
+  [super viewDidChangeEffectiveAppearance];
+  [self setNeedsDisplay:YES];
 }
 
 - (void)setTitle:(NSString*)titleValue {
@@ -452,10 +464,14 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 }
 
 - (void)drawRect:(NSRect)dirtyRect {
-  NSColor* fillColor = self.isSelected ? NSColor.windowBackgroundColor
-                                       : [NSColor colorWithWhite:0.87 alpha:1.0];
-  NSColor* strokeColor = self.isSelected ? [NSColor colorWithWhite:0.64 alpha:1.0]
-                                         : [NSColor colorWithWhite:0.76 alpha:1.0];
+  NSColor* fillColor =
+      [BabelTheme.sharedTheme colorForToken:self.isSelected ? @"tab.selected.background"
+                                                           : @"tab.inactive.background"
+                                      view:self];
+  NSColor* strokeColor =
+      [BabelTheme.sharedTheme colorForToken:self.isSelected ? @"tab.selected.border"
+                                                           : @"tab.inactive.border"
+                                      view:self];
   NSColor* accent = self.accentColor ?: NSColor.controlAccentColor;
 
   NSRect tabRect = NSInsetRect(self.bounds, 0.5, 2.0);
@@ -526,6 +542,11 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 
 - (BOOL)isFlipped {
   return YES;
+}
+
+- (void)viewDidChangeEffectiveAppearance {
+  [super viewDidChangeEffectiveAppearance];
+  [self setNeedsDisplay:YES];
 }
 
 - (void)setTitle:(NSString*)titleValue {
