@@ -3091,30 +3091,50 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 }
 
 - (void)openSettingsPage {
+  [self openSettingsPageForBrowser:nullptr];
+}
+
+- (void)openSettingsPageForBrowser:(CefRefPtr<CefBrowser>)browser {
   [self openInternalPageWithURLString:kSettingsPageURLString
                                 title:@"Settings"
-                                 html:[self settingsPageHTML]];
+                                 html:[self settingsPageHTML]
+                              browser:browser];
 }
 
 - (void)openModuleSettingsPageForIdentifier:(NSString*)moduleIdentifier {
+  [self openModuleSettingsPageForIdentifier:moduleIdentifier browser:nullptr];
+}
+
+- (void)openModuleSettingsPageForIdentifier:(NSString*)moduleIdentifier browser:(CefRefPtr<CefBrowser>)browser {
   NSString* normalizedIdentifier = [self normalizedModuleSettingsIdentifier:moduleIdentifier];
   NSString* urlString = [NSString stringWithFormat:@"babelchrome://settings/%@",
                                                    [self pathEscapedString:normalizedIdentifier]];
   [self openInternalPageWithURLString:urlString
                                 title:@"Module Settings"
-                                 html:[self moduleSettingsPageHTMLForIdentifier:normalizedIdentifier]];
+                                 html:[self moduleSettingsPageHTMLForIdentifier:normalizedIdentifier]
+                              browser:browser];
 }
 
 - (void)openExtensionsPage {
+  [self openExtensionsPageForBrowser:nullptr];
+}
+
+- (void)openExtensionsPageForBrowser:(CefRefPtr<CefBrowser>)browser {
   [self openInternalPageWithURLString:kExtensionsPageURLString
                                 title:@"Extensions"
-                                 html:[self extensionsPageHTML]];
+                                 html:[self extensionsPageHTML]
+                              browser:browser];
 }
 
 - (void)openModulesPage {
+  [self openModulesPageForBrowser:nullptr];
+}
+
+- (void)openModulesPageForBrowser:(CefRefPtr<CefBrowser>)browser {
   [self openInternalPageWithURLString:kModulesPageURLString
                                 title:@"Modules"
-                                 html:[self modulesPageHTML]];
+                                 html:[self modulesPageHTML]
+                              browser:browser];
 }
 
 - (void)openPHPModuleWithIdentifier:(NSString*)moduleIdentifier route:(NSString*)route {
@@ -3265,7 +3285,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       if (markdownThemeDidChange) {
         [self reloadMarkdownViewerTabsUsingCurrentTheme];
       }
-      [self openModuleSettingsPageForIdentifier:moduleSettingsIdentifier];
+      [self openModuleSettingsPageForIdentifier:moduleSettingsIdentifier browser:browser];
       return YES;
     }
 
@@ -3318,7 +3338,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       [self layoutTabItemsSelectingLastTab:NO];
       [self layoutGroupItems];
     }
-    [self openSettingsPage];
+    [self openSettingsPageForBrowser:browser];
     return YES;
   }
 
@@ -3326,37 +3346,37 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     for (NSURLQueryItem* item in components.queryItems) {
       if ([item.name isEqualToString:@"search"] && item.value.length > 0) {
         [self openChromeWebStoreSearchForQuery:item.value];
-        [self openExtensionsPage];
+        [self openExtensionsPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"addUnpacked"] && item.value.length > 0) {
         [self addUnpackedExtensionFromPanel];
-        [self openExtensionsPage];
+        [self openExtensionsPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"remove"] && item.value.length > 0) {
         [self removeUnpackedExtensionAtPath:item.value];
-        [self openExtensionsPage];
+        [self openExtensionsPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"disableProfile"] && item.value.length > 0) {
         [self setProfileExtensionWithIdentifier:item.value enabled:NO];
-        [self openExtensionsPage];
+        [self openExtensionsPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"enableProfile"] && item.value.length > 0) {
         [self setProfileExtensionWithIdentifier:item.value enabled:YES];
-        [self openExtensionsPage];
+        [self openExtensionsPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"removeProfile"] && item.value.length > 0) {
         [self removeProfileExtensionWithIdentifier:item.value];
-        [self openExtensionsPage];
+        [self openExtensionsPageForBrowser:browser];
         return YES;
       }
 
@@ -3366,7 +3386,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       }
     }
 
-    [self openExtensionsPage];
+    [self openExtensionsPageForBrowser:browser];
     return YES;
   }
 
@@ -3386,33 +3406,35 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       [self installPHPModuleUpdatesWithIdentifiers:updateIdentifiers];
       [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
                                     title:@"Module Updates"
-                                     html:[self moduleUpdatesPageHTML]];
+                                     html:[self moduleUpdatesPageHTML]
+                                  browser:browser];
       return YES;
     }
 
     for (NSURLQueryItem* item in components.queryItems) {
       if ([item.name isEqualToString:@"installZip"] && item.value.length > 0) {
         [self installPHPModuleZipFromPanel];
-        [self openModulesPage];
+        [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"configureUpdateURL"] && item.value.length > 0) {
         [self configureModuleUpdateURLFromPrompt];
-        [self openModulesPage];
+        [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"configureUpdateLocal"] && item.value.length > 0) {
         [self configureModuleUpdateLocalDirectoryFromPanel];
-        [self openModulesPage];
+        [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"checkUpdates"] && item.value.length > 0) {
         [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
                                       title:@"Module Updates"
-                                       html:[self moduleUpdatesPageHTML]];
+                                       html:[self moduleUpdatesPageHTML]
+                                    browser:browser];
         return YES;
       }
 
@@ -3420,25 +3442,26 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
         [self installPHPModuleUpdateWithIdentifier:item.value];
         [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
                                       title:@"Module Updates"
-                                       html:[self moduleUpdatesPageHTML]];
+                                       html:[self moduleUpdatesPageHTML]
+                                    browser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"enable"] && item.value.length > 0) {
         [self setPHPModuleWithIdentifier:item.value enabled:YES];
-        [self openModulesPage];
+        [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"disable"] && item.value.length > 0) {
         [self setPHPModuleWithIdentifier:item.value enabled:NO];
-        [self openModulesPage];
+        [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"remove"] && item.value.length > 0) {
         [self removePHPModuleWithIdentifier:item.value];
-        [self openModulesPage];
+        [self openModulesPageForBrowser:browser];
         return YES;
       }
 
@@ -3447,7 +3470,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
                                                          [self queryEscapedString:item.value]];
         [self openInternalPageWithURLString:urlString
                                       title:@"Module"
-                                       html:[self moduleDetailsPageHTMLForIdentifier:item.value]];
+                                       html:[self moduleDetailsPageHTMLForIdentifier:item.value]
+                                    browser:browser];
         return YES;
       }
 
@@ -3464,7 +3488,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       }
     }
 
-    [self openModulesPage];
+    [self openModulesPageForBrowser:browser];
     return YES;
   }
 
@@ -3547,6 +3571,32 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 - (void)openInternalPageWithURLString:(NSString*)internalURLString
                                 title:(NSString*)title
                                  html:(NSString*)html {
+  [self openInternalPageWithURLString:internalURLString
+                                title:title
+                                 html:html
+                              browser:nullptr];
+}
+
+- (void)openInternalPageWithURLString:(NSString*)internalURLString
+                                title:(NSString*)title
+                                 html:(NSString*)html
+                              browser:(CefRefPtr<CefBrowser>)browser {
+  if (browser) {
+    BabelBrowserTab* targetTab = [self tabForBrowser:browser];
+    if (targetTab) {
+      NSString* dataURLString = [self dataURLStringForHTML:html];
+      targetTab.urlString = dataURLString;
+      targetTab.requestedURLString = internalURLString;
+      targetTab.title = title;
+      targetTab.tabItemView.title = [self compactTitleForString:title];
+      browser->GetMainFrame()->LoadURL(std::string(dataURLString.UTF8String));
+      [self selectTab:targetTab];
+      [self showMainWindow];
+      [self saveGroupsState];
+      return;
+    }
+  }
+
   BabelBrowserGroup* group = selectedGroup_ ?: [self ensureGroupNamed:kDefaultGroupName];
   [self selectGroup:group];
 
@@ -3628,8 +3678,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSString* appearanceTheme = [BabelTheme.sharedTheme appearanceMode];
   NSString* body = [NSString stringWithFormat:
       @"<h1>Settings</h1>"
-       "<section><a class='primaryButton' href='babelchrome://extensions'>Extensions</a>"
-       " <a class='primaryButton' href='babelchrome://modules'>PHP Modules</a></section>"
+       "<section><a class='primaryButton' data-can-open-menu='true' href='babelchrome://extensions'>Extensions</a>"
+       " <a class='primaryButton' data-can-open-menu='true' href='babelchrome://modules'>PHP Modules</a></section>"
        "<section>"
        "<h2>General</h2>"
        "<dl>"
@@ -3659,7 +3709,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
          "<dt>Markdown theme</dt><dd>%@</dd>"
          "</dl>"
          "</section>"
-         "<p><a class='smallButton' href='babelchrome://modules'>Back to modules</a></p>",
+         "<p><a class='smallButton' data-can-open-menu='true' href='babelchrome://modules'>Back to modules</a></p>",
         [self settingsMarkdownThemeHTML:[self markdownTheme] settingsURLString:@"babelchrome://settings/babelforge.markdown-viewer"]];
     return [self internalPageHTMLWithTitle:@"Markdown Viewer Settings" body:body];
   }
@@ -3670,7 +3720,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<section>"
        "<p class='empty'>This module does not expose native BabelChrome settings yet.</p>"
        "</section>"
-       "<p><a class='smallButton' href='babelchrome://modules'>Back to modules</a></p>",
+       "<p><a class='smallButton' data-can-open-menu='true' href='babelchrome://modules'>Back to modules</a></p>",
       [self htmlEscapedString:moduleName]];
   return [self internalPageHTMLWithTitle:[NSString stringWithFormat:@"%@ Settings", moduleName] body:body];
 }
@@ -3755,7 +3805,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<p><a class='primaryButton' href='babelchrome://extensions?addUnpacked=1'>Add unpacked extension folder</a></p>"
        "%@"
        "</section>"
-       "<div class='bottomButtonRow'><a class='smallButton' href='babelchrome://settings'>Back to Settings</a></div>",
+       "<div class='bottomButtonRow'><a class='smallButton' data-can-open-menu='true' href='babelchrome://settings'>Back to Settings</a></div>",
       profileListHTML,
       unpackedListHTML];
   return [self internalPageHTMLWithTitle:@"Extensions" body:body];
@@ -3801,11 +3851,11 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       NSString* removeActionHTML = @"";
       if (moduleIdentifier.length > 0) {
         detailsActionHTML = [NSString stringWithFormat:
-            @"<a class='smallButton' href='babelchrome://modules?module=%@'>Details</a>",
+            @"<a class='smallButton' data-can-open-menu='true' href='babelchrome://modules?module=%@'>Details</a>",
             [self queryEscapedString:moduleIdentifier]];
       }
       if (hasSettingsPage) {
-        settingsActionHTML = [NSString stringWithFormat:@"<a class='smallButton' href='%@'>Settings</a>",
+        settingsActionHTML = [NSString stringWithFormat:@"<a class='smallButton' data-can-open-menu='true' href='%@'>Settings</a>",
                                                         [self htmlEscapedString:settingsRoute]];
       }
       if (moduleIdentifier.length > 0) {
@@ -3852,7 +3902,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<h2>Installed Modules</h2>"
        "<div class='buttonRow'>"
        "<a class='primaryButton' href='babelchrome://modules?installZip=1'>Install or Update Module Zip</a>"
-       "<a class='primaryButton' href='babelchrome://modules?checkUpdates=1'>Check Updates</a>"
+       "<a class='primaryButton' data-can-open-menu='true' href='babelchrome://modules?checkUpdates=1'>Check Updates</a>"
        "<details class='gearMenu'>"
        "<summary title='Update source settings' aria-label='Update source settings'>%@</summary>"
        "<div class='gearMenuPanel'>"
@@ -3867,7 +3917,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "</dl>"
        "%@"
        "</section>"
-       "<div class='bottomButtonRow'><a class='smallButton' href='babelchrome://settings'>Back to Settings</a></div>",
+       "<div class='bottomButtonRow'><a class='smallButton' data-can-open-menu='true' href='babelchrome://settings'>Back to Settings</a></div>",
       [self resourceSVGIconHTMLNamed:@"settings-gear" fallback:@"&#9881;"],
       [self htmlEscapedString:updateURLLabel],
       [self htmlEscapedString:updateLocalLabel],
@@ -3901,7 +3951,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   if (!selectedModule) {
     NSString* body = [NSString stringWithFormat:
         @"<h1>Module</h1><p class='empty'>Module <code>%@</code> is not installed.</p>"
-         "<p><a class='smallButton' href='babelchrome://modules'>Back to modules</a></p>",
+         "<p><a class='smallButton' data-can-open-menu='true' href='babelchrome://modules'>Back to modules</a></p>",
         [self htmlEscapedString:moduleIdentifier ?: @""]];
     return [self internalPageHTMLWithTitle:@"Module" body:body];
   }
@@ -3977,7 +4027,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "</section>"
        "<section><h2>Routes</h2><ul>%@</ul></section>"
        "<section><h2>Capabilities</h2><div class='routeList'>%@</div></section>"
-       "<p><a class='smallButton' href='babelchrome://modules'>Back to modules</a></p>",
+       "<p><a class='smallButton' data-can-open-menu='true' href='babelchrome://modules'>Back to modules</a></p>",
       [self htmlEscapedString:moduleName],
       [self htmlEscapedString:moduleDescription],
       [self htmlEscapedString:moduleIdentifier ?: @""],
@@ -4106,7 +4156,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<h2>Available Updates</h2>"
        "%@"
        "</section>"
-       "<div class='bottomButtonRow'><a class='smallButton' href='babelchrome://modules'>Back to modules</a></div>"
+       "<div class='bottomButtonRow'><a class='smallButton' data-can-open-menu='true' href='babelchrome://modules'>Back to modules</a></div>"
        "%@",
       [self htmlEscapedString:sourceLabel],
       [self htmlEscapedString:updateURLString.length > 0 ? updateURLString : @"Not configured"],
@@ -5728,6 +5778,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "document.addEventListener('keydown',(event)=>{"
        "if(event.key==='Escape'){document.querySelectorAll('.gearMenu[open]').forEach((menu)=>menu.removeAttribute('open'));}"
        "});"
+       "document.addEventListener('contextmenu',(event)=>{"
+       "const control=event.target.closest('a.smallButton,a.primaryButton,a.option,button,summary');"
+       "if(control&&control.dataset.canOpenMenu!=='true'){event.preventDefault();}"
+       "},true);"
        "</script></body></html>",
       [self htmlEscapedString:title],
       bodyClass,

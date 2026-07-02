@@ -3,6 +3,7 @@
 #import "Browser/BrowserWindowController.h"
 #import "LocalServices/LocalServiceHost.h"
 
+#include <array>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -174,6 +175,50 @@ std::string ContextMenuLinkURL(CefRefPtr<CefContextMenuParams> params) {
   }
 
   return params->GetLinkUrl().ToString();
+}
+
+/**
+ * Reports whether a BabelChrome internal action URL should suppress the context menu.
+ *
+ * @param urlString The target link URL.
+ * @return True when the link is an action button rather than navigable content.
+ */
+bool ShouldSuppressContextMenuForBabelChromeActionURL(const std::string& urlString) {
+  if (urlString.rfind("babelchrome://", 0) != 0) {
+    return false;
+  }
+
+  const std::array<std::string, 20> actionMarkers = {{
+      "babelchrome://history?reopen=",
+      "babelchrome://settings?tabOpeningStrategy=",
+      "babelchrome://settings?addressSuggestions=",
+      "babelchrome://settings?markdownTheme=",
+      "babelchrome://settings?appearanceTheme=",
+      "babelchrome://extensions?search=",
+      "babelchrome://extensions?addUnpacked=",
+      "babelchrome://extensions?remove=",
+      "babelchrome://extensions?disableProfile=",
+      "babelchrome://extensions?enableProfile=",
+      "babelchrome://extensions?removeProfile=",
+      "babelchrome://extensions?restart=",
+      "babelchrome://modules?installZip=",
+      "babelchrome://modules?configureUpdateURL=",
+      "babelchrome://modules?configureUpdateLocal=",
+      "babelchrome://modules?installSelectedUpdates=",
+      "babelchrome://modules?installUpdates=",
+      "babelchrome://modules?installUpdate=",
+      "babelchrome://modules?enable=",
+      "babelchrome://modules?disable="
+  }};
+
+  for (const std::string& marker : actionMarkers) {
+    if (urlString.rfind(marker, 0) == 0) {
+      return true;
+    }
+  }
+
+  return urlString.rfind("babelchrome://modules?remove=", 0) == 0 ||
+         urlString.rfind("babelchrome://modules?open=", 0) == 0;
 }
 
 /**
@@ -458,6 +503,10 @@ void BabelBrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
     model->AddSeparator();
   }
   std::string linkURL = ContextMenuLinkURL(params);
+  if (ShouldSuppressContextMenuForBabelChromeActionURL(linkURL)) {
+    model->Clear();
+    return;
+  }
   if (!ContextMenuTargetURL(params, frame).empty()) {
     model->AddItem(kOpenInNewTabCommandId, "Ouvrir dans un nouvel onglet");
   }
