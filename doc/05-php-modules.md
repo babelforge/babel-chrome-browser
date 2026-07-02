@@ -155,6 +155,123 @@ When a viewer changes the selected application, it sends an opaque message envel
 
 The host validates the envelope without interpreting the event. Compatible viewer pages then synchronize their own controls.
 
+## Host Integration APIs
+
+BabelChrome exposes a small token-protected internal API from the ExtensionHost. These endpoints are intended for installed modules and native host integration, not for arbitrary remote pages.
+
+Installed module metadata:
+
+```text
+GET /internal/modules
+GET /internal/file-types
+GET /internal/module-hooks
+GET /internal/module-menu-items
+GET /internal/address-badge
+GET /internal/viewer-route
+```
+
+Viewer and local file integration:
+
+```text
+GET  /internal/open-with/list/<extension>
+POST /internal/open-with/set/<extension>
+POST /internal/open-with/open
+POST /internal/message-relay
+```
+
+Module lifecycle:
+
+```text
+GET /internal/module-lifecycle?hook=<hook-name>
+```
+
+`/internal/file-types` returns the enabled file extensions contributed by modules through `file-type-handler.fileTypes`. The native browser also injects those extensions into eligible HTTP and HTTPS requests with:
+
+```text
+X-BabelChrome-File-Types: md,markdown,mdown,mkd,mmd,mermaid,yaml,yml,json
+```
+
+This header is updated when modules are installed, removed, enabled, or disabled. Web applications can combine this header with the `BabelChrome/1.0` User-Agent marker to emit `babelchrome://viewer/...` links only when BabelChrome can handle the target file type.
+
+## Address Badges
+
+Modules can declare an address badge:
+
+```json
+{
+  "badge": {
+    "text": "JSON",
+    "textColor": "#ffffff",
+    "backgroundColor": "#8250df"
+  }
+}
+```
+
+The badge appears inside the address field for URLs handled by that module. When the module also declares a settings route, the badge context menu can expose `View Settings`.
+
+## Settings Routes
+
+Modules with settings should declare:
+
+```json
+{
+  "settings": {
+    "route": "babelchrome://settings/babelforge.markdown-viewer"
+  }
+}
+```
+
+The PHP Modules page shows a `Settings` button only for modules that expose this route. Settings pages should be module-owned pages; they should not be mixed into the native application settings page.
+
+## Hooks And Capabilities
+
+The current host recognizes lifecycle hooks:
+
+```text
+app.did-start
+app.will-quit
+```
+
+The host also exposes hook metadata for module-declared integration points such as:
+
+```text
+address.badge.resolve
+context-menu.build
+drop.local-paths
+file.open.resolve
+settings.section.register
+tab.title.resolve
+url.resolve
+```
+
+Capability strings in `supports` are used for generic targeting. For example, the current viewers declare:
+
+```json
+{
+  "supports": ["file-viewer"]
+}
+```
+
+The `/internal/message-relay` endpoint uses `supports` to broadcast an opaque message to compatible module pages. BabelChrome validates the envelope but does not interpret the inner message.
+
+## Local Drag And Drop
+
+Modules declaring `drop.local-paths` can receive native local paths dropped into drop-aware pages. The browser intercepts CEF file drops for eligible tabs and prevents the default file navigation. Tabs that do not opt into local drops keep normal browser behavior.
+
+Project Launcher uses this mechanism to import a dropped folder or a dropped `babelchrome.json` file.
+
+## Internal Page Context Menus
+
+Internal BabelChrome pages use an explicit opt-in convention for button-like links:
+
+```html
+<a class="smallButton" data-can-open-menu="true" href="babelchrome://modules">Back to modules</a>
+```
+
+Button-like controls do not expose the custom link context menu by default. Navigation buttons opt in with `data-can-open-menu="true"`. State-changing actions such as `Remove`, `Disable`, `Enable`, `Install`, `Restart`, and update-source actions should not opt in.
+
+This convention is currently implemented by BabelChrome's own generated internal pages. It is not automatically injected into arbitrary module pages. Modules can copy the convention or use a future shared UI helper, but the host-side safety net only suppresses known internal action URLs and BabelChrome-generated controls.
+
 ## Shipping
 
 From the browser workspace, low-level packaging is available for a single module directory:
