@@ -13,6 +13,12 @@ cd "${PROJECT_DIR}"
   composer install
 )
 
+if [ -f build-xcode/CMakeCache.txt ] && \
+  ! grep -F "CMAKE_HOME_DIRECTORY:INTERNAL=${PROJECT_DIR}" build-xcode/CMakeCache.txt >/dev/null 2>&1; then
+  echo "Removing stale build-xcode cache generated from another source directory."
+  rm -rf build-xcode
+fi
+
 cmake \
   -G Xcode \
   -DPROJECT_ARCH=x86_64 \
