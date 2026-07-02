@@ -106,6 +106,31 @@ final class ModuleRegistryTest extends TestCase
     }
 
     /**
+     * Ensures backup directories are ignored during module discovery.
+     */
+    public function testBackupModuleDirectoriesAreIgnored(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.example-module.backup.20260702120000';
+        self::assertTrue(mkdir($moduleDirectory.'/vendor', 0o775, true));
+        file_put_contents($moduleDirectory.'/vendor/autoload.php', '<?php return true;');
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.example-module',
+            'name' => 'Example Module',
+            'version' => '1.2.3',
+            'requirements' => [
+                'php' => '>=8.4',
+            ],
+            'description' => 'A backup module.',
+            'entrypoint' => 'Vendor\\Example\\Module',
+        ], JSON_THROW_ON_ERROR));
+
+        $registry = new ModuleRegistry($this->workspaceDirectory.'/Catalog', $this->workspaceDirectory.'/Modules');
+
+        self::assertSame([], $registry->all());
+        self::assertNull($registry->find('vendor.example-module'));
+    }
+
+    /**
      * Ensures legacy viewer manifests advertise their fileTypes as handler extensions.
      */
     public function testLegacyManifestFileTypesAreAdvertisedAsHandlerExtensions(): void

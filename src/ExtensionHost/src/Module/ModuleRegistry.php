@@ -129,6 +129,11 @@ final class ModuleRegistry
             return [];
         }
 
+        $files = array_values(array_filter(
+            $files,
+            static fn (string $manifestFile): bool => !str_contains(basename(dirname($manifestFile)), '.backup'),
+        ));
+
         sort($files);
 
         return $files;
