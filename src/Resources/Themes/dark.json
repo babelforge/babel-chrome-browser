@@ -1,9 +1,9 @@
 {
   "address.border": "#4A4A4A",
   "address.container.background": "#242424",
-  "address.panel.background": "system.windowBackground",
+  "address.panel.background": "#1B1D20",
   "address.text": "system.textColor",
-  "address.title": "system.secondaryLabel",
+  "address.title": "#9BA3AD",
   "developerTools.handle.background": "#3F3F3F",
   "developerTools.panel.background": "system.windowBackground",
   "developerTools.toolbar.background": "#242424",
