@@ -207,37 +207,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
 @end
 
-@interface BabelSidebarSplitView : NSSplitView
-
-@property(nonatomic, copy) void (^sidebarDragHandler)(CGFloat position);
-
-@end
-
-@implementation BabelSidebarSplitView
-
-@synthesize sidebarDragHandler;
-
-- (void)mouseDragged:(NSEvent*)event {
-  [super mouseDragged:event];
-  [self notifySidebarDividerDragWithEvent:event];
-}
-
-- (void)mouseUp:(NSEvent*)event {
-  [super mouseUp:event];
-  [self notifySidebarDividerDragWithEvent:event];
-}
-
-- (void)notifySidebarDividerDragWithEvent:(NSEvent*)event {
-  if (!self.sidebarDragHandler) {
-    return;
-  }
-
-  NSPoint localPoint = [self convertPoint:event.locationInWindow fromView:nil];
-  self.sidebarDragHandler(localPoint.x);
-}
-
-@end
-
 @interface BabelBadgeLabel : NSView
 
 @property(nonatomic, copy) NSString* settingsRoute;
@@ -333,7 +302,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
 @implementation BabelBrowserWindowController {
   NSView* rootView_;
-  NSSplitView* splitView_;
+  NSView* splitView_;
   NSView* sidebarView_;
   BabelDeveloperToolsResizeHandleView* sidebarResizeHandleView_;
   NSTextField* sidebarTitle_;
@@ -499,7 +468,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   didApplyInitialSidebarRestore_ = YES;
   BOOL previousBuildingState = isBuildingInterface_;
   isBuildingInterface_ = YES;
-  [splitView_ setPosition:[self targetSidebarWidth] ofDividerAtIndex:0];
   [self layoutInterfaceForCurrentSplitViewSize];
   isBuildingInterface_ = previousBuildingState;
 }
@@ -551,16 +519,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   rootView_ = themeRootView;
   rootView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
-  BabelSidebarSplitView* sidebarSplitView =
-      [[BabelSidebarSplitView alloc] initWithFrame:rootView_.bounds];
-  __weak BabelBrowserWindowController* weakSelf = self;
-  sidebarSplitView.sidebarDragHandler = ^(CGFloat position) {
-    [weakSelf sidebarSplitViewDidDragDividerToPosition:position];
-  };
-  splitView_ = sidebarSplitView;
-  splitView_.delegate = self;
-  splitView_.dividerStyle = NSSplitViewDividerStyleThin;
-  splitView_.vertical = YES;
+  splitView_ = [[NSView alloc] initWithFrame:rootView_.bounds];
   splitView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
   sidebarView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, kSidebarInitialWidth, 820)];
@@ -601,7 +560,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       [[BabelDeveloperToolsResizeHandleView alloc] initWithFrame:NSMakeRect(initialSidebarWidth, 0, 7, 820)];
   sidebarResizeHandleView_.resizeTarget = self;
   sidebarResizeHandleView_.resizeAction = @selector(resizeSidebarFromHandle:);
-  [rootView_ addSubview:sidebarResizeHandleView_];
 
   rightView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1040, 820)];
   rightView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -697,9 +655,9 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   [splitView_ addSubview:sidebarView_];
   [splitView_ addSubview:rightView_];
   [rootView_ addSubview:splitView_ positioned:NSWindowBelow relativeTo:tabsBarPanel_];
+  [rootView_ addSubview:sidebarResizeHandleView_ positioned:NSWindowAbove relativeTo:splitView_];
   [self.window setContentView:rootView_];
   [self applyThemeColors];
-  [splitView_ setPosition:initialSidebarWidth ofDividerAtIndex:0];
   [self layoutInterfaceForCurrentSplitViewSize];
   isBuildingInterface_ = NO;
 }
@@ -6071,11 +6029,9 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   if (!sidebarCollapsed_) {
     [self saveExpandedSidebarWidth:sidebarView_.frame.size.width];
   }
-  CGFloat targetWidth = sidebarCollapsed_ ? [self restoredExpandedSidebarWidth] : kSidebarCollapsedWidth;
   sidebarCollapsed_ = !sidebarCollapsed_;
   [NSUserDefaults.standardUserDefaults setBool:sidebarCollapsed_
                                         forKey:kSidebarCollapsedDefaultsKey];
-  [splitView_ setPosition:targetWidth ofDividerAtIndex:0];
   [self layoutInterfaceForCurrentSplitViewSize];
   [splitView_ setNeedsDisplay:YES];
   [sidebarView_ setNeedsDisplay:YES];
@@ -7819,11 +7775,10 @@ doCommandBySelector:(SEL)commandSelector {
                                    28);
   splitView_.frame = NSMakeRect(0, 0, rootWidth, MAX(0.0, rootHeight - kTabBarHeight));
 
-  CGFloat dividerThickness = splitView_.dividerThickness;
   CGFloat sidebarWidth = [self sidebarWidth];
   CGFloat totalWidth = splitView_.bounds.size.width;
   CGFloat totalHeight = splitView_.bounds.size.height;
-  CGFloat rightWidth = MAX(0.0, totalWidth - sidebarWidth - dividerThickness);
+  CGFloat rightWidth = MAX(0.0, totalWidth - sidebarWidth);
 
   sidebarView_.frame = NSMakeRect(0, 0, sidebarWidth, totalHeight);
   sidebarResizeHandleView_.hidden = sidebarCollapsed_;
@@ -7871,7 +7826,7 @@ doCommandBySelector:(SEL)commandSelector {
   [sidebarView_ addSubview:sidebarCollapseButton_ positioned:NSWindowAbove relativeTo:nil];
   [sidebarView_ addSubview:newGroupButton_ positioned:NSWindowAbove relativeTo:nil];
   [self layoutGroupItems];
-  rightView_.frame = NSMakeRect(sidebarWidth + dividerThickness, 0, rightWidth, totalHeight);
+  rightView_.frame = NSMakeRect(sidebarWidth, 0, rightWidth, totalHeight);
   addressBarPanel_.frame = NSMakeRect(0,
                                       totalHeight - kToolbarHeight,
                                       rightWidth,
@@ -7949,50 +7904,6 @@ doCommandBySelector:(SEL)commandSelector {
       CefQuitMessageLoop();
     }
   });
-}
-
-- (CGFloat)splitView:(NSSplitView*)splitView
-    constrainMinCoordinate:(CGFloat)proposedMinimumPosition
-              ofSubviewAt:(NSInteger)dividerIndex {
-  if (sidebarCollapsed_) {
-    return kSidebarCollapsedWidth;
-  }
-  return [self minimumExpandedSidebarWidth];
-}
-
-- (CGFloat)splitView:(NSSplitView*)splitView
-    constrainSplitPosition:(CGFloat)proposedPosition
-               ofSubviewAt:(NSInteger)dividerIndex {
-  if (sidebarCollapsed_) {
-    return kSidebarCollapsedWidth;
-  }
-  CGFloat normalizedPosition = [self normalizedExpandedSidebarWidth:proposedPosition];
-  if (!isBuildingInterface_) {
-    expandedSidebarWidth_ = normalizedPosition;
-  }
-  return normalizedPosition;
-}
-
-- (CGFloat)splitView:(NSSplitView*)splitView
-    constrainMaxCoordinate:(CGFloat)proposedMaximumPosition
-              ofSubviewAt:(NSInteger)dividerIndex {
-  if (sidebarCollapsed_) {
-    return kSidebarCollapsedWidth;
-  }
-  return kSidebarMaximumWidth;
-}
-
-- (void)sidebarSplitViewDidDragDividerToPosition:(CGFloat)position {
-  if (isBuildingInterface_ || sidebarCollapsed_) {
-    return;
-  }
-
-  [self saveExpandedSidebarWidth:position];
-  [self layoutInterfaceForCurrentSplitViewSize];
-}
-
-- (void)splitView:(NSSplitView*)splitView resizeSubviewsWithOldSize:(NSSize)oldSize {
-  [self layoutInterfaceForCurrentSplitViewSize];
 }
 
 - (void)windowDidResize:(NSNotification*)notification {

@@ -8,9 +8,7 @@
 /**
  * Owns the main BabelChrome window, split view, tabs, and embedded CEF browsers.
  */
-@interface BabelBrowserWindowController : NSWindowController <NSWindowDelegate,
-                                                              NSSplitViewDelegate,
-                                                              NSTextFieldDelegate>
+@interface BabelBrowserWindowController : NSWindowController <NSWindowDelegate, NSTextFieldDelegate>
 
 /**
  * Creates the main browser window controller.
