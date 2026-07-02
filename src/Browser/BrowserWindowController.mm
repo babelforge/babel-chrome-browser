@@ -3931,7 +3931,9 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       continue;
     }
 
-    NSString* actionHTML = enabled
+    BOOL routeCanOpenDirectly = [routeScheme isEqualToString:@"babelchrome"] &&
+        ![routeHost isEqualToString:@"server"];
+    NSString* actionHTML = enabled && routeCanOpenDirectly
         ? [NSString stringWithFormat:@"<a class='smallButton' href='babelchrome://modules?open=%@&route=%@'>Open route</a>",
                                      [self queryEscapedString:moduleIdentifier ?: @""],
                                      [self queryEscapedString:routeHandler]]
@@ -3951,7 +3953,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     }
   }
   for (NSString* hook in hooks) {
-    if ([hook isKindOfClass:NSString.class] && hook.length > 0) {
+    if ([hook isKindOfClass:NSString.class] && hook.length > 0 &&
+        ![self isInternalModuleCapability:hook]) {
       [tagsHTML appendFormat:@"<code>%@</code>", [self htmlEscapedString:hook]];
     }
   }
@@ -5552,6 +5555,21 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           "<path d='M9 3h6l1 2h4v2H4V5h4l1-2z'/>"
           "<path d='M6 9h12l-1 12H7L6 9zm4 2v8h2v-8h-2zm4 0v8h2v-8h-2z'/>"
           "</svg>";
+}
+
+- (BOOL)isInternalModuleCapability:(NSString*)capability {
+  static NSSet<NSString*>* internalCapabilities = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    internalCapabilities = [NSSet setWithArray:@[
+      @"app.did-start",
+      @"app.will-quit",
+      @"drop.local-paths",
+      @"settings.section.register"
+    ]];
+  });
+
+  return [internalCapabilities containsObject:capability ?: @""];
 }
 
 - (BOOL)internalPagesUseDarkTheme {
