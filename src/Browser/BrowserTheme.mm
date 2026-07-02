@@ -1,5 +1,10 @@
 #import "Browser/BrowserTheme.h"
 
+NSString* const BabelThemeAppearanceDefaultsKey = @"AppearanceTheme";
+NSString* const BabelThemeAppearanceSystem = @"system";
+NSString* const BabelThemeAppearanceLight = @"light";
+NSString* const BabelThemeAppearanceDark = @"dark";
+
 @interface BabelTheme ()
 
 @property(nonatomic, strong) NSDictionary<NSString*, id>* lightTokens;
@@ -60,6 +65,34 @@
   return colors;
 }
 
+- (NSString*)appearanceMode {
+  NSString* mode = [NSUserDefaults.standardUserDefaults stringForKey:BabelThemeAppearanceDefaultsKey];
+  if ([self isSupportedAppearanceMode:mode]) {
+    return mode;
+  }
+
+  return BabelThemeAppearanceSystem;
+}
+
+- (BOOL)isSupportedAppearanceMode:(NSString*)mode {
+  return [mode isEqualToString:BabelThemeAppearanceSystem] ||
+         [mode isEqualToString:BabelThemeAppearanceLight] ||
+         [mode isEqualToString:BabelThemeAppearanceDark];
+}
+
+- (NSAppearance*)forcedAppearance {
+  NSString* mode = [self appearanceMode];
+  if ([mode isEqualToString:BabelThemeAppearanceLight]) {
+    return [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+  }
+
+  if ([mode isEqualToString:BabelThemeAppearanceDark]) {
+    return [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+  }
+
+  return nil;
+}
+
 - (id)tokenValueForToken:(NSString*)token view:(NSView*)view {
   NSDictionary<NSString*, id>* tokens = [self viewUsesDarkAppearance:view] ? self.darkTokens : self.lightTokens;
 
@@ -88,6 +121,15 @@
 }
 
 - (BOOL)viewUsesDarkAppearance:(NSView*)view {
+  NSString* mode = [self appearanceMode];
+  if ([mode isEqualToString:BabelThemeAppearanceLight]) {
+    return NO;
+  }
+
+  if ([mode isEqualToString:BabelThemeAppearanceDark]) {
+    return YES;
+  }
+
   NSAppearance* appearance = view.effectiveAppearance ?: NSApp.effectiveAppearance;
   NSAppearanceName name = [appearance bestMatchFromAppearancesWithNames:@[
     NSAppearanceNameAqua,

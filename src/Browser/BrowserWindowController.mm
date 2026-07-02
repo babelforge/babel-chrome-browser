@@ -3234,6 +3234,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSString* commandName = components.host ?: @"";
   if ([commandName isEqualToString:@"settings"]) {
     BOOL markdownThemeDidChange = NO;
+    BOOL appearanceThemeDidChange = NO;
     for (NSURLQueryItem* item in components.queryItems) {
       if ([item.name isEqualToString:@"tabOpeningStrategy"] &&
           [self isSupportedTabOpeningStrategy:item.value]) {
@@ -3254,6 +3255,16 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           markdownThemeDidChange = ![previousTheme isEqualToString:item.value];
           break;
         }
+
+        if ([item.name isEqualToString:@"appearanceTheme"] &&
+            [BabelTheme.sharedTheme isSupportedAppearanceMode:item.value]) {
+          NSString* previousTheme = [BabelTheme.sharedTheme appearanceMode];
+          [NSUserDefaults.standardUserDefaults setObject:item.value
+                                                  forKey:BabelThemeAppearanceDefaultsKey];
+          [NSUserDefaults.standardUserDefaults synchronize];
+          appearanceThemeDidChange = ![previousTheme isEqualToString:item.value];
+          break;
+        }
         continue;
       }
 
@@ -3265,6 +3276,11 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
     if (markdownThemeDidChange) {
       [self reloadMarkdownViewerTabsUsingCurrentTheme];
+    }
+    if (appearanceThemeDidChange) {
+      [self applyThemeColors];
+      [self layoutTabItemsSelectingLastTab:NO];
+      [self layoutGroupItems];
     }
     [self openSettingsPage];
     return YES;
@@ -3528,6 +3544,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSString* strategy = [self tabOpeningStrategy];
   NSString* addressSuggestionsMode = [self addressSuggestionsMode];
   NSString* markdownTheme = [self markdownTheme];
+  NSString* appearanceTheme = [BabelTheme.sharedTheme appearanceMode];
   NSString* body = [NSString stringWithFormat:
       @"<h1>Settings</h1>"
        "<section><a class='primaryButton' href='babelchrome://extensions'>Extensions</a>"
@@ -3536,6 +3553,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<h2>General</h2>"
        "<dl>"
        "<dt>Default page</dt><dd>%@</dd>"
+       "<dt>Application theme</dt><dd>%@</dd>"
        "<dt>Tab opening strategy</dt><dd>%@</dd>"
        "<dt>Address suggestions</dt><dd>%@</dd>"
        "<dt>Markdown theme</dt><dd>%@</dd>"
@@ -3544,6 +3562,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "</dl>"
        "</section>",
       [self htmlEscapedString:BabelChromeConfiguration.defaultURLString],
+      [self settingsAppearanceThemeHTML:appearanceTheme],
       [self settingsTabOpeningStrategyHTML:strategy],
       [self settingsAddressSuggestionsHTML:addressSuggestionsMode],
       [self settingsMarkdownThemeHTML:markdownTheme]];
@@ -4035,6 +4054,37 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       kAddressSuggestionsModeLocal,
       googleClass,
       kAddressSuggestionsModeGoogle];
+}
+
+- (NSString*)settingsAppearanceThemeHTML:(NSString*)selectedTheme {
+  NSDictionary<NSString*, NSString*>* labels = @{
+    BabelThemeAppearanceSystem : @"System",
+    BabelThemeAppearanceLight : @"Light",
+    BabelThemeAppearanceDark : @"Dark",
+  };
+  NSDictionary<NSString*, NSString*>* descriptions = @{
+    BabelThemeAppearanceSystem : @"Follow the current macOS appearance.",
+    BabelThemeAppearanceLight : @"Always use BabelChrome light colors.",
+    BabelThemeAppearanceDark : @"Always use BabelChrome dark colors.",
+  };
+  NSArray<NSString*>* themes = @[
+    BabelThemeAppearanceSystem,
+    BabelThemeAppearanceLight,
+    BabelThemeAppearanceDark
+  ];
+  NSMutableString* html = [NSMutableString stringWithString:@"<div class='options'>"];
+  for (NSString* theme in themes) {
+    NSString* optionClass = [selectedTheme isEqualToString:theme] ? @"option selected" : @"option";
+    [html appendFormat:
+        @"<a class='%@' href='babelchrome://settings?appearanceTheme=%@'>"
+         "<strong>%@</strong><span>%@</span></a>",
+        optionClass,
+        theme,
+        [self htmlEscapedString:labels[theme]],
+        [self htmlEscapedString:descriptions[theme]]];
+  }
+  [html appendString:@"</div>"];
+  return html;
 }
 
 - (NSString*)settingsMarkdownThemeHTML:(NSString*)selectedTheme {
@@ -4694,6 +4744,23 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           "</svg>";
 }
 
+- (BOOL)internalPagesUseDarkTheme {
+  NSString* mode = [BabelTheme.sharedTheme appearanceMode];
+  if ([mode isEqualToString:BabelThemeAppearanceDark]) {
+    return YES;
+  }
+
+  if ([mode isEqualToString:BabelThemeAppearanceLight]) {
+    return NO;
+  }
+
+  NSAppearanceName name = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:@[
+    NSAppearanceNameAqua,
+    NSAppearanceNameDarkAqua
+  ]];
+  return [name isEqualToString:NSAppearanceNameDarkAqua];
+}
+
 - (void)restartApplication {
   NSString* bundlePath = NSBundle.mainBundle.bundlePath;
   if (bundlePath.length == 0) {
@@ -4720,6 +4787,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 }
 
 - (NSString*)internalPageHTMLWithTitle:(NSString*)title body:(NSString*)body {
+  NSString* bodyClass = [self internalPagesUseDarkTheme] ? @"dark" : @"light";
   return [NSString stringWithFormat:
       @"<!doctype html><html><head><meta charset='utf-8'>"
        "<title>%@</title>"
@@ -4751,8 +4819,23 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".searchForm{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:10px;max-width:620px;}"
        "input{font:inherit;border:1px solid #c7d0db;border-radius:7px;padding:8px 10px;background:#fff;}"
        ".note,.empty{color:#526171;line-height:1.45;}.empty{background:#fff;border:1px solid #d8dde3;border-radius:8px;padding:14px;}"
-       "</style></head><body><main>%@</main></body></html>",
+       "body.dark{color:#e7edf5;background:#15171a;}"
+       "body.dark h2{color:#c8d3df;}"
+       "body.dark ul,body.dark dl,body.dark .empty{background:#1e2227;border-color:#343b44;}"
+       "body.dark li{border-top-color:#2d333b;}"
+       "body.dark small,body.dark dd,body.dark .note,body.dark .empty{color:#aeb8c4;}"
+       "body.dark em,body.dark .routeList span{color:#8f9ba8;}"
+       "body.dark .option{color:#dbe5f0;border-color:#343b44;background:#20252b;}"
+       "body.dark .option strong{color:#f4f7fb;}body.dark .option span{color:#aeb8c4;}"
+       "body.dark .option.selected{border-color:#5ea1ff;background:#193149;box-shadow:inset 0 0 0 1px #5ea1ff;}"
+       "body.dark .primaryButton,body.dark .smallButton,body.dark button{border-color:#46515d;background:#242a31;color:#f4f7fb;}"
+       "body.dark .primaryButton,body.dark .primarySmallButton{background:#2f7de1;border-color:#2f7de1;color:#fff;}"
+       "body.dark .dangerButton{border-color:#7f3a43;color:#ffb6bf;background:#321d22;}"
+       "body.dark input{background:#1e2227;border-color:#46515d;color:#f4f7fb;}"
+       "body.dark .routeList code{background:#20252b;border-color:#343b44;color:#dbe5f0;}"
+       "</style></head><body class='%@'><main>%@</main></body></html>",
       [self htmlEscapedString:title],
+      bodyClass,
       body ?: @""];
 }
 
@@ -6554,6 +6637,7 @@ doCommandBySelector:(SEL)commandSelector {
 
 - (void)applyThemeColors {
   BabelTheme* theme = BabelTheme.sharedTheme;
+  rootView_.appearance = [theme forcedAppearance];
   sidebarView_.layer.backgroundColor = [theme cgColorForToken:@"sidebar.background" view:sidebarView_];
   rightView_.layer.backgroundColor = [theme cgColorForToken:@"address.panel.background" view:rightView_];
   tabsBarPanel_.layer.backgroundColor = [theme cgColorForToken:@"tabsBar.background" view:tabsBarPanel_];
