@@ -177,6 +177,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
 @interface BabelBadgeLabel : NSView
 
+@property(nonatomic, copy) NSString* settingsRoute;
+@property(nonatomic, weak) id settingsTarget;
+@property(nonatomic, assign) SEL settingsAction;
+
 - (void)configureWithText:(NSString*)text
                 textColor:(NSColor*)textColor
           backgroundColor:(NSColor*)backgroundColor;
@@ -191,6 +195,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSColor* badgeBackgroundColor_;
   NSFont* badgeFont_;
 }
+
+@synthesize settingsRoute;
+@synthesize settingsTarget;
+@synthesize settingsAction;
 
 - (instancetype)init {
   self = [super initWithFrame:NSZeroRect];
@@ -239,6 +247,23 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
                                self.bounds.size.width,
                                textSize.height);
   [badgeText_ drawInRect:textRect withAttributes:attributes];
+}
+
+- (void)resetCursorRects {
+  [super resetCursorRects];
+  [self addCursorRect:self.bounds cursor:NSCursor.pointingHandCursor];
+}
+
+- (void)rightMouseDown:(NSEvent*)event {
+  NSMenu* menu = [[NSMenu alloc] initWithTitle:@""];
+  NSMenuItem* settingsItem = [[NSMenuItem alloc] initWithTitle:@"View Settings"
+                                                        action:self.settingsAction
+                                                 keyEquivalent:@""];
+  settingsItem.target = self.settingsTarget;
+  settingsItem.representedObject = self.settingsRoute ?: @"";
+  settingsItem.enabled = self.settingsRoute.length > 0;
+  [menu addItem:settingsItem];
+  [NSMenu popUpContextMenu:menu withEvent:event forView:self];
 }
 
 @end
@@ -468,6 +493,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
   viewerBadgeLabel_ = [[BabelBadgeLabel alloc] init];
   viewerBadgeLabel_.hidden = YES;
+  viewerBadgeLabel_.settingsTarget = self;
+  viewerBadgeLabel_.settingsAction = @selector(openAddressBadgeSettingsFromMenu:);
   [addressTextFieldContainer_ addSubview:viewerBadgeLabel_];
 
   urlTextField_ = [[NSTextField alloc] initWithFrame:NSMakeRect(8, 4, 962, 22)];
@@ -4646,10 +4673,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "dl{display:grid;grid-template-columns:180px 1fr;gap:12px 18px;background:white;border:1px solid #d8dde3;border-radius:8px;padding:18px;}"
        "dt{font-weight:700;}dd{margin:0;color:#526171;}"
        ".options{display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:10px;}"
-       ".option{display:block;text-decoration:none;color:#243447;border:1px solid #d8dde3;border-radius:8px;padding:12px;background:#f9fafb;}"
+       ".option{display:block;text-decoration:none;color:#243447;border:1px solid #d8dde3;border-radius:8px;padding:12px;background:#f9fafb;cursor:pointer;}"
        ".option strong{display:block;margin-bottom:5px;color:#172533;}.option span{display:block;color:#526171;line-height:1.35;}"
        ".option.selected{border-color:#1473e6;background:#edf5ff;box-shadow:inset 0 0 0 1px #1473e6;}"
-       ".primaryButton,.smallButton,button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;text-decoration:none;font-weight:700;min-height:32px;padding:0 12px;}"
+       ".primaryButton,.smallButton,button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;text-decoration:none;font-weight:700;min-height:32px;padding:0 12px;cursor:pointer;}"
        ".primaryButton{background:#1473e6;border-color:#1473e6;color:#fff;}.smallButton{min-height:26px;font-size:12px;}"
        ".primarySmallButton{border-color:#1473e6;background:#1473e6;color:#fff;}"
        "li>.note{grid-column:1 / 3;margin:0;}"
@@ -5093,11 +5120,24 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   BOOL hasBadge = normalizedBadgeString.length > 0;
   NSString* textColorString = [badge[@"textColor"] isKindOfClass:NSString.class] ? badge[@"textColor"] : @"#ffffff";
   NSString* backgroundColorString = [badge[@"backgroundColor"] isKindOfClass:NSString.class] ? badge[@"backgroundColor"] : @"#000000";
+  NSString* settingsRoute = [badge[@"settingsRoute"] isKindOfClass:NSString.class] ? badge[@"settingsRoute"] : @"";
   viewerBadgeLabel_.hidden = !hasBadge;
+  viewerBadgeLabel_.settingsRoute = hasBadge ? settingsRoute : @"";
   [viewerBadgeLabel_ configureWithText:normalizedBadgeString
                              textColor:[self colorFromHexString:textColorString fallbackColor:NSColor.whiteColor]
                        backgroundColor:[self colorFromHexString:backgroundColorString fallbackColor:NSColor.clearColor]];
   [self layoutAddressTextFieldContent];
+}
+
+- (void)openAddressBadgeSettingsFromMenu:(NSMenuItem*)sender {
+  NSString* settingsRoute = [sender.representedObject isKindOfClass:NSString.class]
+      ? sender.representedObject
+      : @"";
+  if (settingsRoute.length == 0) {
+    return;
+  }
+
+  [self handleInternalNavigationURLString:settingsRoute];
 }
 
 - (void)updateAddressBarForTab:(BabelBrowserTab*)tab {

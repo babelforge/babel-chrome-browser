@@ -167,6 +167,7 @@ final readonly class ViewerController
         return new JsonResponse([
             'handled' => true,
             'moduleId' => $module->id,
+            'settingsRoute' => $module->settingsRoute,
             'badge' => $module->badge->toArray(),
         ]);
     }

@@ -154,7 +154,15 @@ static NSUInteger const kLegacyViewerCacheKeyLengthThreshold = 64;
     return nil;
   }
 
-  return badge;
+  NSMutableDictionary* enrichedBadge = [NSMutableDictionary dictionaryWithDictionary:badge];
+  if ([response[@"moduleId"] isKindOfClass:NSString.class]) {
+    enrichedBadge[@"moduleId"] = response[@"moduleId"];
+  }
+  if ([response[@"settingsRoute"] isKindOfClass:NSString.class]) {
+    enrichedBadge[@"settingsRoute"] = response[@"settingsRoute"];
+  }
+
+  return enrichedBadge;
 }
 
 - (NSURL*)viewerURLForURL:(NSURL*)url {
