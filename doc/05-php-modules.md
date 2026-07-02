@@ -90,7 +90,10 @@ Every module has a root `manifest.json`. The host reads this manifest to discove
 - badges;
 - menu items;
 - permissions;
+- optional `defaultGroup` placement for module tabs;
 - optional capabilities such as `file-viewer`.
+
+When `defaultGroup` is present, BabelChrome opens or recreates that module's tab in the named group by default. The user can still move the tab afterward; closing and opening the module again reapplies the manifest preference.
 
 A web module declares a front controller:
 

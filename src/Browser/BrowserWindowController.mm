@@ -260,6 +260,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSView* addressTextFieldContainer_;
   NSTextField* urlTextField_;
   BabelBadgeLabel* viewerBadgeLabel_;
+  NSButton* reloadButton_;
   NSView* omniboxSuggestionsPanel_;
   NSView* pagesPanel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
@@ -480,6 +481,14 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   urlTextField_.focusRingType = NSFocusRingTypeNone;
   urlTextField_.autoresizingMask = NSViewWidthSizable;
   [addressTextFieldContainer_ addSubview:urlTextField_];
+
+  reloadButton_ = BabelButton(@"", self, @selector(reloadSelectedTabFromButton:));
+  reloadButton_.bezelStyle = NSBezelStyleTexturedRounded;
+  reloadButton_.toolTip = @"Reload";
+  reloadButton_.frame = NSMakeRect(1000, 8, 28, 28);
+  reloadButton_.autoresizingMask = NSViewMinXMargin;
+  ConfigureIconButton(reloadButton_, @"toolbar-reload", @"↻");
+  [addressBarPanel_ addSubview:reloadButton_];
 
   omniboxSuggestionsPanel_ = [[NSView alloc] initWithFrame:NSMakeRect(50, 520, 978, 0)];
   omniboxSuggestionsPanel_.hidden = YES;
@@ -1436,6 +1445,22 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
          [path hasPrefix:@"/module/"];
 }
 
+- (BOOL)isLocalServiceRuntimeURLString:(NSString*)urlString {
+  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
+  if (![components.host isEqualToString:@"127.0.0.1"] ||
+      (![components.scheme isEqualToString:@"http"] && ![components.scheme isEqualToString:@"https"])) {
+    return NO;
+  }
+
+  for (NSURLQueryItem* item in components.queryItems ?: @[]) {
+    if ([item.name isEqualToString:@"token"] && item.value.length > 0) {
+      return YES;
+    }
+  }
+
+  return NO;
+}
+
 - (BOOL)isProjectLauncherModuleURLString:(NSString*)urlString {
   NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
   NSString* path = components.path ?: @"";
@@ -2277,6 +2302,11 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   return nil;
 }
 
+- (BOOL)isWindowPointInsideSidebar:(NSPoint)windowPoint {
+  NSPoint sidebarPoint = [sidebarView_ convertPoint:windowPoint fromView:nil];
+  return NSPointInRect(sidebarPoint, sidebarView_.bounds);
+}
+
 - (BOOL)isWindowPointInsideTabStrip:(NSPoint)windowPoint {
   NSPoint tabStripPoint = [tabsItemsPanel_ convertPoint:windowPoint fromView:nil];
   return NSPointInRect(tabStripPoint, tabsItemsPanel_.bounds);
@@ -2403,6 +2433,12 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     [self moveDraggingTabToGroup:dropGroup
                   insertionIndex:dropGroup.tabs.count
                     selectMovedTab:YES];
+  } else if (draggingTab_ && !dropGroup &&
+             [self isWindowPointInsideSidebar:currentEvent.locationInWindow]) {
+    NSString* groupName = [self nextManualGroupName];
+    BabelBrowserGroup* group = [self createGroupWithName:groupName
+                                              identifier:NSUUID.UUID.UUIDString];
+    [self moveDraggingTabToGroup:group insertionIndex:0 selectMovedTab:YES];
   }
 
   pendingTabDragHoverGroup_ = nil;
@@ -2933,6 +2969,47 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   return pathComponents[2];
 }
 
+- (NSString*)defaultGroupNameForModuleIdentifier:(NSString*)moduleIdentifier {
+  if (moduleIdentifier.length == 0) {
+    return nil;
+  }
+
+  NSError* error = nil;
+  NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&error];
+  if (!snapshot || error) {
+    return nil;
+  }
+
+  NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
+  for (NSDictionary* module in modules) {
+    if (![module isKindOfClass:NSDictionary.class]) {
+      continue;
+    }
+
+    NSString* identifier = [module[@"id"] isKindOfClass:NSString.class] ? module[@"id"] : @"";
+    if (![identifier isEqualToString:moduleIdentifier]) {
+      continue;
+    }
+
+    NSString* defaultGroup = [module[@"defaultGroup"] isKindOfClass:NSString.class]
+        ? [module[@"defaultGroup"] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet]
+        : @"";
+    return defaultGroup.length > 0 ? defaultGroup : nil;
+  }
+
+  return nil;
+}
+
+- (BabelBrowserGroup*)targetGroupForModuleIdentifier:(NSString*)moduleIdentifier
+                                      fallbackGroup:(BabelBrowserGroup*)fallbackGroup {
+  NSString* defaultGroupName = [self defaultGroupNameForModuleIdentifier:moduleIdentifier];
+  if (defaultGroupName.length > 0) {
+    return [self ensureGroupNamed:defaultGroupName];
+  }
+
+  return fallbackGroup ?: [self ensureGroupNamed:kDefaultGroupName];
+}
+
 - (void)openHistoryPage {
   [self openInternalPageWithURLString:kHistoryPageURLString
                                 title:@"History"
@@ -2980,7 +3057,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     return;
   }
 
-  BabelBrowserGroup* group = selectedGroup_ ?: [self ensureGroupNamed:kDefaultGroupName];
+  BabelBrowserGroup* group = [self targetGroupForModuleIdentifier:moduleIdentifier
+                                                    fallbackGroup:selectedGroup_];
   [self selectGroup:group];
   BabelBrowserTab* tab = [self createTabForURL:moduleURL.absoluteString
                                        inGroup:group
@@ -3057,7 +3135,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   [queryItems addObject:[NSURLQueryItem queryItemWithName:@"path" value:path]];
   components.queryItems = queryItems;
 
-  BabelBrowserGroup* group = selectedGroup_ ?: [self ensureGroupNamed:kDefaultGroupName];
+  BabelBrowserGroup* group = [self targetGroupForModuleIdentifier:@"babelforge.project-launcher"
+                                                    fallbackGroup:selectedGroup_];
   [self selectGroup:group];
   BabelBrowserTab* tab = [self createTabForURL:components.URL.absoluteString
                                        inGroup:group
@@ -4828,6 +4907,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   [selectedTab_ browser]->Reload();
 }
 
+- (void)reloadSelectedTabFromButton:(id)sender {
+  [self reloadSelectedTab];
+}
+
 - (void)reloadSelectedTabIgnoringCache {
   if (!selectedTab_ || ![selectedTab_ browser]) {
     return;
@@ -5524,6 +5607,12 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
         }
 
         tab.urlString = urlString;
+        if ([self isStableServerURLString:tab.requestedURLString]) {
+          tab.requestedURLString = [self stableServerReloadURLStringForTab:tab];
+        } else if (![self isStableBabelChromeURLString:tab.requestedURLString] ||
+                   ![self isLocalServiceRuntimeURLString:urlString]) {
+          tab.requestedURLString = urlString;
+        }
         NSNumber* browserIdentifier = @([tab browser]->GetIdentifier());
         NSArray<NSString*>* pendingRefreshURLStrings =
             pendingRefreshURLStringsByBrowserIdentifier_[browserIdentifier];
@@ -6395,16 +6484,24 @@ doCommandBySelector:(SEL)commandSelector {
                                       rightWidth,
                                       kToolbarHeight);
   addressLabel_.frame = NSMakeRect(12, 12, 30, 18);
-  addressTextFieldContainer_.frame = NSMakeRect(50, 7, MAX(0.0, rightWidth - 62), 30);
+  CGFloat addressFieldX = 50.0;
+  CGFloat reloadButtonWidth = 28.0;
+  CGFloat reloadButtonRightInset = 8.0;
+  CGFloat reloadButtonGap = 6.0;
+  CGFloat reloadButtonX = MAX(addressFieldX,
+                              rightWidth - reloadButtonRightInset - reloadButtonWidth);
+  reloadButton_.frame = NSMakeRect(reloadButtonX, 8, reloadButtonWidth, reloadButtonWidth);
+  CGFloat addressFieldWidth = MAX(0.0, reloadButtonX - addressFieldX - reloadButtonGap);
+  addressTextFieldContainer_.frame = NSMakeRect(addressFieldX, 7, addressFieldWidth, 30);
   [self layoutAddressTextFieldContent];
   CGFloat suggestionsHeight = omniboxSuggestionsPanel_.hidden
       ? 0.0
       : MIN(kOmniboxSuggestionPanelMaximumHeight,
             kOmniboxSuggestionRowHeight * omniboxSuggestions_.count);
-  omniboxSuggestionsPanel_.frame = NSMakeRect(50,
+  omniboxSuggestionsPanel_.frame = NSMakeRect(addressFieldX,
                                               MAX(0.0, totalHeight - kToolbarHeight -
                                                            suggestionsHeight - 2.0),
-                                              MAX(0.0, rightWidth - 62),
+                                              addressFieldWidth,
                                               suggestionsHeight);
   [rightView_ addSubview:omniboxSuggestionsPanel_
               positioned:NSWindowAbove

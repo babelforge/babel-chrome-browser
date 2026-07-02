@@ -119,6 +119,7 @@ final readonly class ModuleHookRegistry
             'menuItems' => $this->menuItemsForHook($module, $hook),
             'badge' => $module->badge?->toArray(),
             'settingsRoute' => $module->settingsRoute,
+            'defaultGroup' => $module->defaultGroup,
         ];
     }
 

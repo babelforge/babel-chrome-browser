@@ -32,6 +32,7 @@ final readonly class ModuleManifest
      * @param list<ModuleMenuItem> $menuItems                the menu items contributed by the module
      * @param ModuleBadge|null     $badge                    the optional address badge
      * @param string|null          $settingsRoute            the optional settings route
+     * @param string|null          $defaultGroup             the optional preferred browser group
      * @param string               $currentPhpVersion        the PHP version used to validate this manifest
      */
     public function __construct(
@@ -55,6 +56,7 @@ final readonly class ModuleManifest
         public array $menuItems,
         public ?ModuleBadge $badge,
         public ?string $settingsRoute,
+        public ?string $defaultGroup,
         public string $currentPhpVersion = PHP_VERSION,
     ) {
         if ('' === $this->id) {
@@ -113,6 +115,7 @@ final readonly class ModuleManifest
             self::menuItems($data),
             self::badge($data),
             self::settingsRoute($data),
+            self::defaultGroup($data),
         );
     }
 
@@ -155,6 +158,7 @@ final readonly class ModuleManifest
             ),
             'badge' => $this->badge?->toArray(),
             'settingsRoute' => $this->settingsRoute,
+            'defaultGroup' => $this->defaultGroup,
             'hasIsolatedVendor' => $this->hasIsolatedVendor(),
         ];
     }
@@ -508,6 +512,25 @@ final readonly class ModuleManifest
         $route = $settings['route'] ?? null;
 
         return is_string($route) && '' !== $route ? $route : null;
+    }
+
+    /**
+     * Reads the optional default browser group from an array.
+     *
+     * @param array<string, mixed> $data the source data
+     *
+     * @return string|null the preferred browser group
+     */
+    private static function defaultGroup(array $data): ?string
+    {
+        $defaultGroup = $data['defaultGroup'] ?? null;
+        if (!is_string($defaultGroup)) {
+            return null;
+        }
+
+        $defaultGroup = trim($defaultGroup);
+
+        return '' !== $defaultGroup ? $defaultGroup : null;
     }
 
     /**
