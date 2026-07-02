@@ -240,12 +240,27 @@
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser urlString:(NSString*)urlString;
 
 /**
+ * Updates the hovered-link status text for a browser.
+ *
+ * @param browser The browser whose status changed.
+ * @param statusText The status text to display, or an empty string to hide it.
+ */
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser statusText:(NSString*)statusText;
+
+/**
  * Updates the favicon image for a browser.
  *
  * @param browser The browser whose favicon changed.
  * @param faviconImage The new favicon image.
  */
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser faviconImage:(NSImage*)faviconImage;
+
+/**
+ * Copies a URL string to the system pasteboard.
+ *
+ * @param urlString The URL string to copy.
+ */
+- (void)copyURLStringToPasteboard:(NSString*)urlString;
 
 /**
  * Requests application shutdown and closes every embedded browser.

@@ -29,6 +29,8 @@ static const CGFloat kTabSpacing = 3.0;
 static const CGFloat kNewTabButtonWidth = 34.0;
 static const CGFloat kDeveloperToolsToolbarHeight = 30.0;
 static const CGFloat kDeveloperToolsResizeHandleThickness = 7.0;
+static const CGFloat kLinkStatusBarHeight = 24.0;
+static const CGFloat kLinkStatusBarMaximumWidth = 760.0;
 static const CGFloat kOmniboxSuggestionRowHeight = 44.0;
 static const NSUInteger kOmniboxSuggestionMaximumCount = 10;
 static const CGFloat kOmniboxSuggestionPanelMaximumHeight =
@@ -288,6 +290,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSButton* reloadButton_;
   NSView* omniboxSuggestionsPanel_;
   NSView* pagesPanel_;
+  NSView* linkStatusBarView_;
+  NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
   NSMutableArray<BabelClosedTab*>* closedTabs_;
   NSMutableArray<NSDictionary*>* omniboxSuggestions_;
@@ -530,6 +534,23 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   pagesPanel_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   pagesPanel_.clipsToBounds = YES;
   [rightView_ addSubview:pagesPanel_];
+
+  linkStatusBarView_ = [[NSView alloc] initWithFrame:NSMakeRect(8, 8, 320, kLinkStatusBarHeight)];
+  linkStatusBarView_.hidden = YES;
+  linkStatusBarView_.wantsLayer = YES;
+  linkStatusBarView_.layer.backgroundColor = [NSColor colorWithWhite:0.84 alpha:0.96].CGColor;
+  linkStatusBarView_.layer.borderColor = [NSColor colorWithWhite:0.66 alpha:1.0].CGColor;
+  linkStatusBarView_.layer.borderWidth = 1.0;
+  linkStatusBarView_.layer.cornerRadius = 5.0;
+  [rightView_ addSubview:linkStatusBarView_ positioned:NSWindowAbove relativeTo:pagesPanel_];
+
+  linkStatusBarLabel_ = [NSTextField labelWithString:@""];
+  linkStatusBarLabel_.font = [NSFont systemFontOfSize:12];
+  linkStatusBarLabel_.textColor = NSColor.blackColor;
+  linkStatusBarLabel_.lineBreakMode = NSLineBreakByTruncatingMiddle;
+  linkStatusBarLabel_.frame = NSMakeRect(8, 4, 304, 16);
+  linkStatusBarLabel_.autoresizingMask = NSViewWidthSizable;
+  [linkStatusBarView_ addSubview:linkStatusBarLabel_];
 
   [splitView_ addSubview:sidebarView_];
   [splitView_ addSubview:rightView_];
@@ -5024,6 +5045,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
 - (void)selectTab:(BabelBrowserTab*)tab deferringBrowserCreation:(BOOL)deferringBrowserCreation {
   selectedTab_ = tab;
+  linkStatusBarView_.hidden = YES;
   selectedGroup_.selectedTabIdentifier = tab.identifier;
   [self touchRecentlyUsedTab:tab];
   for (BabelBrowserTab* currentTab in tabs_) {
@@ -5691,6 +5713,32 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       }
     }
   }
+}
+
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser statusText:(NSString*)statusText {
+  BabelBrowserTab* tab = [self tabForBrowser:browser];
+  if (!tab || tab != selectedTab_) {
+    return;
+  }
+
+  NSString* displayedStatusText = statusText ?: @"";
+  linkStatusBarLabel_.stringValue = displayedStatusText;
+  linkStatusBarView_.hidden = displayedStatusText.length == 0;
+  if (!linkStatusBarView_.hidden) {
+    [rightView_ addSubview:linkStatusBarView_
+                positioned:NSWindowAbove
+                relativeTo:pagesPanel_];
+  }
+}
+
+- (void)copyURLStringToPasteboard:(NSString*)urlString {
+  if (urlString.length == 0) {
+    return;
+  }
+
+  NSPasteboard* pasteboard = NSPasteboard.generalPasteboard;
+  [pasteboard clearContents];
+  [pasteboard setString:urlString forType:NSPasteboardTypeString];
 }
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser faviconImage:(NSImage*)faviconImage {
@@ -6568,6 +6616,19 @@ doCommandBySelector:(SEL)commandSelector {
                                  0,
                                  rightWidth,
                                  MAX(0.0, totalHeight - kToolbarHeight));
+  CGFloat linkStatusBarWidth =
+      MIN(kLinkStatusBarMaximumWidth, MAX(220.0, rightWidth - 16.0));
+  linkStatusBarView_.frame = NSMakeRect(8.0,
+                                        8.0,
+                                        linkStatusBarWidth,
+                                        kLinkStatusBarHeight);
+  linkStatusBarLabel_.frame = NSMakeRect(8.0,
+                                         4.0,
+                                         MAX(0.0, linkStatusBarWidth - 16.0),
+                                         16.0);
+  [rightView_ addSubview:linkStatusBarView_
+              positioned:NSWindowAbove
+              relativeTo:pagesPanel_];
   for (BabelBrowserGroup* group in groups_) {
     for (BabelBrowserTab* tab in group.tabs) {
       [self layoutBrowserViewsForTab:tab];

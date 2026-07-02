@@ -17,6 +17,7 @@ const int kOpenInNewTabCommandId = MENU_ID_USER_FIRST + 1;
 const int kOpenDeveloperToolsCommandId = MENU_ID_USER_FIRST + 2;
 const int kOpenViewerSourceCommandId = MENU_ID_USER_FIRST + 3;
 const int kRevealViewerSourceCommandId = MENU_ID_USER_FIRST + 4;
+const int kCopyLinkCommandId = MENU_ID_USER_FIRST + 5;
 const int kFaviconDownloadMaximumSize = 32;
 const char kBabelChromeFileTypesHeaderName[] = "X-BabelChrome-File-Types";
 
@@ -159,6 +160,20 @@ std::string ContextMenuTargetURL(CefRefPtr<CefContextMenuParams> params,
   }
 
   return "";
+}
+
+/**
+ * Returns the direct link URL targeted by a page context menu action.
+ *
+ * @param params The CEF context menu parameters.
+ * @return The link URL when the menu targets a link.
+ */
+std::string ContextMenuLinkURL(CefRefPtr<CefContextMenuParams> params) {
+  if (!params) {
+    return "";
+  }
+
+  return params->GetLinkUrl().ToString();
 }
 
 /**
@@ -401,6 +416,16 @@ void BabelBrowserClient::OnAddressChange(CefRefPtr<CefBrowser> browser,
   });
 }
 
+void BabelBrowserClient::OnStatusMessage(CefRefPtr<CefBrowser> browser,
+                                         const CefString& value) {
+  CEF_REQUIRE_UI_THREAD();
+  std::string statusString(value);
+  NSString* nativeStatusString = [NSString stringWithUTF8String:statusString.c_str()];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [controller_ updateBrowser:browser statusText:nativeStatusString];
+  });
+}
+
 void BabelBrowserClient::OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
                                             const std::vector<CefString>& icon_urls) {
   CEF_REQUIRE_UI_THREAD();
@@ -432,8 +457,12 @@ void BabelBrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
   if (model->GetCount() > 0) {
     model->AddSeparator();
   }
+  std::string linkURL = ContextMenuLinkURL(params);
   if (!ContextMenuTargetURL(params, frame).empty()) {
     model->AddItem(kOpenInNewTabCommandId, "Ouvrir dans un nouvel onglet");
+  }
+  if (!linkURL.empty()) {
+    model->AddItem(kCopyLinkCommandId, "Copier le lien");
   }
   model->AddItem(kOpenDeveloperToolsCommandId, "Developer Tools");
   model->SetEnabled(kOpenDeveloperToolsCommandId,
@@ -469,6 +498,15 @@ bool BabelBrowserClient::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
 
   if (commandId == kOpenInNewTabCommandId) {
     OpenURLStringInNewTab(controller_, ContextMenuTargetURL(params, frame), browser);
+    return true;
+  }
+
+  if (commandId == kCopyLinkCommandId) {
+    std::string linkURL = ContextMenuLinkURL(params);
+    if (!linkURL.empty()) {
+      NSString* nativeLinkURL = [NSString stringWithUTF8String:linkURL.c_str()];
+      [controller_ copyURLStringToPasteboard:nativeLinkURL];
+    }
     return true;
   }
 

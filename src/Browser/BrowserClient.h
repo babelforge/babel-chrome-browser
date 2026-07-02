@@ -140,6 +140,14 @@ class BabelBrowserClient final : public CefClient,
                        const CefString& url) override;
 
   /**
+   * Receives status text updates such as hovered link URLs.
+   *
+   * @param browser The browser whose status changed.
+   * @param value The new status text.
+   */
+  void OnStatusMessage(CefRefPtr<CefBrowser> browser, const CefString& value) override;
+
+  /**
    * Receives page favicon URL changes.
    *
    * @param browser The browser whose favicon changed.
