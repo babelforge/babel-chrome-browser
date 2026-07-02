@@ -7910,10 +7910,6 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (void)splitView:(NSSplitView*)splitView resizeSubviewsWithOldSize:(NSSize)oldSize {
-  CGFloat splitSidebarWidth = sidebarView_.frame.size.width;
-  if (!isBuildingInterface_ && !sidebarCollapsed_ && splitSidebarWidth > 0.0) {
-    expandedSidebarWidth_ = [self normalizedExpandedSidebarWidth:splitSidebarWidth];
-  }
   [self layoutInterfaceForCurrentSplitViewSize];
   if (!isBuildingInterface_ && !sidebarCollapsed_) {
     [self saveExpandedSidebarWidth:expandedSidebarWidth_];
