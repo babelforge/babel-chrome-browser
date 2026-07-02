@@ -3853,7 +3853,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<a class='primaryButton' href='babelchrome://modules?installZip=1'>Install or Update Module Zip</a>"
        "<a class='primaryButton' href='babelchrome://modules?checkUpdates=1'>Check Updates</a>"
        "<details class='gearMenu'>"
-       "<summary title='Update source settings' aria-label='Update source settings'>&#9881;</summary>"
+       "<summary title='Update source settings' aria-label='Update source settings'>%@</summary>"
        "<div class='gearMenuPanel'>"
        "<a class='smallButton' href='babelchrome://modules?configureUpdateURL=1'>Set Update URL</a>"
        "<a class='smallButton' href='babelchrome://modules?configureUpdateLocal=1'>Set Local Update Folder</a>"
@@ -3866,6 +3866,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "</dl>"
        "%@"
        "</section>",
+      [self resourceSVGIconHTMLNamed:@"settings-gear" fallback:@"&#9881;"],
       [self htmlEscapedString:updateURLLabel],
       [self htmlEscapedString:updateLocalLabel],
       moduleListHTML];
@@ -5557,6 +5558,33 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           "</svg>";
 }
 
+- (NSString*)resourceSVGIconHTMLNamed:(NSString*)resourceName fallback:(NSString*)fallbackHTML {
+  NSString* resourcePath = [NSBundle.mainBundle pathForResource:resourceName ofType:@"svg"];
+  if (resourcePath.length == 0) {
+    return fallbackHTML ?: @"";
+  }
+
+  NSError* error = nil;
+  NSString* iconHTML = [NSString stringWithContentsOfFile:resourcePath
+                                                 encoding:NSUTF8StringEncoding
+                                                    error:&error];
+  if (error || iconHTML.length == 0) {
+    return fallbackHTML ?: @"";
+  }
+
+  NSMutableString* normalizedIconHTML = [NSMutableString stringWithString:iconHTML];
+  [normalizedIconHTML replaceOccurrencesOfString:@"<svg "
+                                      withString:@"<svg class='buttonIcon gearIcon' aria-hidden='true' "
+                                         options:0
+                                           range:NSMakeRange(0, normalizedIconHTML.length)];
+  [normalizedIconHTML replaceOccurrencesOfString:@"fill=\"#17345a\""
+                                      withString:@"fill=\"currentColor\""
+                                         options:0
+                                           range:NSMakeRange(0, normalizedIconHTML.length)];
+
+  return normalizedIconHTML;
+}
+
 - (BOOL)isInternalModuleCapability:(NSString*)capability {
   static NSSet<NSString*>* internalCapabilities = nil;
   static dispatch_once_t onceToken;
@@ -5638,7 +5666,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".primaryButton{background:#1473e6;border-color:#1473e6;color:#fff;}.smallButton{min-height:26px;font-size:12px;}"
        ".primarySmallButton{border-color:#1473e6;background:#1473e6;color:#fff;}"
        ".buttonRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
-       ".gearMenu{position:relative;}.gearMenu summary{display:inline-flex;align-items:center;justify-content:center;width:54px;min-height:38px;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;font-size:38px;font-weight:700;line-height:1;cursor:pointer;list-style:none;}"
+       ".gearMenu{position:relative;}.gearMenu summary{display:inline-flex;align-items:center;justify-content:center;width:54px;min-height:38px;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;cursor:pointer;list-style:none;}"
        ".gearMenu summary::-webkit-details-marker{display:none;}.gearMenuPanel{position:absolute;z-index:10;right:0;top:46px;display:grid;gap:8px;min-width:190px;padding:10px;background:#fff;border:1px solid #d8dde3;border-radius:8px;box-shadow:0 10px 28px rgba(20,32,45,.18);}"
        ".updatesForm{display:grid;gap:10px;}.updatesToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #d8dde3;border-radius:8px;padding:10px 12px;}"
        ".updatesToolbar label,.updateCheckbox{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:#243447;cursor:pointer;}.updateList input{cursor:pointer;}"
@@ -5656,7 +5684,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".routeList code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;border:1px solid #d8dde3;border-radius:6px;padding:3px 6px;color:#273849;}"
        ".routeList span{color:#7a8794;font-weight:700;}"
        ".dangerButton{border-color:#f0b9b9;color:#8a1f1f;background:#fff8f8;}.iconTextButton{gap:6px;}"
-       ".buttonIcon{width:14px;height:14px;fill:currentColor;flex:0 0 auto;}"
+       ".buttonIcon{width:14px;height:14px;fill:currentColor;flex:0 0 auto;}.gearIcon{width:24px;height:24px;}"
        ".searchForm{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:10px;max-width:620px;}"
        "input{font:inherit;border:1px solid #c7d0db;border-radius:7px;padding:8px 10px;background:#fff;}"
        ".note,.empty{color:#526171;line-height:1.45;}.empty{background:#fff;border:1px solid #d8dde3;border-radius:8px;padding:14px;}"

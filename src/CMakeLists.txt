@@ -43,6 +43,7 @@ set(BABEL_CHROME_RESOURCES
   Resources/devtools-dock-left.svg
   Resources/devtools-dock-right.svg
   Resources/devtools-dock-top.svg
+  Resources/settings-gear.svg
   Resources/tab-close.svg
   Resources/toolbar-reload.svg
 )
