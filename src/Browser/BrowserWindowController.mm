@@ -4019,13 +4019,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   } else if (installedModules.count == 0) {
     [rowsHTML appendString:@"<p class='empty'>No installed module was found.</p>"];
   } else {
-    [rowsHTML appendString:@"<form class='updatesForm' action='babelchrome://modules' method='get'>"
-                           "<input type='hidden' name='installSelectedUpdates' value='1'>"
-                           "<div class='updatesToolbar'>"
-                           "<label><input id='selectAllUpdates' type='checkbox'> Select all</label>"
-                           "<button class='primaryButton' type='submit'>Install Updates</button>"
-                           "</div>"
-                           "<ul class='stripedList updateList'>"];
+    NSMutableString* updateRowsHTML = [NSMutableString string];
     for (NSDictionary* module in installedModules) {
       if (![module isKindOfClass:NSDictionary.class]) {
         continue;
@@ -4057,7 +4051,11 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       NSString* wrappedActionsHTML = actionHTML.length > 0
           ? [NSString stringWithFormat:@"<div class='actions'>%@</div>", actionHTML]
           : @"";
-      [rowsHTML appendFormat:
+      if (actionHTML.length == 0) {
+        continue;
+      }
+
+      [updateRowsHTML appendFormat:
           @"<li><span>%@</span><small>%@ - Installed %@ - Available %@</small><em>%@</em>%@</li>",
           [self htmlEscapedString:moduleName],
           [self htmlEscapedString:moduleIdentifier],
@@ -4066,7 +4064,20 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           [self htmlEscapedString:status],
           wrappedActionsHTML];
     }
-    [rowsHTML appendString:@"</ul></form>"];
+    if (updateCount == 0) {
+      [rowsHTML appendString:@"<p class='empty'>No update available.</p>"];
+    } else {
+      [rowsHTML appendFormat:
+          @"<form class='updatesForm' action='babelchrome://modules' method='get'>"
+           "<input type='hidden' name='installSelectedUpdates' value='1'>"
+           "<div class='updatesToolbar'>"
+           "<label><input id='selectAllUpdates' type='checkbox'> Select all</label>"
+           "<button class='primaryButton' type='submit'>Install Updates</button>"
+           "</div>"
+           "<ul class='stripedList updateList'>%@</ul>"
+           "</form>",
+          updateRowsHTML];
+    }
   }
 
   NSString* updateURLString = [self moduleUpdateURLString];
