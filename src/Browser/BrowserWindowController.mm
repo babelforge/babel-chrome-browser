@@ -3093,6 +3093,15 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
                                  html:[self settingsPageHTML]];
 }
 
+- (void)openModuleSettingsPageForIdentifier:(NSString*)moduleIdentifier {
+  NSString* normalizedIdentifier = [self normalizedModuleSettingsIdentifier:moduleIdentifier];
+  NSString* urlString = [NSString stringWithFormat:@"babelchrome://settings/%@",
+                                                   [self pathEscapedString:normalizedIdentifier]];
+  [self openInternalPageWithURLString:urlString
+                                title:@"Module Settings"
+                                 html:[self moduleSettingsPageHTMLForIdentifier:normalizedIdentifier]];
+}
+
 - (void)openExtensionsPage {
   [self openInternalPageWithURLString:kExtensionsPageURLString
                                 title:@"Extensions"
@@ -3233,6 +3242,30 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
   NSString* commandName = components.host ?: @"";
   if ([commandName isEqualToString:@"settings"]) {
+    NSString* moduleSettingsIdentifier = [self moduleSettingsIdentifierFromSettingsComponents:components];
+    if (moduleSettingsIdentifier.length > 0) {
+      BOOL markdownThemeDidChange = NO;
+      for (NSURLQueryItem* item in components.queryItems) {
+        if ([item.name isEqualToString:@"markdownTheme"] &&
+            [self isSupportedMarkdownTheme:item.value] &&
+            [[self normalizedModuleSettingsIdentifier:moduleSettingsIdentifier]
+                isEqualToString:@"babelforge.markdown-viewer"]) {
+          NSString* previousTheme = [self markdownTheme];
+          [NSUserDefaults.standardUserDefaults setObject:item.value
+                                                  forKey:kMarkdownThemeDefaultsKey];
+          [NSUserDefaults.standardUserDefaults synchronize];
+          markdownThemeDidChange = ![previousTheme isEqualToString:item.value];
+          break;
+        }
+      }
+
+      if (markdownThemeDidChange) {
+        [self reloadMarkdownViewerTabsUsingCurrentTheme];
+      }
+      [self openModuleSettingsPageForIdentifier:moduleSettingsIdentifier];
+      return YES;
+    }
+
     BOOL markdownThemeDidChange = NO;
     BOOL appearanceThemeDidChange = NO;
     for (NSURLQueryItem* item in components.queryItems) {
@@ -3543,7 +3576,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 - (NSString*)settingsPageHTML {
   NSString* strategy = [self tabOpeningStrategy];
   NSString* addressSuggestionsMode = [self addressSuggestionsMode];
-  NSString* markdownTheme = [self markdownTheme];
   NSString* appearanceTheme = [BabelTheme.sharedTheme appearanceMode];
   NSString* body = [NSString stringWithFormat:
       @"<h1>Settings</h1>"
@@ -3556,7 +3588,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<dt>Application theme</dt><dd>%@</dd>"
        "<dt>Tab opening strategy</dt><dd>%@</dd>"
        "<dt>Address suggestions</dt><dd>%@</dd>"
-       "<dt>Markdown theme</dt><dd>%@</dd>"
        "<dt>Groups file</dt><dd>Stored in the BabelChrome application support folder.</dd>"
        "<dt>Developer Tools docking</dt><dd>The last selected dock mode is saved automatically.</dd>"
        "</dl>"
@@ -3564,9 +3595,35 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
       [self htmlEscapedString:BabelChromeConfiguration.defaultURLString],
       [self settingsAppearanceThemeHTML:appearanceTheme],
       [self settingsTabOpeningStrategyHTML:strategy],
-      [self settingsAddressSuggestionsHTML:addressSuggestionsMode],
-      [self settingsMarkdownThemeHTML:markdownTheme]];
+      [self settingsAddressSuggestionsHTML:addressSuggestionsMode]];
   return [self internalPageHTMLWithTitle:@"Settings" body:body];
+}
+
+- (NSString*)moduleSettingsPageHTMLForIdentifier:(NSString*)moduleIdentifier {
+  NSString* normalizedIdentifier = [self normalizedModuleSettingsIdentifier:moduleIdentifier];
+  if ([normalizedIdentifier isEqualToString:@"babelforge.markdown-viewer"]) {
+    NSString* body = [NSString stringWithFormat:
+        @"<h1>Markdown Viewer Settings</h1>"
+         "<section>"
+         "<p class='note'>These settings belong to the Markdown Viewer module, not to BabelChrome itself.</p>"
+         "<dl>"
+         "<dt>Markdown theme</dt><dd>%@</dd>"
+         "</dl>"
+         "</section>"
+         "<p><a class='smallButton' href='babelchrome://settings'>Back to app settings</a></p>",
+        [self settingsMarkdownThemeHTML:[self markdownTheme] settingsURLString:@"babelchrome://settings/babelforge.markdown-viewer"]];
+    return [self internalPageHTMLWithTitle:@"Markdown Viewer Settings" body:body];
+  }
+
+  NSString* moduleName = [self moduleNameForIdentifier:normalizedIdentifier] ?: normalizedIdentifier;
+  NSString* body = [NSString stringWithFormat:
+      @"<h1>%@ Settings</h1>"
+       "<section>"
+       "<p class='empty'>This module does not expose native BabelChrome settings yet.</p>"
+       "</section>"
+       "<p><a class='smallButton' href='babelchrome://settings'>Back to app settings</a></p>",
+      [self htmlEscapedString:moduleName]];
+  return [self internalPageHTMLWithTitle:[NSString stringWithFormat:@"%@ Settings", moduleName] body:body];
 }
 
 - (NSString*)extensionsPageHTML {
@@ -3668,7 +3725,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   } else if (modules.count == 0) {
     [moduleListHTML appendString:@"<p class='empty'>No PHP module is registered.</p>"];
   } else {
-    [moduleListHTML appendString:@"<ul>"];
+    [moduleListHTML appendString:@"<ul class='stripedList'>"];
     for (NSDictionary* module in modules) {
       if (![module isKindOfClass:NSDictionary.class]) {
         continue;
@@ -4088,6 +4145,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 }
 
 - (NSString*)settingsMarkdownThemeHTML:(NSString*)selectedTheme {
+  return [self settingsMarkdownThemeHTML:selectedTheme settingsURLString:@"babelchrome://settings"];
+}
+
+- (NSString*)settingsMarkdownThemeHTML:(NSString*)selectedTheme settingsURLString:(NSString*)settingsURLString {
   NSDictionary<NSString*, NSString*>* labels = @{
     kMarkdownThemeGitHubLight : @"GitHub Light",
     kMarkdownThemeGitHubDark : @"GitHub Dark",
@@ -4110,15 +4171,71 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   for (NSString* theme in themes) {
     NSString* optionClass = [selectedTheme isEqualToString:theme] ? @"option selected" : @"option";
     [html appendFormat:
-        @"<a class='%@' href='babelchrome://settings?markdownTheme=%@'>"
+        @"<a class='%@' href='%@?markdownTheme=%@'>"
          "<strong>%@</strong><span>%@</span></a>",
         optionClass,
+        [self htmlEscapedString:settingsURLString ?: @"babelchrome://settings"],
         theme,
         [self htmlEscapedString:labels[theme]],
         [self htmlEscapedString:descriptions[theme]]];
   }
   [html appendString:@"</div>"];
   return html;
+}
+
+- (NSString*)moduleSettingsIdentifierFromSettingsComponents:(NSURLComponents*)components {
+  NSString* path = components.path ?: @"";
+  if ([path hasPrefix:@"/"]) {
+    path = [path substringFromIndex:1];
+  }
+  if (path.length > 0) {
+    return path;
+  }
+
+  NSString* fragment = components.fragment ?: @"";
+  if (fragment.length > 0) {
+    return fragment;
+  }
+
+  return @"";
+}
+
+- (NSString*)normalizedModuleSettingsIdentifier:(NSString*)moduleIdentifier {
+  NSString* normalizedIdentifier =
+      [moduleIdentifier stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] ?: @"";
+  if (normalizedIdentifier.length == 0) {
+    return @"";
+  }
+
+  if ([normalizedIdentifier containsString:@"."]) {
+    return normalizedIdentifier;
+  }
+
+  return [@"babelforge." stringByAppendingString:normalizedIdentifier];
+}
+
+- (NSString*)moduleNameForIdentifier:(NSString*)moduleIdentifier {
+  NSError* error = nil;
+  NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&error];
+  if (error) {
+    return nil;
+  }
+
+  NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
+  for (NSDictionary* module in modules) {
+    if (![module isKindOfClass:NSDictionary.class]) {
+      continue;
+    }
+
+    NSString* currentIdentifier = [module[@"id"] isKindOfClass:NSString.class] ? module[@"id"] : @"";
+    if (![currentIdentifier isEqualToString:moduleIdentifier ?: @""]) {
+      continue;
+    }
+
+    return [module[@"name"] isKindOfClass:NSString.class] ? module[@"name"] : currentIdentifier;
+  }
+
+  return nil;
 }
 
 - (NSArray<NSString*>*)installedExtensionPaths {
@@ -4805,6 +4922,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".option{display:block;text-decoration:none;color:#243447;border:1px solid #d8dde3;border-radius:8px;padding:12px;background:#f9fafb;cursor:pointer;}"
        ".option strong{display:block;margin-bottom:5px;color:#172533;}.option span{display:block;color:#526171;line-height:1.35;}"
        ".option.selected{border-color:#1473e6;background:#edf5ff;box-shadow:inset 0 0 0 1px #1473e6;}"
+       ".stripedList li:nth-child(odd){background:#fff;}.stripedList li:nth-child(even){background:#f3f8ff;}"
        ".primaryButton,.smallButton,button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;text-decoration:none;font-weight:700;min-height:32px;padding:0 12px;cursor:pointer;}"
        ".primaryButton{background:#1473e6;border-color:#1473e6;color:#fff;}.smallButton{min-height:26px;font-size:12px;}"
        ".primarySmallButton{border-color:#1473e6;background:#1473e6;color:#fff;}"
@@ -4828,6 +4946,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "body.dark .option{color:#dbe5f0;border-color:#343b44;background:#20252b;}"
        "body.dark .option strong{color:#f4f7fb;}body.dark .option span{color:#aeb8c4;}"
        "body.dark .option.selected{border-color:#5ea1ff;background:#193149;box-shadow:inset 0 0 0 1px #5ea1ff;}"
+       "body.dark .stripedList li:nth-child(odd){background:#1e2227;}body.dark .stripedList li:nth-child(even){background:#202a35;}"
        "body.dark .primaryButton,body.dark .smallButton,body.dark button{border-color:#46515d;background:#242a31;color:#f4f7fb;}"
        "body.dark .primaryButton,body.dark .primarySmallButton{background:#2f7de1;border-color:#2f7de1;color:#fff;}"
        "body.dark .dangerButton{border-color:#7f3a43;color:#ffb6bf;background:#321d22;}"
