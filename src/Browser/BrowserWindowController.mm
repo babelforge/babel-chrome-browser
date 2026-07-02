@@ -3792,28 +3792,31 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           [module[@"settingsRoute"] isKindOfClass:NSString.class] ? module[@"settingsRoute"] : @"";
       BOOL hasSettingsPage = settingsRoute.length > 0 && ![settingsRoute isEqualToString:@"babelchrome://modules"];
       NSString* enabledLabel = enabled ? @"Enabled" : @"Disabled";
-      NSString* vendorLabel = hasIsolatedVendor ? @"Own vendor" : @"No module vendor";
+      NSString* vendorLabel = hasIsolatedVendor ? @"Bundled vendor" : @"No bundled vendor";
       NSString* versionLabel = [NSString stringWithFormat:@"Installed %@", moduleVersion];
-      NSMutableString* primaryActionsHTML = [NSMutableString string];
-      NSMutableString* secondaryActionsHTML = [NSMutableString string];
+      NSString* detailsActionHTML = @"";
+      NSString* settingsActionHTML = @"";
+      NSString* toggleActionHTML = @"";
+      NSString* removeActionHTML = @"";
       if (moduleIdentifier.length > 0) {
-        [primaryActionsHTML appendFormat:
+        detailsActionHTML = [NSString stringWithFormat:
             @"<a class='smallButton' href='babelchrome://modules?module=%@'>Details</a>",
             [self queryEscapedString:moduleIdentifier]];
       }
       if (hasSettingsPage) {
-        [primaryActionsHTML appendFormat:@"<a class='smallButton' href='%@'>Settings</a>",
-                                         [self htmlEscapedString:settingsRoute]];
+        settingsActionHTML = [NSString stringWithFormat:@"<a class='smallButton' href='%@'>Settings</a>",
+                                                        [self htmlEscapedString:settingsRoute]];
       }
       if (moduleIdentifier.length > 0) {
         NSString* toggleAction = enabled ? @"disable" : @"enable";
         NSString* toggleLabel = enabled ? @"Disable" : @"Enable";
-        [secondaryActionsHTML appendFormat:
-            @"<a class='smallButton' href='babelchrome://modules?%@=%@'>%@</a>"
-             "<a class='smallButton dangerButton iconTextButton' href='babelchrome://modules?remove=%@' title='Remove'>%@<span>Remove</span></a>",
+        toggleActionHTML = [NSString stringWithFormat:
+            @"<a class='smallButton' href='babelchrome://modules?%@=%@'>%@</a>",
             toggleAction,
             [self queryEscapedString:moduleIdentifier],
-            toggleLabel,
+            toggleLabel];
+        removeActionHTML = [NSString stringWithFormat:
+            @"<a class='smallButton dangerButton iconTextButton' href='babelchrome://modules?remove=%@' title='Remove'>%@<span>Remove</span></a>",
             [self queryEscapedString:moduleIdentifier],
             [self trashIconHTML]];
       }
@@ -3822,7 +3825,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           @"<li class='moduleItem'>"
            "<div class='moduleText'><span>%@</span><small>%@ - %@ - %@ - %@</small><em>%@</em>"
            "<p class='note'>%@</p></div>"
-           "<div class='moduleButtons'><div>%@</div><div>%@</div></div>"
+           "<div class='moduleButtons'>"
+           "<div class='moduleButtonCell'>%@</div><div class='moduleButtonCell'>%@</div>"
+           "<div class='moduleButtonCell'>%@</div><div class='moduleButtonCell'>%@</div>"
+           "</div>"
            "</li>",
           [self htmlEscapedString:moduleName],
           [self htmlEscapedString:moduleIdentifier],
@@ -3831,8 +3837,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
           [self htmlEscapedString:enabledLabel],
           [self htmlEscapedString:vendorLabel],
           [self htmlEscapedString:moduleDescription],
-          primaryActionsHTML,
-          secondaryActionsHTML];
+          detailsActionHTML,
+          settingsActionHTML,
+          toggleActionHTML,
+          removeActionHTML];
     }
     [moduleListHTML appendString:@"</ul>"];
   }
@@ -5612,15 +5620,16 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        ".primaryButton{background:#1473e6;border-color:#1473e6;color:#fff;}.smallButton{min-height:26px;font-size:12px;}"
        ".primarySmallButton{border-color:#1473e6;background:#1473e6;color:#fff;}"
        ".buttonRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
-       ".gearMenu{position:relative;}.gearMenu summary{display:inline-flex;align-items:center;justify-content:center;width:42px;min-height:34px;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;font-size:22px;font-weight:700;line-height:1;cursor:pointer;list-style:none;}"
-       ".gearMenu summary::-webkit-details-marker{display:none;}.gearMenuPanel{position:absolute;z-index:10;right:0;top:42px;display:grid;gap:8px;min-width:190px;padding:10px;background:#fff;border:1px solid #d8dde3;border-radius:8px;box-shadow:0 10px 28px rgba(20,32,45,.18);}"
+       ".gearMenu{position:relative;}.gearMenu summary{display:inline-flex;align-items:center;justify-content:center;width:54px;min-height:38px;border:1px solid #c7d0db;border-radius:7px;background:#fff;color:#172533;font-size:38px;font-weight:700;line-height:1;cursor:pointer;list-style:none;}"
+       ".gearMenu summary::-webkit-details-marker{display:none;}.gearMenuPanel{position:absolute;z-index:10;right:0;top:46px;display:grid;gap:8px;min-width:190px;padding:10px;background:#fff;border:1px solid #d8dde3;border-radius:8px;box-shadow:0 10px 28px rgba(20,32,45,.18);}"
        ".updatesForm{display:grid;gap:10px;}.updatesToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #d8dde3;border-radius:8px;padding:10px 12px;}"
        ".updatesToolbar label,.updateCheckbox{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:#243447;cursor:pointer;}.updateList input{cursor:pointer;}"
        ".moduleList .moduleItem{grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:center;}"
        ".moduleText{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 14px;align-items:center;}"
-       ".moduleText span,.moduleText small{min-width:0;}.moduleText span,.moduleText small{display:block;}.moduleText em{text-align:right;}"
+       ".moduleText span,.moduleText small{min-width:0;}.moduleText span,.moduleText small{display:block;}.moduleText em{text-align:left;}"
        ".moduleText .note{grid-column:1 / -1;margin:0;}"
-       ".moduleButtons{display:grid;gap:8px;align-content:center;}.moduleButtons>div{display:flex;justify-content:flex-end;gap:8px;min-height:26px;}"
+       ".moduleButtons{display:grid;grid-template-columns:repeat(2,minmax(92px,1fr));gap:8px;align-content:center;}"
+       ".moduleButtonCell{min-height:26px;}.moduleButtonCell .smallButton{width:100%%;box-sizing:border-box;}"
        ".bottomButtonRow{display:flex;justify-content:flex-start;margin-top:14px;}"
        "li>.note{grid-column:1 / 3;margin:0;}"
        "li>.actions{grid-column:3;grid-row:1 / span 2;}"
