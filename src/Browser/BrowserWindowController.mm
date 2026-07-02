@@ -45,6 +45,7 @@ static NSString* const kDefaultGroupName = @"default";
 static NSString* const kDeveloperToolsDockModeDefaultsKey = @"DeveloperToolsDockMode";
 static NSString* const kDeveloperToolsSizeRatioDefaultsKey = @"DeveloperToolsSizeRatio";
 static NSString* const kSidebarCollapsedDefaultsKey = @"SidebarCollapsed";
+static NSString* const kSidebarWidthDefaultsKey = @"SidebarWidth";
 static NSString* const kAddressSuggestionsModeDefaultsKey = @"AddressSuggestionsMode";
 static NSString* const kTabOpeningStrategyDefaultsKey = @"TabOpeningStrategy";
 static NSString* const kMarkdownThemeDefaultsKey = @"MarkdownTheme";
@@ -5936,7 +5937,10 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 }
 
 - (void)toggleSidebarCollapsed:(id)sender {
-  CGFloat targetWidth = sidebarCollapsed_ ? kSidebarInitialWidth : kSidebarCollapsedWidth;
+  if (!sidebarCollapsed_) {
+    [self saveExpandedSidebarWidth:sidebarView_.frame.size.width];
+  }
+  CGFloat targetWidth = sidebarCollapsed_ ? [self restoredExpandedSidebarWidth] : kSidebarCollapsedWidth;
   sidebarCollapsed_ = !sidebarCollapsed_;
   [NSUserDefaults.standardUserDefaults setBool:sidebarCollapsed_
                                         forKey:kSidebarCollapsedDefaultsKey];
@@ -7529,6 +7533,18 @@ doCommandBySelector:(SEL)commandSelector {
   return MIN(kSidebarMaximumWidth, MAX([self minimumExpandedSidebarWidth], sidebarView_.frame.size.width));
 }
 
+- (CGFloat)restoredExpandedSidebarWidth {
+  double storedWidth = [NSUserDefaults.standardUserDefaults doubleForKey:kSidebarWidthDefaultsKey];
+  CGFloat width = storedWidth > 0.0 ? (CGFloat)storedWidth : kSidebarInitialWidth;
+  return MIN(kSidebarMaximumWidth, MAX([self minimumExpandedSidebarWidth], width));
+}
+
+- (void)saveExpandedSidebarWidth:(CGFloat)width {
+  CGFloat normalizedWidth = MIN(kSidebarMaximumWidth, MAX([self minimumExpandedSidebarWidth], width));
+  [NSUserDefaults.standardUserDefaults setDouble:normalizedWidth forKey:kSidebarWidthDefaultsKey];
+  [NSUserDefaults.standardUserDefaults synchronize];
+}
+
 - (CGFloat)minimumExpandedSidebarWidth {
   CGFloat titleWidth = sidebarTitle_ ? [sidebarTitle_ intrinsicContentSize].width : 0.0;
   return kSidebarHeaderLeadingInset + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap +
@@ -7539,7 +7555,7 @@ doCommandBySelector:(SEL)commandSelector {
   if (sidebarCollapsed_) {
     return kSidebarCollapsedWidth;
   }
-  return kSidebarInitialWidth;
+  return [self restoredExpandedSidebarWidth];
 }
 
 - (void)restoreMainWindowFrame {
@@ -7815,6 +7831,9 @@ doCommandBySelector:(SEL)commandSelector {
 
 - (void)splitView:(NSSplitView*)splitView resizeSubviewsWithOldSize:(NSSize)oldSize {
   [self layoutInterfaceForCurrentSplitViewSize];
+  if (!sidebarCollapsed_) {
+    [self saveExpandedSidebarWidth:sidebarView_.frame.size.width];
+  }
 }
 
 - (void)windowDidResize:(NSNotification*)notification {
