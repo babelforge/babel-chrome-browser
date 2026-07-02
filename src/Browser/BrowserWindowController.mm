@@ -207,6 +207,37 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
 @end
 
+@interface BabelSidebarSplitView : NSSplitView
+
+@property(nonatomic, copy) void (^sidebarDragHandler)(CGFloat position);
+
+@end
+
+@implementation BabelSidebarSplitView
+
+@synthesize sidebarDragHandler;
+
+- (void)mouseDragged:(NSEvent*)event {
+  [super mouseDragged:event];
+  [self notifySidebarDividerDragWithEvent:event];
+}
+
+- (void)mouseUp:(NSEvent*)event {
+  [super mouseUp:event];
+  [self notifySidebarDividerDragWithEvent:event];
+}
+
+- (void)notifySidebarDividerDragWithEvent:(NSEvent*)event {
+  if (!self.sidebarDragHandler) {
+    return;
+  }
+
+  NSPoint localPoint = [self convertPoint:event.locationInWindow fromView:nil];
+  self.sidebarDragHandler(localPoint.x);
+}
+
+@end
+
 @interface BabelBadgeLabel : NSView
 
 @property(nonatomic, copy) NSString* settingsRoute;
@@ -508,7 +539,13 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   rootView_ = themeRootView;
   rootView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
-  splitView_ = [[NSSplitView alloc] initWithFrame:rootView_.bounds];
+  BabelSidebarSplitView* sidebarSplitView =
+      [[BabelSidebarSplitView alloc] initWithFrame:rootView_.bounds];
+  __weak BabelBrowserWindowController* weakSelf = self;
+  sidebarSplitView.sidebarDragHandler = ^(CGFloat position) {
+    [weakSelf sidebarSplitViewDidDragDividerToPosition:position];
+  };
+  splitView_ = sidebarSplitView;
   splitView_.delegate = self;
   splitView_.dividerStyle = NSSplitViewDividerStyleThin;
   splitView_.vertical = YES;
@@ -7909,11 +7946,17 @@ doCommandBySelector:(SEL)commandSelector {
   return kSidebarMaximumWidth;
 }
 
+- (void)sidebarSplitViewDidDragDividerToPosition:(CGFloat)position {
+  if (isBuildingInterface_ || sidebarCollapsed_) {
+    return;
+  }
+
+  [self saveExpandedSidebarWidth:position];
+  [self layoutInterfaceForCurrentSplitViewSize];
+}
+
 - (void)splitView:(NSSplitView*)splitView resizeSubviewsWithOldSize:(NSSize)oldSize {
   [self layoutInterfaceForCurrentSplitViewSize];
-  if (!isBuildingInterface_ && !sidebarCollapsed_) {
-    [self saveExpandedSidebarWidth:expandedSidebarWidth_];
-  }
 }
 
 - (void)windowDidResize:(NSNotification*)notification {
