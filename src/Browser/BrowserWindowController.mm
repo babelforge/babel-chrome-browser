@@ -3610,7 +3610,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
          "<dt>Markdown theme</dt><dd>%@</dd>"
          "</dl>"
          "</section>"
-         "<p><a class='smallButton' href='babelchrome://settings'>Back to app settings</a></p>",
+         "<p><a class='smallButton' href='babelchrome://modules'>Back to modules</a></p>",
         [self settingsMarkdownThemeHTML:[self markdownTheme] settingsURLString:@"babelchrome://settings/babelforge.markdown-viewer"]];
     return [self internalPageHTMLWithTitle:@"Markdown Viewer Settings" body:body];
   }
@@ -3621,7 +3621,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<section>"
        "<p class='empty'>This module does not expose native BabelChrome settings yet.</p>"
        "</section>"
-       "<p><a class='smallButton' href='babelchrome://settings'>Back to app settings</a></p>",
+       "<p><a class='smallButton' href='babelchrome://modules'>Back to modules</a></p>",
       [self htmlEscapedString:moduleName]];
   return [self internalPageHTMLWithTitle:[NSString stringWithFormat:@"%@ Settings", moduleName] body:body];
 }
