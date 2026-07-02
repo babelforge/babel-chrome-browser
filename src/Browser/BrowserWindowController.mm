@@ -350,6 +350,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   BOOL isDraggingTabAcrossGroups_;
   BOOL isRestoringSession_;
   BOOL isBuildingInterface_;
+  BOOL didApplyInitialSidebarRestore_;
   BOOL needsInitialRestoredBrowserCreation_;
   NSUInteger deferredBrowserCreationGeneration_;
   NSUInteger adjacentTabPreloadGeneration_;
@@ -392,7 +393,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     developerToolsDockMode_ = [self restoredDeveloperToolsDockMode];
     developerToolsSizeRatio_ = [self restoredDeveloperToolsSizeRatio];
     expandedSidebarWidth_ = kSidebarInitialWidth;
-    sidebarCollapsed_ = [NSUserDefaults.standardUserDefaults boolForKey:kSidebarCollapsedDefaultsKey];
+    sidebarCollapsed_ = NO;
     isTerminating_ = NO;
     didRestoreMainWindowState_ = NO;
     isReorderingGroups_ = NO;
@@ -400,25 +401,77 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     isDraggingTabAcrossGroups_ = NO;
     isRestoringSession_ = NO;
     isBuildingInterface_ = NO;
+    didApplyInitialSidebarRestore_ = NO;
     needsInitialRestoredBrowserCreation_ = NO;
     deferredBrowserCreationGeneration_ = 0;
     adjacentTabPreloadGeneration_ = 0;
     tabDragHoverGeneration_ = 0;
     googleSuggestGeneration_ = 0;
     selectedOmniboxSuggestionIndex_ = -1;
-    [self restoreMainWindowFrame];
+    [self restoreSessionWindowFrame];
     [self restoreProfileExtensionsMovedByOlderVersions];
     [self clearPendingProfileExtensionRestartStates];
     window.delegate = self;
     [self buildInterface];
     [self restoreFaviconStore];
-    isRestoringSession_ = YES;
-    [self restoreGroupsState];
-    isRestoringSession_ = NO;
-    [self createInitialRestoredBrowserIfNeeded];
-    [self dispatchApplicationDidStartModuleLifecycleHook];
+    [self restoreSessionGroupsAndTabs];
+    [self restoreSessionInitialBrowsers];
+    [self restoreSessionModulesLifecycle];
   }
   return self;
+}
+
+- (void)restoreSessionWindowFrame {
+  [self restoreMainWindowFrame];
+}
+
+- (void)restoreSessionWindowZoom {
+  [self restoreMainWindowZoomStateIfNeeded];
+}
+
+- (void)restoreSessionSidebarCollapsedState {
+  sidebarCollapsed_ = [NSUserDefaults.standardUserDefaults boolForKey:kSidebarCollapsedDefaultsKey];
+}
+
+- (void)restoreSessionSidebarExpandedWidth {
+  expandedSidebarWidth_ = [self restoredExpandedSidebarWidth];
+}
+
+- (void)restoreSessionSidebarState {
+  [self restoreSessionSidebarCollapsedState];
+  [self restoreSessionSidebarExpandedWidth];
+}
+
+- (void)applySessionSidebarDividerPosition {
+  if (didApplyInitialSidebarRestore_) {
+    return;
+  }
+
+  didApplyInitialSidebarRestore_ = YES;
+  BOOL previousBuildingState = isBuildingInterface_;
+  isBuildingInterface_ = YES;
+  [splitView_ setPosition:[self targetSidebarWidth] ofDividerAtIndex:0];
+  [self layoutInterfaceForCurrentSplitViewSize];
+  isBuildingInterface_ = previousBuildingState;
+}
+
+- (void)restoreSessionSidebarAfterInitialLayout {
+  [self restoreSessionSidebarState];
+  [self applySessionSidebarDividerPosition];
+}
+
+- (void)restoreSessionGroupsAndTabs {
+  isRestoringSession_ = YES;
+  [self restoreGroupsState];
+  isRestoringSession_ = NO;
+}
+
+- (void)restoreSessionInitialBrowsers {
+  [self createInitialRestoredBrowserIfNeeded];
+}
+
+- (void)restoreSessionModulesLifecycle {
+  [self dispatchApplicationDidStartModuleLifecycleHook];
 }
 
 - (void)dispatchApplicationDidStartModuleLifecycleHook {
@@ -474,7 +527,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
                                    24);
   sidebarTitle_.autoresizingMask = NSViewMinYMargin;
   [sidebarView_ addSubview:sidebarTitle_];
-  expandedSidebarWidth_ = [self restoredExpandedSidebarWidth];
+  [self restoreSessionSidebarState];
   CGFloat initialSidebarWidth = [self targetSidebarWidth];
   sidebarView_.frame = NSMakeRect(0, 0, initialSidebarWidth, 820);
 
@@ -1812,8 +1865,9 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 }
 
 - (void)showMainWindow {
-  [self restoreMainWindowZoomStateIfNeeded];
+  [self restoreSessionWindowZoom];
   [self layoutInterfaceForCurrentSplitViewSize];
+  [self restoreSessionSidebarAfterInitialLayout];
   [self.window makeKeyAndOrderFront:nil];
   [NSApp activateIgnoringOtherApps:YES];
 }
