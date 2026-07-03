@@ -1,10 +1,10 @@
 // This file is included by BrowserWindowController.mm.
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (NSString*)settingsTabOpeningStrategyHTML:(NSString*)selectedStrategy {
-  NSString* originalClass = [selectedStrategy isEqualToString:kTabOpeningStrategyAppend]
+  NSString* originalClass = [selectedStrategy isEqualToString:BabelTabOpeningStrategyAppend]
       ? @"option selected"
       : @"option";
-  NSString* childClusterClass = [selectedStrategy isEqualToString:kTabOpeningStrategyChildCluster]
+  NSString* childClusterClass = [selectedStrategy isEqualToString:BabelTabOpeningStrategyChildCluster]
       ? @"option selected"
       : @"option";
   return [NSString stringWithFormat:
@@ -15,16 +15,16 @@
        "<strong>Parent group</strong><span>New tabs opened from a page stay next to their parent tab.</span></a>"
        "</div>",
       originalClass,
-      kTabOpeningStrategyAppend,
+      BabelTabOpeningStrategyAppend,
       childClusterClass,
-      kTabOpeningStrategyChildCluster];
+      BabelTabOpeningStrategyChildCluster];
 }
 
 - (NSString*)settingsAddressSuggestionsHTML:(NSString*)selectedMode {
-  NSString* localClass = [selectedMode isEqualToString:kAddressSuggestionsModeLocal]
+  NSString* localClass = [selectedMode isEqualToString:BabelAddressSuggestionsModeLocal]
       ? @"option selected"
       : @"option";
-  NSString* googleClass = [selectedMode isEqualToString:kAddressSuggestionsModeGoogle]
+  NSString* googleClass = [selectedMode isEqualToString:BabelAddressSuggestionsModeGoogle]
       ? @"option selected"
       : @"option";
   return [NSString stringWithFormat:
@@ -35,9 +35,9 @@
        "<strong>Local + Google</strong><span>Also ask Google Suggest while typing.</span></a>"
        "</div>",
       localClass,
-      kAddressSuggestionsModeLocal,
+      BabelAddressSuggestionsModeLocal,
       googleClass,
-      kAddressSuggestionsModeGoogle];
+      BabelAddressSuggestionsModeGoogle];
 }
 
 - (NSString*)settingsAppearanceThemeHTML:(NSString*)selectedTheme {
@@ -91,22 +91,22 @@
 
 - (NSString*)settingsMarkdownThemeHTML:(NSString*)selectedTheme settingsURLString:(NSString*)settingsURLString {
   NSDictionary<NSString*, NSString*>* labels = @{
-    kMarkdownThemeGitHubLight : @"GitHub Light",
-    kMarkdownThemeGitHubDark : @"GitHub Dark",
-    kMarkdownThemeReader : @"Reader",
-    kMarkdownThemeCompact : @"Compact",
+    BabelMarkdownThemeGitHubLight : @"GitHub Light",
+    BabelMarkdownThemeGitHubDark : @"GitHub Dark",
+    BabelMarkdownThemeReader : @"Reader",
+    BabelMarkdownThemeCompact : @"Compact",
   };
   NSDictionary<NSString*, NSString*>* descriptions = @{
-    kMarkdownThemeGitHubLight : @"Default technical documentation style.",
-    kMarkdownThemeGitHubDark : @"Dark technical documentation style.",
-    kMarkdownThemeReader : @"Wider reading rhythm for long documents.",
-    kMarkdownThemeCompact : @"Denser rendering for reference documents.",
+    BabelMarkdownThemeGitHubLight : @"Default technical documentation style.",
+    BabelMarkdownThemeGitHubDark : @"Dark technical documentation style.",
+    BabelMarkdownThemeReader : @"Wider reading rhythm for long documents.",
+    BabelMarkdownThemeCompact : @"Denser rendering for reference documents.",
   };
   NSArray<NSString*>* themes = @[
-    kMarkdownThemeGitHubLight,
-    kMarkdownThemeGitHubDark,
-    kMarkdownThemeReader,
-    kMarkdownThemeCompact
+    BabelMarkdownThemeGitHubLight,
+    BabelMarkdownThemeGitHubDark,
+    BabelMarkdownThemeReader,
+    BabelMarkdownThemeCompact
   ];
   NSMutableString* html = [NSMutableString stringWithString:@"<div class='options'>"];
   for (NSString* theme in themes) {

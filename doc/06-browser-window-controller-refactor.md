@@ -40,6 +40,7 @@ BrowserWindowController
             |__ RecentlyClosedTabStore
             |__ InternalPageRenderer
             |__ StableViewerURLResolver
+            |__ BrowserSettingsStore
             |__ more focused collaborators as needed
 ```
 
@@ -65,7 +66,7 @@ BrowserWindowController
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
-| `BrowserWindowController+SettingsOptions.inc.mm` | App setting values, parsing, persistence, and option-specific action handling. |
+| `BrowserWindowController+SettingsOptions.inc.mm` | App settings option HTML rendering. Settings value persistence and validation are delegated to `BabelBrowserSettingsStore`. |
 | `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML and module settings shell rendering. Candidate for `InternalPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
 | `BrowserWindowController+StableViewerDisplay.inc.mm` | Stable viewer URL display wrappers and stable-server same-tab navigation. Stable viewer URL parsing and display formatting are delegated to `BabelStableViewerURLResolver`. |
@@ -156,6 +157,18 @@ The controller may provide page body HTML for now, but it must not own the commo
 - encodes stable viewer path segments.
 
 The controller may use the resolver to decide navigation and address display, but it must not manually parse stable viewer URL paths.
+
+### `BabelBrowserSettingsStore`
+
+`BabelBrowserSettingsStore` owns persisted browser-level settings and option validation:
+
+- tab opening strategy;
+- address suggestions mode;
+- Markdown viewer theme;
+- long Cmd+Q behavior;
+- supported value validation for these settings.
+
+The controller may route settings URLs and refresh affected UI, but it must not directly read/write these settings in `NSUserDefaults`.
 
 ### `BabelModuleUpdateService`
 

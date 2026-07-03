@@ -44,8 +44,7 @@
   NSString* strategy = [self tabOpeningStrategy];
   NSString* addressSuggestionsMode = [self addressSuggestionsMode];
   NSString* appearanceTheme = [BabelTheme.sharedTheme appearanceMode];
-  BOOL longQuitShortcutEnabled =
-      [NSUserDefaults.standardUserDefaults boolForKey:kLongQuitShortcutEnabledDefaultsKey];
+  BOOL longQuitShortcutEnabled = [browserSettingsStore_ longQuitShortcutEnabled];
   NSString* body = [NSString stringWithFormat:
       @"<h1>Settings</h1>"
        "<section><a class='primaryButton' data-can-open-menu='true' href='babelchrome://extensions'>Extensions</a>"

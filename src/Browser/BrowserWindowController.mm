@@ -1,6 +1,7 @@
 #import "Browser/BrowserWindowController.h"
 
 #import "Browser/BrowserClient.h"
+#import "Browser/BrowserSettingsStore.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/FaviconStore.h"
 #import "Browser/InternalPageRenderer.h"
@@ -56,10 +57,6 @@ static NSString* const kDefaultGroupIdentifier = @"default";
 static NSString* const kDefaultGroupName = @"default";
 static NSString* const kDeveloperToolsDockModeDefaultsKey = @"DeveloperToolsDockMode";
 static NSString* const kDeveloperToolsSizeRatioDefaultsKey = @"DeveloperToolsSizeRatio";
-static NSString* const kAddressSuggestionsModeDefaultsKey = @"AddressSuggestionsMode";
-static NSString* const kTabOpeningStrategyDefaultsKey = @"TabOpeningStrategy";
-static NSString* const kMarkdownThemeDefaultsKey = @"MarkdownTheme";
-static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutEnabled";
 static NSString* const kModuleUpdateURLDefaultsKey = @"ModuleUpdateURL";
 static NSString* const kModuleUpdateLocalDirectoryDefaultsKey = @"ModuleUpdateLocalDirectory";
 static NSString* const kModuleUpdateLocalIndexFilename = @"module-update-local-index.json";
@@ -67,15 +64,6 @@ static NSString* const kDeveloperToolsDockModeBottom = @"bottom";
 static NSString* const kDeveloperToolsDockModeTop = @"top";
 static NSString* const kDeveloperToolsDockModeLeft = @"left";
 static NSString* const kDeveloperToolsDockModeRight = @"right";
-static NSString* const kTabOpeningStrategyAppend = @"append";
-static NSString* const kTabOpeningStrategyAfterSelected = @"after-selected";
-static NSString* const kTabOpeningStrategyChildCluster = @"child-cluster";
-static NSString* const kAddressSuggestionsModeLocal = @"local";
-static NSString* const kAddressSuggestionsModeGoogle = @"google";
-static NSString* const kMarkdownThemeGitHubLight = @"github-light";
-static NSString* const kMarkdownThemeGitHubDark = @"github-dark";
-static NSString* const kMarkdownThemeReader = @"reader";
-static NSString* const kMarkdownThemeCompact = @"compact";
 static NSString* const kCompactCommandOpaquePrefix = @"babelchrome:group:";
 static NSString* const kCompactCommandHierarchicalPrefix = @"babelchrome://command/group:";
 static NSString* const kInternalStartQueryParameter = @"__babelchrome_start";
@@ -120,6 +108,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelBrowserGroup*>* groups_;
   NSMutableArray<NSDictionary*>* omniboxSuggestions_;
   NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
+  BabelBrowserSettingsStore* browserSettingsStore_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelFaviconStore* faviconStore_;
   BabelInternalPageRenderer* internalPageRenderer_;
@@ -184,6 +173,8 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     groups_ = [NSMutableArray array];
     omniboxSuggestions_ = [NSMutableArray array];
     googleSuggestCache_ = [NSMutableDictionary dictionary];
+    browserSettingsStore_ =
+        [[BabelBrowserSettingsStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     extensionProfileStore_ =
         [[BabelExtensionProfileStore alloc]
             initWithProfileDirectoryURL:BabelChromeConfiguration.profileDirectoryURL

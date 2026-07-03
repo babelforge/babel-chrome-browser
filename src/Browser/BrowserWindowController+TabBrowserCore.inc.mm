@@ -181,7 +181,7 @@
  respectingUserStrategy:(BOOL)respectingUserStrategy {
   if (!parentTab || ![group.tabs containsObject:parentTab] ||
       (respectingUserStrategy &&
-       [[self tabOpeningStrategy] isEqualToString:kTabOpeningStrategyAppend])) {
+       [[self tabOpeningStrategy] isEqualToString:BabelTabOpeningStrategyAppend])) {
     [group.tabs addObject:tab];
     return;
   }
@@ -197,7 +197,7 @@
     return group.tabs.count;
   }
 
-  if ([[self tabOpeningStrategy] isEqualToString:kTabOpeningStrategyAfterSelected]) {
+  if ([[self tabOpeningStrategy] isEqualToString:BabelTabOpeningStrategyAfterSelected]) {
     return parentIndex + 1;
   }
 
@@ -234,49 +234,31 @@
 }
 
 - (NSString*)tabOpeningStrategy {
-  NSString* strategy = [NSUserDefaults.standardUserDefaults stringForKey:kTabOpeningStrategyDefaultsKey];
-  if ([self isSupportedTabOpeningStrategy:strategy]) {
-    return strategy;
-  }
-  return kTabOpeningStrategyChildCluster;
+  return [browserSettingsStore_ tabOpeningStrategy];
 }
 
 - (BOOL)isSupportedTabOpeningStrategy:(NSString*)strategy {
-  return [strategy isEqualToString:kTabOpeningStrategyAppend] ||
-         [strategy isEqualToString:kTabOpeningStrategyAfterSelected] ||
-         [strategy isEqualToString:kTabOpeningStrategyChildCluster];
+  return [browserSettingsStore_ isSupportedTabOpeningStrategy:strategy];
 }
 
 - (NSString*)addressSuggestionsMode {
-  NSString* mode = [NSUserDefaults.standardUserDefaults stringForKey:kAddressSuggestionsModeDefaultsKey];
-  if ([self isSupportedAddressSuggestionsMode:mode]) {
-    return mode;
-  }
-  return kAddressSuggestionsModeLocal;
+  return [browserSettingsStore_ addressSuggestionsMode];
 }
 
 - (BOOL)isSupportedAddressSuggestionsMode:(NSString*)mode {
-  return [mode isEqualToString:kAddressSuggestionsModeLocal] ||
-         [mode isEqualToString:kAddressSuggestionsModeGoogle];
+  return [browserSettingsStore_ isSupportedAddressSuggestionsMode:mode];
 }
 
 - (NSString*)markdownTheme {
-  NSString* theme = [NSUserDefaults.standardUserDefaults stringForKey:kMarkdownThemeDefaultsKey];
-  if ([self isSupportedMarkdownTheme:theme]) {
-    return theme;
-  }
-  return kMarkdownThemeGitHubLight;
+  return [browserSettingsStore_ markdownTheme];
 }
 
 - (BOOL)isSupportedMarkdownTheme:(NSString*)theme {
-  return [theme isEqualToString:kMarkdownThemeGitHubLight] ||
-         [theme isEqualToString:kMarkdownThemeGitHubDark] ||
-         [theme isEqualToString:kMarkdownThemeReader] ||
-         [theme isEqualToString:kMarkdownThemeCompact];
+  return [browserSettingsStore_ isSupportedMarkdownTheme:theme];
 }
 
 - (BOOL)googleSuggestEnabled {
-  return [[self addressSuggestionsMode] isEqualToString:kAddressSuggestionsModeGoogle];
+  return [[self addressSuggestionsMode] isEqualToString:BabelAddressSuggestionsModeGoogle];
 }
 
 - (void)createBrowserForTabIfNeeded:(BabelBrowserTab*)tab {

@@ -12,6 +12,8 @@ set(BABEL_CHROME_SOURCES
   App/MainMenuBuilder.mm
   Browser/BrowserClient.h
   Browser/BrowserClient.mm
+  Browser/BrowserSettingsStore.h
+  Browser/BrowserSettingsStore.mm
   Browser/ExtensionProfileStore.h
   Browser/ExtensionProfileStore.mm
   Browser/FaviconStore.h

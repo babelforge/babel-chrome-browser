@@ -21,15 +21,13 @@
       BOOL markdownThemeDidChange = NO;
       for (NSURLQueryItem* item in components.queryItems) {
         if ([item.name isEqualToString:@"markdownTheme"] &&
-            [self isSupportedMarkdownTheme:item.value] &&
             [[self normalizedModuleSettingsIdentifier:moduleSettingsIdentifier]
                 isEqualToString:@"babelforge.markdown-viewer"]) {
           NSString* previousTheme = [self markdownTheme];
-          [NSUserDefaults.standardUserDefaults setObject:item.value
-                                                  forKey:kMarkdownThemeDefaultsKey];
-          [NSUserDefaults.standardUserDefaults synchronize];
-          markdownThemeDidChange = ![previousTheme isEqualToString:item.value];
-          break;
+          if ([browserSettingsStore_ setMarkdownTheme:item.value]) {
+            markdownThemeDidChange = ![previousTheme isEqualToString:item.value];
+            break;
+          }
         }
       }
 
@@ -44,32 +42,25 @@
     BOOL appearanceThemeDidChange = NO;
     for (NSURLQueryItem* item in components.queryItems) {
       if ([item.name isEqualToString:@"tabOpeningStrategy"] &&
-          [self isSupportedTabOpeningStrategy:item.value]) {
-        [NSUserDefaults.standardUserDefaults setObject:item.value
-                                                forKey:kTabOpeningStrategyDefaultsKey];
-        [NSUserDefaults.standardUserDefaults synchronize];
+          [browserSettingsStore_ setTabOpeningStrategy:item.value]) {
         break;
       }
 
       if ([item.name isEqualToString:@"longQuitShortcut"]) {
         BOOL enabled = [item.value isEqualToString:@"1"] ||
                        [[item.value lowercaseString] isEqualToString:@"true"];
-        [NSUserDefaults.standardUserDefaults setBool:enabled
-                                              forKey:kLongQuitShortcutEnabledDefaultsKey];
-        [NSUserDefaults.standardUserDefaults synchronize];
+        [browserSettingsStore_ setLongQuitShortcutEnabled:enabled];
         break;
       }
 
       if (![item.name isEqualToString:@"addressSuggestions"] ||
-          ![self isSupportedAddressSuggestionsMode:item.value]) {
-        if ([item.name isEqualToString:@"markdownTheme"] &&
-            [self isSupportedMarkdownTheme:item.value]) {
+          ![browserSettingsStore_ setAddressSuggestionsMode:item.value]) {
+        if ([item.name isEqualToString:@"markdownTheme"]) {
           NSString* previousTheme = [self markdownTheme];
-          [NSUserDefaults.standardUserDefaults setObject:item.value
-                                                  forKey:kMarkdownThemeDefaultsKey];
-          [NSUserDefaults.standardUserDefaults synchronize];
-          markdownThemeDidChange = ![previousTheme isEqualToString:item.value];
-          break;
+          if ([browserSettingsStore_ setMarkdownTheme:item.value]) {
+            markdownThemeDidChange = ![previousTheme isEqualToString:item.value];
+            break;
+          }
         }
 
         if ([item.name isEqualToString:@"appearanceTheme"] &&
@@ -83,10 +74,6 @@
         }
         continue;
       }
-
-      [NSUserDefaults.standardUserDefaults setObject:item.value
-                                              forKey:kAddressSuggestionsModeDefaultsKey];
-      [NSUserDefaults.standardUserDefaults synchronize];
       break;
     }
 
