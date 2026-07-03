@@ -1,6 +1,7 @@
 #import "Browser/BrowserWindowController.h"
 
 #import "Browser/BrowserClient.h"
+#import "Browser/AppSettingsPageRenderer.h"
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/ExtensionsPageRenderer.h"
@@ -111,6 +112,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelBrowserGroup*>* groups_;
   NSMutableArray<NSDictionary*>* omniboxSuggestions_;
   NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
+  BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
@@ -212,6 +214,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
                                                         moduleUpdateService:moduleUpdateService_];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     settingsOptionRenderer_ = [[BabelSettingsOptionRenderer alloc] init];
+    appSettingsPageRenderer_ =
+        [[BabelAppSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];

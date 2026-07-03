@@ -10,6 +10,8 @@ set(BABEL_CHROME_SOURCES
   App/ApplicationDelegate.mm
   App/MainMenuBuilder.h
   App/MainMenuBuilder.mm
+  Browser/AppSettingsPageRenderer.h
+  Browser/AppSettingsPageRenderer.mm
   Browser/BrowserClient.h
   Browser/BrowserClient.mm
   Browser/BrowserSettingsStore.h

@@ -39,27 +39,11 @@
   NSString* addressSuggestionsMode = [self addressSuggestionsMode];
   NSString* appearanceTheme = [BabelTheme.sharedTheme appearanceMode];
   BOOL longQuitShortcutEnabled = [browserSettingsStore_ longQuitShortcutEnabled];
-  NSString* body = [NSString stringWithFormat:
-      @"<h1>Settings</h1>"
-       "<section><a class='primaryButton' data-can-open-menu='true' href='babelchrome://extensions'>Extensions</a>"
-       " <a class='primaryButton' data-can-open-menu='true' href='babelchrome://modules'>PHP Modules</a></section>"
-       "<section>"
-       "<h2>General</h2>"
-       "<dl>"
-       "<dt>Default page</dt><dd>%@</dd>"
-       "<dt>Application theme</dt><dd>%@</dd>"
-       "<dt>Quit shortcut</dt><dd>%@</dd>"
-       "<dt>Tab opening strategy</dt><dd>%@</dd>"
-       "<dt>Address suggestions</dt><dd>%@</dd>"
-       "<dt>Groups file</dt><dd>Stored in the BabelChrome application support folder.</dd>"
-       "<dt>Developer Tools docking</dt><dd>The last selected dock mode is saved automatically.</dd>"
-       "</dl>"
-       "</section>",
-      [self htmlEscapedString:BabelChromeConfiguration.defaultURLString],
-      [self settingsAppearanceThemeHTML:appearanceTheme],
-      [self settingsLongQuitShortcutHTML:longQuitShortcutEnabled],
-      [self settingsTabOpeningStrategyHTML:strategy],
-      [self settingsAddressSuggestionsHTML:addressSuggestionsMode]];
+  NSString* body = [appSettingsPageRenderer_ settingsPageBodyWithDefaultURLString:BabelChromeConfiguration.defaultURLString
+                                                                  appearanceTheme:appearanceTheme
+                                                          longQuitShortcutEnabled:longQuitShortcutEnabled
+                                                               tabOpeningStrategy:strategy
+                                                           addressSuggestionsMode:addressSuggestionsMode];
   return [self internalPageHTMLWithTitle:@"Settings" body:body];
 }
 
