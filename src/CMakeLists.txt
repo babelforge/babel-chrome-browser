@@ -28,6 +28,8 @@ set(BABEL_CHROME_SOURCES
   Browser/HistoryPageRenderer.mm
   Browser/InternalPageRenderer.h
   Browser/InternalPageRenderer.mm
+  Browser/LiveBrowserEvictionPolicy.h
+  Browser/LiveBrowserEvictionPolicy.mm
   Browser/ModuleActionService.h
   Browser/ModuleActionService.mm
   Browser/ModulePageRenderer.h

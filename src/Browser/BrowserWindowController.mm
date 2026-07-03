@@ -9,6 +9,7 @@
 #import "Browser/GoogleSuggestClient.h"
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/InternalPageRenderer.h"
+#import "Browser/LiveBrowserEvictionPolicy.h"
 #import "Browser/ModuleActionService.h"
 #import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleSettingsPageRenderer.h"
@@ -123,6 +124,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelGoogleSuggestClient* googleSuggestClient_;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelInternalPageRenderer* internalPageRenderer_;
+  BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
   BabelModuleActionService* moduleActionService_;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
@@ -137,8 +139,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelTabPlacementPolicy* tabPlacementPolicy_;
   BabelWindowStateStore* windowStateStore_;
-  NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
-  NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
   NSMutableDictionary<NSNumber*, NSDate*>* pendingLocalDropBrowserIdentifiers_;
   BabelBrowserGroup* selectedGroup_;
   NSMutableArray<BabelBrowserTab*>* tabs_;
@@ -204,6 +204,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     googleSuggestClient_ = [[BabelGoogleSuggestClient alloc] init];
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
+    liveBrowserEvictionPolicy_ = [[BabelLiveBrowserEvictionPolicy alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];
     modulePageRenderer_ =
         [[BabelModulePageRenderer alloc]
@@ -231,8 +232,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     tabPlacementPolicy_ = [[BabelTabPlacementPolicy alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
-    recentlyUsedTabIdentifiers_ = [NSMutableArray array];
-    evictingBrowserTabIdentifiers_ = [NSMutableSet set];
     pendingLocalDropBrowserIdentifiers_ = [NSMutableDictionary dictionary];
     tabs_ = [NSMutableArray array];
     pendingTabs_ = [NSMutableArray array];

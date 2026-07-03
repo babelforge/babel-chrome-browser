@@ -304,7 +304,7 @@
   [self dispatchApplicationWillQuitModuleLifecycleHook];
   [BabelLocalServiceHost.sharedHost stop];
   [pendingTabs_ removeAllObjects];
-  [evictingBrowserTabIdentifiers_ removeAllObjects];
+  [liveBrowserEvictionPolicy_ reset];
 
   if ([self totalTabCount] == 0) {
     CefQuitMessageLoop();

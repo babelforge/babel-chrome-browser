@@ -76,8 +76,8 @@
     return;
   }
 
-  if ([evictingBrowserTabIdentifiers_ containsObject:tabToRemove.identifier ?: @""]) {
-    [evictingBrowserTabIdentifiers_ removeObject:tabToRemove.identifier ?: @""];
+  if ([liveBrowserEvictionPolicy_ isTabEvicting:tabToRemove]) {
+    [liveBrowserEvictionPolicy_ unmarkTabEvicting:tabToRemove];
     [tabToRemove setBrowser:nullptr];
     [tabToRemove.hostView setBrowser:nullptr];
     return;
@@ -113,8 +113,7 @@
     [tabs_ removeObject:tab];
   }
   [pendingTabs_ removeObject:tab];
-  [recentlyUsedTabIdentifiers_ removeObject:tab.identifier ?: @""];
-  [evictingBrowserTabIdentifiers_ removeObject:tab.identifier ?: @""];
+  [liveBrowserEvictionPolicy_ removeTab:tab];
 
   if (allowSelection && selectedTab_ == tab) {
     selectedTab_ = tabs_.lastObject;

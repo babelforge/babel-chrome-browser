@@ -360,12 +360,7 @@
 }
 
 - (void)touchRecentlyUsedTab:(BabelBrowserTab*)tab {
-  if (tab.identifier.length == 0) {
-    return;
-  }
-
-  [recentlyUsedTabIdentifiers_ removeObject:tab.identifier];
-  [recentlyUsedTabIdentifiers_ addObject:tab.identifier];
+  [liveBrowserEvictionPolicy_ touchTab:tab];
 }
 
 - (NSMutableSet<NSString*>*)protectedLiveBrowserTabIdentifiers {
@@ -392,40 +387,13 @@
 }
 
 - (NSArray<BabelBrowserTab*>*)livePageBrowserTabsExcludingEvictions {
-  NSMutableArray<BabelBrowserTab*>* liveTabs = [NSMutableArray array];
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if ([tab browser] &&
-          ![evictingBrowserTabIdentifiers_ containsObject:tab.identifier ?: @""]) {
-        [liveTabs addObject:tab];
-      }
-    }
-  }
-  return liveTabs;
+  return [liveBrowserEvictionPolicy_ liveBrowserTabsInGroupsExcludingEvictions:groups_];
 }
 
 - (BabelBrowserTab*)leastRecentlyUsedEvictableTabFromTabs:(NSArray<BabelBrowserTab*>*)liveTabs
                                      protectedIdentifiers:(NSSet<NSString*>*)protectedIdentifiers {
-  for (BabelBrowserTab* tab in liveTabs) {
-    if (![recentlyUsedTabIdentifiers_ containsObject:tab.identifier ?: @""] &&
-        ![protectedIdentifiers containsObject:tab.identifier ?: @""]) {
-      return tab;
-    }
-  }
-
-  for (NSString* tabIdentifier in recentlyUsedTabIdentifiers_) {
-    if ([protectedIdentifiers containsObject:tabIdentifier]) {
-      continue;
-    }
-
-    for (BabelBrowserTab* tab in liveTabs) {
-      if ([tab.identifier isEqualToString:tabIdentifier]) {
-        return tab;
-      }
-    }
-  }
-
-  return nil;
+  return [liveBrowserEvictionPolicy_ leastRecentlyUsedEvictableTabFromTabs:liveTabs
+                                                       protectedIdentifiers:protectedIdentifiers];
 }
 
 - (void)closeBrowserForTabKeepingNativeTab:(BabelBrowserTab*)tab {
@@ -434,7 +402,7 @@
     return;
   }
 
-  [evictingBrowserTabIdentifiers_ addObject:tab.identifier];
+  [liveBrowserEvictionPolicy_ markTabEvicting:tab];
   browser->GetHost()->CloseDevTools();
   browser->GetHost()->CloseBrowser(true);
 }

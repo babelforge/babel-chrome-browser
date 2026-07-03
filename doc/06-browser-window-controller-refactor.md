@@ -52,6 +52,7 @@ BrowserWindowController
             |__ GoogleSuggestClient
             |__ OmniboxSuggestionsController
             |__ TabPlacementPolicy
+            |__ LiveBrowserEvictionPolicy
             |__ more focused collaborators as needed
 ```
 
@@ -80,7 +81,7 @@ BrowserWindowController
 | `BrowserWindowController+SettingsOptions.inc.mm` | Compatibility wrappers for app settings option HTML. Actual option rendering is delegated to `BabelSettingsOptionRenderer`, and settings value persistence/validation is delegated to `BabelBrowserSettingsStore`. |
 | `BrowserWindowController+SettingsPages.inc.mm` | Main Settings value collection, module settings value collection, and view-model collection for History and Extensions. Main Settings rendering is delegated to `BabelAppSettingsPageRenderer`; module Settings rendering is delegated to `BabelModuleSettingsPageRenderer`; History page body rendering is delegated to `BabelHistoryPageRenderer`; Extensions page body rendering is delegated to `BabelExtensionsPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. Stable server URL parsing and internal query handling are delegated to `BabelStableServerURLResolver`. |
-| `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. New-tab insertion policy is delegated to `BabelTabPlacementPolicy`. |
+| `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limit orchestration. New-tab insertion policy is delegated to `BabelTabPlacementPolicy`; live-browser LRU and eviction-state policy is delegated to `BabelLiveBrowserEvictionPolicy`. |
 | `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tab reopening orchestration. Recently closed tab stack ownership is delegated to `BabelRecentlyClosedTabStore`. |
 | `BrowserWindowController+URLOpening.inc.mm` | External URL opening, command URL handling, new tab placement, and open requests from macOS or CEF. |
 
@@ -237,6 +238,17 @@ The controller may add favicon-enriched suggestions and execute selected suggest
 - descendant detection through parent tab identifiers.
 
 The controller may still mutate the group tab array and build lightweight identifier maps, but it must not implement tab placement strategy logic directly.
+
+### `BabelLiveBrowserEvictionPolicy`
+
+`BabelLiveBrowserEvictionPolicy` owns live page-browser eviction policy state:
+
+- recently used tab identifier ordering;
+- in-flight eviction tracking;
+- live browser tab filtering that excludes in-flight evictions;
+- least-recently-used evictable tab selection.
+
+The controller may still decide which tabs are protected by current UI state and may still perform the CEF `CloseBrowser` call, but it must not own LRU arrays or eviction marker sets directly.
 
 ### `BabelBrowserSettingsStore`
 
