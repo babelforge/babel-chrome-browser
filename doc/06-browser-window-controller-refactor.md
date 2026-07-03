@@ -57,7 +57,7 @@ BrowserWindowController
 | `BrowserWindowController+InternalNavigationRouter.inc.mm` | Routing for `babelchrome://settings`, `babelchrome://modules`, `babelchrome://extensions`, `babelchrome://history`, and related internal URLs. |
 | `BrowserWindowController+InternalPageLoading.inc.mm` | Loading rendered internal HTML into the selected browser tab. |
 | `BrowserWindowController+InternalPageOpeners.inc.mm` | Convenience methods that open built-in internal pages from menu items, buttons, shortcuts, or module routes. Module page methods collect snapshots/update data and delegate body rendering to `BabelModulePageRenderer`. |
-| `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, escaping, formatting, and small HTML utilities. Candidate for extraction into renderer/view helpers. |
+| `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, URL/path escaping, shell quoting, icon loading, restart launching, and compatibility wrappers for internal page rendering. Shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
@@ -132,6 +132,17 @@ The controller may instantiate these helpers, but it must not define view/helper
 
 The controller may create `BabelClosedTab` snapshots and reopen tabs from them, but it must not own the mutable recently closed tab stack directly.
 
+### `BabelInternalPageRenderer`
+
+`BabelInternalPageRenderer` owns the shared HTML document shell for BabelChrome internal pages:
+
+- renders the common internal page HTML document;
+- owns the common CSS and small JavaScript conventions for internal pages;
+- resolves light/dark internal page classes from the current BabelChrome theme;
+- provides shared HTML escaping.
+
+The controller may provide page body HTML for now, but it must not own the common internal-page shell, theme CSS, or escaping implementation.
+
 ### `BabelModuleUpdateService`
 
 `BabelModuleUpdateService` owns module update source and artifact resolution:
@@ -185,9 +196,9 @@ The controller may refresh browser capabilities and reopen internal pages after 
 
 ## Extraction Candidates
 
-### `InternalPageRenderer`
+### Broader Internal Page Rendering
 
-Move HTML generation for internal pages into a renderer layer. Good first targets:
+Continue moving page-specific HTML generation into renderer classes. Good next targets:
 
 - settings page HTML;
 - modules page HTML;
@@ -196,7 +207,7 @@ Move HTML generation for internal pages into a renderer layer. Good first target
 - extensions page HTML;
 - history page HTML.
 
-The controller should provide view models and receive rendered HTML. It should not concatenate large HTML strings directly.
+The controller should provide view models and receive rendered HTML. It should not concatenate large page-specific HTML strings directly.
 
 ### `WindowStateStore`
 
