@@ -2,6 +2,7 @@
 
 #import "Browser/BrowserClient.h"
 #import "Browser/AppSettingsPageRenderer.h"
+#import "Browser/DeveloperToolsDockingPolicy.h"
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/DeveloperToolsLayoutCalculator.h"
@@ -127,6 +128,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelBrowserGroup*>* groups_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelBrowserSettingsStore* browserSettingsStore_;
+  BabelDeveloperToolsDockingPolicy* developerToolsDockingPolicy_;
   BabelDeveloperToolsDockingStore* developerToolsDockingStore_;
   BabelDeveloperToolsLayoutCalculator* developerToolsLayoutCalculator_;
   BabelExtensionProfileStore* extensionProfileStore_;
@@ -206,6 +208,15 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     groups_ = [NSMutableArray array];
     browserSettingsStore_ =
         [[BabelBrowserSettingsStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
+    developerToolsDockingPolicy_ =
+        [[BabelDeveloperToolsDockingPolicy alloc] initWithBottomMode:kDeveloperToolsDockModeBottom
+                                                             topMode:kDeveloperToolsDockModeTop
+                                                            leftMode:kDeveloperToolsDockModeLeft
+                                                           rightMode:kDeveloperToolsDockModeRight
+                                                             leftTag:kDeveloperToolsDockTagLeft
+                                                            rightTag:kDeveloperToolsDockTagRight
+                                                           bottomTag:kDeveloperToolsDockTagBottom
+                                                              topTag:kDeveloperToolsDockTagTop];
     developerToolsDockingStore_ =
         [[BabelDeveloperToolsDockingStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults
                                                   dockModeDefaultsKey:kDeveloperToolsDockModeDefaultsKey

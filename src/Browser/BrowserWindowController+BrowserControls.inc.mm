@@ -85,14 +85,14 @@
 }
 
 - (void)changeDeveloperToolsDockFromButton:(NSButton*)sender {
-  NSString* dockMode = [self developerToolsDockModeForTag:sender.tag];
+  NSString* dockMode = [developerToolsDockingPolicy_ dockModeForTag:sender.tag];
   if (dockMode.length == 0) {
     return;
   }
 
   developerToolsDockMode_ = dockMode;
   [developerToolsDockingStore_ setDockMode:dockMode
-                              allowedModes:[self allowedDeveloperToolsDockModes]];
+                              allowedModes:[developerToolsDockingPolicy_ allowedDockModes]];
   [self layoutInterfaceForCurrentSplitViewSize];
 }
 
@@ -148,25 +148,9 @@
   return nil;
 }
 
-- (NSString*)developerToolsDockModeForTag:(NSInteger)tag {
-  if (tag == kDeveloperToolsDockTagLeft) {
-    return kDeveloperToolsDockModeLeft;
-  }
-  if (tag == kDeveloperToolsDockTagRight) {
-    return kDeveloperToolsDockModeRight;
-  }
-  if (tag == kDeveloperToolsDockTagTop) {
-    return kDeveloperToolsDockModeTop;
-  }
-  if (tag == kDeveloperToolsDockTagBottom) {
-    return kDeveloperToolsDockModeBottom;
-  }
-  return nil;
-}
-
 - (NSString*)restoredDeveloperToolsDockMode {
   return [developerToolsDockingStore_ restoredDockModeWithFallback:kDeveloperToolsDockModeBottom
-                                                      allowedModes:[self allowedDeveloperToolsDockModes]];
+                                                      allowedModes:[developerToolsDockingPolicy_ allowedDockModes]];
 }
 
 - (CGFloat)restoredDeveloperToolsSizeRatio {
@@ -174,16 +158,7 @@
 }
 
 - (BOOL)developerToolsDockModeIsHorizontal {
-  return [developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeBottom] ||
-         [developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeTop];
-}
-
-- (NSSet<NSString*>*)allowedDeveloperToolsDockModes {
-  return [NSSet setWithObjects:kDeveloperToolsDockModeBottom,
-                              kDeveloperToolsDockModeTop,
-                              kDeveloperToolsDockModeLeft,
-                              kDeveloperToolsDockModeRight,
-                              nil];
+  return [developerToolsDockingPolicy_ isHorizontalDockMode:developerToolsDockMode_];
 }
 
 - (void)navigateSelectedTabBack {

@@ -82,6 +82,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserViews.mm
   Browser/DeveloperToolsDockingStore.h
   Browser/DeveloperToolsDockingStore.mm
+  Browser/DeveloperToolsDockingPolicy.h
+  Browser/DeveloperToolsDockingPolicy.mm
   Browser/DeveloperToolsLayoutCalculator.h
   Browser/DeveloperToolsLayoutCalculator.mm
   Browser/BrowserWindowController.h

@@ -60,6 +60,7 @@ BrowserWindowController
             |__ LocalDropBridgeScriptBuilder
             |__ LocalDropCoordinator
             |__ TabStripLayoutCalculator
+            |__ DeveloperToolsDockingPolicy
             |__ DeveloperToolsDockingStore
             |__ DeveloperToolsLayoutCalculator
             |__ more focused collaborators as needed
@@ -71,7 +72,7 @@ BrowserWindowController
 | --- | --- |
 | `BrowserWindowController+AddressFieldEditing.inc.mm` | Address field focus, submit, text editing, Escape behavior, and address entry state. |
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
-| `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. |
+| `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`. |
 | `BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm` | CEF browser title, URL, loading, favicon, status updates, and browser-client capability refresh. Favicon persistence is delegated to `BabelFaviconStore`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
 | `BrowserWindowController+ExtensionActions.inc.mm` | Extension install, remove, enable, disable, restart, and page action handlers. |
@@ -333,6 +334,16 @@ The controller may still map toolbar button tags to dock modes and apply AppKit/
 - preserving the same dock-mode sizing constraints independently from AppKit view mutation.
 
 The controller may still apply calculated frames to concrete views and maintain subview ordering, but it must not keep the DevTools sizing math inline.
+
+### `BabelDeveloperToolsDockingPolicy`
+
+`BabelDeveloperToolsDockingPolicy` owns embedded Developer Tools docking rules:
+
+- mapping toolbar button tags to dock-mode values;
+- exposing the allowed dock-mode set;
+- identifying dock modes that resize along the vertical axis.
+
+The controller may still react to toolbar button actions and persist the selected mode through `BabelDeveloperToolsDockingStore`, but it must not duplicate dock-mode mapping logic.
 
 ### `BabelBrowserSettingsStore`
 
