@@ -65,7 +65,7 @@
 
   tab.tabItemView = [[BabelTabItemView alloc] initWithIdentifier:tab.identifier
                                                           title:[self compactTitleForString:tab.title]];
-  tab.tabItemView.faviconImage = [self faviconImageForURLString:tab.urlString];
+  tab.tabItemView.faviconImage = [faviconStore_ faviconImageForURLString:tab.urlString];
   tab.tabItemView.target = self;
   tab.tabItemView.action = @selector(selectTabFromItem:);
   tab.tabItemView.closeTarget = self;

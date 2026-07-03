@@ -1,6 +1,7 @@
 #import "Browser/BrowserWindowController.h"
 
 #import "Browser/BrowserClient.h"
+#import "Browser/FaviconStore.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
@@ -117,7 +118,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelClosedTab*>* closedTabs_;
   NSMutableArray<NSDictionary*>* omniboxSuggestions_;
   NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
-  NSMutableDictionary<NSString*, NSImage*>* faviconImagesByOrigin_;
+  BabelFaviconStore* faviconStore_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
   NSMutableDictionary<NSNumber*, NSDate*>* pendingLocalDropBrowserIdentifiers_;
@@ -173,7 +174,8 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     closedTabs_ = [NSMutableArray array];
     omniboxSuggestions_ = [NSMutableArray array];
     googleSuggestCache_ = [NSMutableDictionary dictionary];
-    faviconImagesByOrigin_ = [NSMutableDictionary dictionary];
+    faviconStore_ =
+        [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
     evictingBrowserTabIdentifiers_ = [NSMutableSet set];
     pendingLocalDropBrowserIdentifiers_ = [NSMutableDictionary dictionary];
@@ -203,7 +205,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     [self clearPendingProfileExtensionRestartStates];
     window.delegate = self;
     [self buildInterface];
-    [self restoreFaviconStore];
+    [faviconStore_ restore];
     [self restoreSessionByPriority];
   }
   return self;

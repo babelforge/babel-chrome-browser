@@ -222,7 +222,7 @@
 }
 
 - (NSImage*)faviconImageForSuggestionTitle:(NSString*)title urlString:(NSString*)urlString {
-  NSImage* faviconImage = [self faviconImageForURLString:urlString];
+  NSImage* faviconImage = [faviconStore_ faviconImageForURLString:urlString];
   if (faviconImage) {
     return faviconImage;
   }
@@ -232,21 +232,7 @@
     return nil;
   }
 
-  for (NSString* originKey in faviconImagesByOrigin_) {
-    NSString* host = [NSURLComponents componentsWithString:originKey].host.lowercaseString;
-    if (host.length == 0) {
-      continue;
-    }
-
-    NSString* normalizedHost = [self normalizedFaviconHostString:host];
-    if (normalizedHost.length > 0 &&
-        ([normalizedTitle isEqualToString:normalizedHost] ||
-         [normalizedTitle hasPrefix:[normalizedHost stringByAppendingString:@" "]])) {
-      return faviconImagesByOrigin_[originKey];
-    }
-  }
-
-  return nil;
+  return [faviconStore_ faviconImageMatchingNormalizedTitle:normalizedTitle];
 }
 
 - (NSString*)normalizedFaviconLookupString:(NSString*)string {
@@ -274,16 +260,6 @@
   }
 
   return [normalizedString stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
-}
-
-- (NSString*)normalizedFaviconHostString:(NSString*)host {
-  NSString* normalizedHost = host.lowercaseString ?: @"";
-  if ([normalizedHost hasPrefix:@"www."]) {
-    normalizedHost = [normalizedHost substringFromIndex:4];
-  }
-
-  NSArray<NSString*>* parts = [normalizedHost componentsSeparatedByString:@"."];
-  return parts.count > 0 ? parts.firstObject : normalizedHost;
 }
 
 - (void)showOmniboxSuggestions {
