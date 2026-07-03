@@ -796,22 +796,21 @@
     return;
   }
 
-  BabelBrowserGroup* group = [self groupWithIdentifier:closedTab.groupIdentifier];
-  if (!group) {
-    NSString* groupName = closedTab.groupName.length > 0 ? closedTab.groupName : kDefaultGroupName;
-    NSString* groupIdentifier = closedTab.groupIdentifier.length > 0
-        ? closedTab.groupIdentifier
-        : NSUUID.UUID.UUIDString;
-    group = [self createGroupWithName:groupName identifier:groupIdentifier];
+  BabelClosedTabRestorationPlan* plan =
+      [closedTabRestorationPlanner_ restorationPlanForClosedTab:closedTab];
+  if (!plan) {
+    return;
   }
 
-  NSString* requestedURLString = closedTab.requestedURLString ?: closedTab.urlString;
-  NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:requestedURLString] ?:
-      closedTab.urlString;
-  BabelBrowserTab* tab = [self makeTabForURL:navigationURLString
+  BabelBrowserGroup* group = [self groupWithIdentifier:plan.groupIdentifier];
+  if (!group) {
+    group = [self createGroupWithName:plan.groupName identifier:plan.groupIdentifier];
+  }
+
+  BabelBrowserTab* tab = [self makeTabForURL:plan.navigationURLString
                                   identifier:nil
-                                       title:closedTab.title ?: closedTab.urlString];
-  tab.requestedURLString = requestedURLString;
+                                       title:plan.title];
+  tab.requestedURLString = plan.requestedURLString;
   [group.tabs addObject:tab];
   [pagesPanel_ addSubview:tab.hostView];
   [pagesPanel_ addSubview:tab.developerToolsPanelView];

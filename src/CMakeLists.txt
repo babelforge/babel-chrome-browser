@@ -34,6 +34,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserTabMoveCoordinator.mm
   Browser/ChromeCommandParser.h
   Browser/ChromeCommandParser.mm
+  Browser/ClosedTabRestorationPlanner.h
+  Browser/ClosedTabRestorationPlanner.mm
   Browser/ExtensionProfileStore.h
   Browser/ExtensionProfileStore.mm
   Browser/ExtensionsPageRenderer.h

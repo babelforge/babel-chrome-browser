@@ -7,6 +7,7 @@
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/BrowserTabFactory.h"
 #import "Browser/ChromeCommandParser.h"
+#import "Browser/ClosedTabRestorationPlanner.h"
 #import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/DeveloperToolsLayoutCalculator.h"
 #import "Browser/ExtensionProfileStore.h"
@@ -155,6 +156,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserTabCollection* browserTabCollection_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
   BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
+  BabelClosedTabRestorationPlanner* closedTabRestorationPlanner_;
   BabelGroupListCoordinator* groupListCoordinator_;
   BabelGroupSessionStore* groupSessionStore_;
   BabelHistoryPageRenderer* historyPageRenderer_;
@@ -235,6 +237,13 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     chromeCommandParser_ =
         [[BabelChromeCommandParser alloc] initWithDefaultGroupName:kDefaultGroupName
                                                   defaultURLString:BabelChromeConfiguration.defaultURLString];
+    __weak BabelBrowserWindowController* weakSelf = self;
+    closedTabRestorationPlanner_ =
+        [[BabelClosedTabRestorationPlanner alloc]
+            initWithDefaultGroupName:kDefaultGroupName
+             stableNavigationURLResolver:^NSString*(NSString* urlString) {
+               return [weakSelf navigationURLStringForStableBabelChromeURLString:urlString];
+             }];
     developerToolsDockingPolicy_ =
         [[BabelDeveloperToolsDockingPolicy alloc] initWithBottomMode:kDeveloperToolsDockModeBottom
                                                              topMode:kDeveloperToolsDockModeTop
@@ -261,7 +270,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelExtensionsPageRenderer alloc] initWithTrashIconHTML:[self trashIconHTML]];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
-    __weak BabelBrowserWindowController* weakSelf = self;
     browserTabFactory_ =
         [[BabelBrowserTabFactory alloc]
             initWithFaviconStore:faviconStore_
