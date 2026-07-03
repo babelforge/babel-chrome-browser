@@ -41,6 +41,7 @@ BrowserWindowController
             |__ InternalPageRenderer
             |__ StableViewerURLResolver
             |__ BrowserSettingsStore
+            |__ SettingsOptionRenderer
             |__ more focused collaborators as needed
 ```
 
@@ -66,7 +67,7 @@ BrowserWindowController
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
-| `BrowserWindowController+SettingsOptions.inc.mm` | App settings option HTML rendering. Settings value persistence and validation are delegated to `BabelBrowserSettingsStore`. |
+| `BrowserWindowController+SettingsOptions.inc.mm` | Compatibility wrappers for app settings option HTML. Actual option rendering is delegated to `BabelSettingsOptionRenderer`, and settings value persistence/validation is delegated to `BabelBrowserSettingsStore`. |
 | `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML and module settings shell rendering. Candidate for `InternalPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
 | `BrowserWindowController+StableViewerDisplay.inc.mm` | Stable viewer URL display wrappers and stable-server same-tab navigation. Stable viewer URL parsing and display formatting are delegated to `BabelStableViewerURLResolver`. |
@@ -169,6 +170,18 @@ The controller may use the resolver to decide navigation and address display, bu
 - supported value validation for these settings.
 
 The controller may route settings URLs and refresh affected UI, but it must not directly read/write these settings in `NSUserDefaults`.
+
+### `BabelSettingsOptionRenderer`
+
+`BabelSettingsOptionRenderer` owns reusable settings option HTML:
+
+- tab opening strategy controls;
+- address suggestions mode controls;
+- application appearance controls;
+- long Cmd+Q controls;
+- Markdown viewer theme controls.
+
+The controller may choose which settings blocks appear on a page, but it must not concatenate option-control HTML directly.
 
 ### `BabelModuleUpdateService`
 

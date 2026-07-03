@@ -10,6 +10,7 @@
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/ModuleUIActionCoordinator.h"
 #import "Browser/RecentlyClosedTabStore.h"
+#import "Browser/SettingsOptionRenderer.h"
 #import "Browser/StableViewerURLResolver.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserSupportViews.h"
@@ -117,6 +118,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleUpdateService* moduleUpdateService_;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
+  BabelSettingsOptionRenderer* settingsOptionRenderer_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelWindowStateStore* windowStateStore_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
@@ -202,6 +204,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
                                                         moduleUpdateService:moduleUpdateService_];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
+    settingsOptionRenderer_ = [[BabelSettingsOptionRenderer alloc] init];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
