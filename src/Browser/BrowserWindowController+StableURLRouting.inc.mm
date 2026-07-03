@@ -239,7 +239,7 @@
     }
   } else {
     NSError* error = nil;
-    NSDictionary* moduleRoute = [self moduleRouteForBabelChromeComponents:components error:&error];
+    NSDictionary* moduleRoute = [moduleActionService_ moduleRouteForBabelChromeComponents:components error:&error];
     if (!moduleRoute) {
       return nil;
     }

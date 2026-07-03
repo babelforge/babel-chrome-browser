@@ -4,6 +4,12 @@
   return isTerminating_;
 }
 
+- (void)refreshBabelChromeFileTypeCapabilities {
+  if (browserClient_) {
+    browserClient_->RefreshFileTypesHeaderValue();
+  }
+}
+
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser title:(NSString*)title {
   for (BabelBrowserGroup* group in groups_) {
     for (BabelBrowserTab* tab in group.tabs) {

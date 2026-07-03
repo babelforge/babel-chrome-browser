@@ -160,6 +160,16 @@
   return [self createGroupWithName:normalizedName identifier:identifier];
 }
 
+- (BabelBrowserGroup*)targetGroupForModuleIdentifier:(NSString*)moduleIdentifier
+                                      fallbackGroup:(BabelBrowserGroup*)fallbackGroup {
+  NSString* defaultGroupName = [moduleActionService_ defaultGroupNameForModuleIdentifier:moduleIdentifier];
+  if (defaultGroupName.length > 0) {
+    return [self ensureGroupNamed:defaultGroupName];
+  }
+
+  return fallbackGroup ?: [self ensureGroupNamed:kDefaultGroupName];
+}
+
 - (NSString*)nextManualGroupName {
   NSUInteger index = 1;
   while ([self groupWithName:[NSString stringWithFormat:@"Group %lu", (unsigned long)index]]) {

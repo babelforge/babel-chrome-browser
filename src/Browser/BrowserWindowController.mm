@@ -6,6 +6,7 @@
 #import "Browser/ModuleActionService.h"
 #import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleUpdateService.h"
+#import "Browser/ModuleUIActionCoordinator.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
@@ -127,6 +128,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleActionService* moduleActionService_;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleUpdateService* moduleUpdateService_;
+  BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
   NSMutableDictionary<NSNumber*, NSDate*>* pendingLocalDropBrowserIdentifiers_;
@@ -204,6 +206,9 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
    updateLocalDirectoryDefaultsKey:kModuleUpdateLocalDirectoryDefaultsKey
                 localIndexFilePath:[BabelChromeConfiguration.applicationSupportDirectoryURL.path
                                        stringByAppendingPathComponent:kModuleUpdateLocalIndexFilename]];
+    moduleUIActionCoordinator_ =
+        [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
+                                                        moduleUpdateService:moduleUpdateService_];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
     evictingBrowserTabIdentifiers_ = [NSMutableSet set];
     pendingLocalDropBrowserIdentifiers_ = [NSMutableDictionary dictionary];
@@ -256,15 +261,10 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
 
 #include "BrowserWindowController+LocalDrop.inc.mm"
 
-#include "BrowserWindowController+ModuleGroupRouting.inc.mm"
-
 #include "BrowserWindowController+InternalPageOpeners.inc.mm"
 #include "BrowserWindowController+InternalNavigationRouter.inc.mm"
 #include "BrowserWindowController+InternalPageLoading.inc.mm"
 #include "BrowserWindowController+SettingsPages.inc.mm"
-#include "BrowserWindowController+ModulePages.inc.mm"
-#include "BrowserWindowController+ModuleUpdateActions.inc.mm"
-#include "BrowserWindowController+ModuleActions.inc.mm"
 #include "BrowserWindowController+SettingsOptions.inc.mm"
 #include "BrowserWindowController+ExtensionActions.inc.mm"
 #include "BrowserWindowController+InternalUtilities.inc.mm"

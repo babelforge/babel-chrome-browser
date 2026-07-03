@@ -294,7 +294,7 @@
   NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
   NSString* scheme = components.scheme.lowercaseString ?: @"";
   NSString* host = components.host.lowercaseString ?: @"";
-  NSString* localModuleIdentifier = [self localServiceModuleIdentifierForURLComponents:components];
+  NSString* localModuleIdentifier = [moduleActionService_ localServiceModuleIdentifierForURLComponents:components];
   for (NSDictionary* module in modules) {
     if (![module isKindOfClass:NSDictionary.class] || ![module[@"enabled"] boolValue]) {
       continue;

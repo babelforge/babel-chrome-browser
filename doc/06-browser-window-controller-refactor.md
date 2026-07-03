@@ -35,6 +35,7 @@ BrowserWindowController
             |__ ModuleUpdateService
             |__ ModulePageRenderer
             |__ ModuleActionService
+            |__ ModuleUIActionCoordinator
             |__ InternalPageRenderer
             |__ more focused collaborators as needed
 ```
@@ -46,21 +47,17 @@ BrowserWindowController
 | `BrowserWindowController+AddressFieldEditing.inc.mm` | Address field focus, submit, text editing, Escape behavior, and address entry state. |
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. |
-| `BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm` | CEF browser title, URL, loading, favicon, and status updates. Favicon persistence is delegated to `BabelFaviconStore`. |
+| `BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm` | CEF browser title, URL, loading, favicon, status updates, and browser-client capability refresh. Favicon persistence is delegated to `BabelFaviconStore`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, docking mode, resizing, closing, and keyboard/menu integration. |
 | `BrowserWindowController+ExtensionActions.inc.mm` | Extension install, remove, enable, disable, restart, and page action handlers. |
-| `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group persistence, group selection, group list refresh, and group restore data. |
+| `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group persistence, group selection, group list refresh, group restore data, and default group placement for module-created tabs. |
 | `BrowserWindowController+InterfaceBuilding.inc.mm` | Main AppKit interface construction and initial view hierarchy wiring. |
 | `BrowserWindowController+InternalNavigationRouter.inc.mm` | Routing for `babelchrome://settings`, `babelchrome://modules`, `babelchrome://extensions`, `babelchrome://history`, and related internal URLs. |
 | `BrowserWindowController+InternalPageLoading.inc.mm` | Loading rendered internal HTML into the selected browser tab. |
-| `BrowserWindowController+InternalPageOpeners.inc.mm` | Convenience methods that open built-in internal pages from menu items, buttons, or shortcuts. |
+| `BrowserWindowController+InternalPageOpeners.inc.mm` | Convenience methods that open built-in internal pages from menu items, buttons, shortcuts, or module routes. Module page methods collect snapshots/update data and delegate body rendering to `BabelModulePageRenderer`. |
 | `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, escaping, formatting, and small HTML utilities. Candidate for extraction into renderer/view helpers. |
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, window persistence, and view resizing. Candidate for `WindowStateStore` plus layout helpers. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
-| `BrowserWindowController+ModuleActions.inc.mm` | Module install panel, remove confirmation, action alerts, file-type refresh, and UI action coordination. Registry calls and route matching are delegated to `BabelModuleActionService`. |
-| `BrowserWindowController+ModuleGroupRouting.inc.mm` | Module manifest group routing, especially default group placement for module-created tabs. |
-| `BrowserWindowController+ModulePages.inc.mm` | Collects module snapshots and update data, then delegates module page body rendering to `BabelModulePageRenderer`. |
-| `BrowserWindowController+ModuleUpdateActions.inc.mm` | Module update prompts, selected update installation action dispatch, and LocalServiceHost install coordination. Source preferences, source discovery, zip parsing, and zip resolution are delegated to `BabelModuleUpdateService`. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
@@ -114,7 +111,7 @@ The controller may open panels, show alerts, render extension pages, and route u
 - builds release-module lookup tables;
 - resolves update zip paths from local folders or remote manifests.
 
-The controller may ask the service for update data, open source configuration prompts, install selected zip paths through `LocalServiceHost`, and render the module update page. It must not parse update manifests or inspect zip files directly.
+The controller may ask the service for update data and render the module update page. It must not parse update manifests or inspect zip files directly.
 
 ### `BabelModulePageRenderer`
 
@@ -137,7 +134,19 @@ The controller still wraps these bodies with the shared internal page shell unti
 - enable or disable module;
 - remove module.
 
-The controller remains responsible for native panels, confirmation dialogs, alerts, and browser capability refresh after successful actions.
+The controller may use this service for module lookups and registry mutations. It must not call `LocalServiceHost` directly for module install, enable, disable, remove, or route matching.
+
+### `BabelModuleUIActionCoordinator`
+
+`BabelModuleUIActionCoordinator` owns native UI flows around module management:
+
+- module zip selection panel;
+- module removal confirmation;
+- module action alert rendering;
+- module update source prompts;
+- selected module update installation orchestration.
+
+The controller may refresh browser capabilities and reopen internal pages after the coordinator reports a successful module change. It must not implement native module panels or module action alert text directly.
 
 ## Extraction Candidates
 

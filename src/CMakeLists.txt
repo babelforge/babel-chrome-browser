@@ -22,6 +22,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ModulePageRenderer.mm
   Browser/ModuleUpdateService.h
   Browser/ModuleUpdateService.mm
+  Browser/ModuleUIActionCoordinator.h
+  Browser/ModuleUIActionCoordinator.mm
   Browser/BrowserModels.h
   Browser/BrowserModels.mm
   Browser/BrowserTheme.h

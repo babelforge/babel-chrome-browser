@@ -163,7 +163,9 @@
       }
     }
     if (didRequestUpdateInstall) {
-      [self installPHPModuleUpdatesWithIdentifiers:updateIdentifiers];
+      if ([moduleUIActionCoordinator_ installPHPModuleUpdatesWithIdentifiers:updateIdentifiers]) {
+        [self refreshBabelChromeFileTypeCapabilities];
+      }
       [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
                                     title:@"Module Updates"
                                      html:[self moduleUpdatesPageHTML]
@@ -173,19 +175,21 @@
 
     for (NSURLQueryItem* item in components.queryItems) {
       if ([item.name isEqualToString:@"installZip"] && item.value.length > 0) {
-        [self installPHPModuleZipFromPanel];
+        if ([moduleUIActionCoordinator_ installPHPModuleZipFromPanel]) {
+          [self refreshBabelChromeFileTypeCapabilities];
+        }
         [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"configureUpdateURL"] && item.value.length > 0) {
-        [self configureModuleUpdateURLFromPrompt];
+        [moduleUIActionCoordinator_ configureModuleUpdateURLFromPrompt];
         [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"configureUpdateLocal"] && item.value.length > 0) {
-        [self configureModuleUpdateLocalDirectoryFromPanel];
+        [moduleUIActionCoordinator_ configureModuleUpdateLocalDirectoryFromPanel];
         [self openModulesPageForBrowser:browser];
         return YES;
       }
@@ -199,7 +203,9 @@
       }
 
       if ([item.name isEqualToString:@"installUpdate"] && item.value.length > 0) {
-        [self installPHPModuleUpdateWithIdentifier:item.value];
+        if ([moduleUIActionCoordinator_ installPHPModuleUpdateWithIdentifier:item.value]) {
+          [self refreshBabelChromeFileTypeCapabilities];
+        }
         [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
                                       title:@"Module Updates"
                                        html:[self moduleUpdatesPageHTML]
@@ -208,19 +214,25 @@
       }
 
       if ([item.name isEqualToString:@"enable"] && item.value.length > 0) {
-        [self setPHPModuleWithIdentifier:item.value enabled:YES];
+        if ([moduleUIActionCoordinator_ setPHPModuleWithIdentifier:item.value enabled:YES]) {
+          [self refreshBabelChromeFileTypeCapabilities];
+        }
         [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"disable"] && item.value.length > 0) {
-        [self setPHPModuleWithIdentifier:item.value enabled:NO];
+        if ([moduleUIActionCoordinator_ setPHPModuleWithIdentifier:item.value enabled:NO]) {
+          [self refreshBabelChromeFileTypeCapabilities];
+        }
         [self openModulesPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"remove"] && item.value.length > 0) {
-        [self removePHPModuleWithIdentifier:item.value];
+        if ([moduleUIActionCoordinator_ removePHPModuleWithIdentifier:item.value]) {
+          [self refreshBabelChromeFileTypeCapabilities];
+        }
         [self openModulesPageForBrowser:browser];
         return YES;
       }
