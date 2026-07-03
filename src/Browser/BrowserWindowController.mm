@@ -1,9 +1,12 @@
 #import "Browser/BrowserWindowController.h"
 
 #import "Browser/BrowserClient.h"
+#import "Browser/AdjacentTabPreloadPlanner.h"
 #import "Browser/AppSettingsPageRenderer.h"
 #import "Browser/DeveloperToolsDockingPolicy.h"
 #import "Browser/BrowserSettingsStore.h"
+#import "Browser/BrowserTabFactory.h"
+#import "Browser/ChromeCommandParser.h"
 #import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/DeveloperToolsLayoutCalculator.h"
 #import "Browser/ExtensionProfileStore.h"
@@ -33,6 +36,7 @@
 #import "Browser/TabDragCoordinator.h"
 #import "Browser/TabPlacementPolicy.h"
 #import "Browser/TabStripLayoutCalculator.h"
+#import "Browser/TabURLMatcher.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserSupportViews.h"
 #import "Browser/BrowserTheme.h"
@@ -86,8 +90,6 @@ static NSString* const kDeveloperToolsDockModeBottom = @"bottom";
 static NSString* const kDeveloperToolsDockModeTop = @"top";
 static NSString* const kDeveloperToolsDockModeLeft = @"left";
 static NSString* const kDeveloperToolsDockModeRight = @"right";
-static NSString* const kCompactCommandOpaquePrefix = @"babelchrome:group:";
-static NSString* const kCompactCommandHierarchicalPrefix = @"babelchrome://command/group:";
 static NSString* const kHistoryPageURLString = @"babelchrome://history";
 static NSString* const kSettingsPageURLString = @"babelchrome://settings";
 static NSString* const kExtensionsPageURLString = @"babelchrome://extensions";
@@ -126,8 +128,11 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSView* linkStatusBarView_;
   NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
+  BabelAdjacentTabPreloadPlanner* adjacentTabPreloadPlanner_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelBrowserSettingsStore* browserSettingsStore_;
+  BabelBrowserTabFactory* browserTabFactory_;
+  BabelChromeCommandParser* chromeCommandParser_;
   BabelDeveloperToolsDockingPolicy* developerToolsDockingPolicy_;
   BabelDeveloperToolsDockingStore* developerToolsDockingStore_;
   BabelDeveloperToolsLayoutCalculator* developerToolsLayoutCalculator_;
@@ -158,6 +163,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelTabDragCoordinator* tabDragCoordinator_;
   BabelTabPlacementPolicy* tabPlacementPolicy_;
   BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
+  BabelTabURLMatcher* tabURLMatcher_;
   BabelWindowStateStore* windowStateStore_;
   BabelBrowserGroup* selectedGroup_;
   NSMutableArray<BabelBrowserTab*>* tabs_;
@@ -206,8 +212,12 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   self = [super initWithWindow:window];
   if (self) {
     groups_ = [NSMutableArray array];
+    adjacentTabPreloadPlanner_ = [[BabelAdjacentTabPreloadPlanner alloc] init];
     browserSettingsStore_ =
         [[BabelBrowserSettingsStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
+    chromeCommandParser_ =
+        [[BabelChromeCommandParser alloc] initWithDefaultGroupName:kDefaultGroupName
+                                                  defaultURLString:BabelChromeConfiguration.defaultURLString];
     developerToolsDockingPolicy_ =
         [[BabelDeveloperToolsDockingPolicy alloc] initWithBottomMode:kDeveloperToolsDockModeBottom
                                                              topMode:kDeveloperToolsDockModeTop
@@ -234,6 +244,20 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelExtensionsPageRenderer alloc] initWithTrashIconHTML:[self trashIconHTML]];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
+    __weak BabelBrowserWindowController* weakSelf = self;
+    browserTabFactory_ =
+        [[BabelBrowserTabFactory alloc]
+            initWithFaviconStore:faviconStore_
+                    actionTarget:self
+               compactTitleBlock:^NSString*(NSString* title) {
+                 return [weakSelf compactTitleForString:title];
+               }
+        localDropAcceptanceBlock:^BOOL(BabelPageContainerView* container) {
+          return [weakSelf pageContainerSupportsLocalDrop:container];
+        }
+            localDropHandlerBlock:^(BabelPageContainerView* container) {
+              [weakSelf pageContainerDidReceiveLocalDrop:container];
+            }];
     googleSuggestClient_ = [[BabelGoogleSuggestClient alloc] init];
     groupListCoordinator_ = [[BabelGroupListCoordinator alloc] init];
     groupSessionStore_ = [[BabelGroupSessionStore alloc] init];
@@ -280,6 +304,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
                                                       minimumWidth:kTabMinimumWidth
                                                           tabHeight:kTabHeight
                                                             spacing:kTabSpacing];
+    tabURLMatcher_ = [[BabelTabURLMatcher alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     tabs_ = [NSMutableArray array];
     pendingTabs_ = [NSMutableArray array];

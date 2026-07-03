@@ -369,54 +369,11 @@
 
 - (BabelBrowserTab*)tabWithURLString:(NSString*)urlString inGroup:(BabelBrowserGroup*)group {
   for (BabelBrowserTab* tab in group.tabs) {
-    if ([self tab:tab matchesURLString:urlString]) {
+    if ([tabURLMatcher_ tab:tab matchesURLString:urlString]) {
       return tab;
     }
   }
   return nil;
-}
-
-- (BOOL)tab:(BabelBrowserTab*)tab matchesURLString:(NSString*)urlString {
-  if ([tab.urlString isEqualToString:urlString] ||
-      [tab.requestedURLString isEqualToString:urlString]) {
-    return YES;
-  }
-
-  NSString* normalizedURLString = [self URLStringByRemovingTrailingSlash:urlString];
-  if ([[self URLStringByRemovingTrailingSlash:tab.urlString] isEqualToString:normalizedURLString] ||
-      [[self URLStringByRemovingTrailingSlash:tab.requestedURLString] isEqualToString:normalizedURLString]) {
-    return YES;
-  }
-
-  return [self rootURLString:urlString matchesURLString:tab.urlString] ||
-         [self rootURLString:urlString matchesURLString:tab.requestedURLString];
-}
-
-- (NSString*)URLStringByRemovingTrailingSlash:(NSString*)urlString {
-  if (urlString.length > 1 && [urlString hasSuffix:@"/"]) {
-    return [urlString substringToIndex:urlString.length - 1];
-  }
-  return urlString ?: @"";
-}
-
-- (BOOL)rootURLString:(NSString*)rootURLString matchesURLString:(NSString*)candidateURLString {
-  NSURLComponents* rootComponents = [NSURLComponents componentsWithString:rootURLString];
-  NSURLComponents* candidateComponents = [NSURLComponents componentsWithString:candidateURLString];
-  if (rootComponents.scheme.length == 0 || candidateComponents.scheme.length == 0) {
-    return NO;
-  }
-
-  NSString* rootPath = rootComponents.path ?: @"";
-  if (rootPath.length > 0 && ![rootPath isEqualToString:@"/"]) {
-    return NO;
-  }
-
-  BOOL sameScheme = [rootComponents.scheme isEqualToString:candidateComponents.scheme];
-  BOOL sameHost = [rootComponents.host isEqualToString:candidateComponents.host];
-  NSNumber* rootPort = rootComponents.port ?: @([rootComponents.scheme isEqualToString:@"https"] ? 443 : 80);
-  NSNumber* candidatePort = candidateComponents.port ?:
-      @([candidateComponents.scheme isEqualToString:@"https"] ? 443 : 80);
-  return sameScheme && sameHost && [rootPort isEqualToNumber:candidatePort];
 }
 
 - (void)saveGroupsState {
@@ -438,121 +395,10 @@
 - (BabelBrowserTab*)makeTabForURL:(NSString*)urlString
                         identifier:(NSString*)identifier
                              title:(NSString*)title {
-  BabelBrowserTab* tab = [[BabelBrowserTab alloc] init];
-  tab.identifier = identifier ?: NSUUID.UUID.UUIDString;
-  tab.urlString = urlString;
-  tab.requestedURLString = urlString;
-  tab.title = title ?: urlString;
-  tab.hostView = [[BabelPageContainerView alloc] initWithFrame:pagesPanel_.bounds];
-  __weak BabelBrowserWindowController* weakSelf = self;
-  tab.hostView.canAcceptLocalDrop = ^BOOL(BabelPageContainerView* container) {
-    return [weakSelf pageContainerSupportsLocalDrop:container];
-  };
-  tab.hostView.localDropHandler = ^(BabelPageContainerView* container) {
-    [weakSelf pageContainerDidReceiveLocalDrop:container];
-  };
-  tab.hostView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-  tab.hostView.hidden = YES;
-
-  tab.developerToolsPanelView = [[NSView alloc] initWithFrame:NSZeroRect];
-  tab.developerToolsPanelView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-  tab.developerToolsPanelView.hidden = YES;
-  tab.developerToolsPanelView.wantsLayer = YES;
-  tab.developerToolsPanelView.layer.backgroundColor =
-      [BabelTheme.sharedTheme cgColorForToken:@"developerTools.panel.background"
-                                         view:tab.developerToolsPanelView];
-
-  tab.developerToolsToolbarView = [[NSView alloc] initWithFrame:NSZeroRect];
-  tab.developerToolsToolbarView.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
-  tab.developerToolsToolbarView.wantsLayer = YES;
-  tab.developerToolsToolbarView.layer.backgroundColor =
-      [BabelTheme.sharedTheme cgColorForToken:@"developerTools.toolbar.background"
-                                         view:tab.developerToolsToolbarView];
-  [tab.developerToolsPanelView addSubview:tab.developerToolsToolbarView];
-
-  tab.developerToolsResizeHandleView =
-      [[BabelDeveloperToolsResizeHandleView alloc] initWithFrame:NSZeroRect];
-  tab.developerToolsResizeHandleView.resizeTarget = self;
-  tab.developerToolsResizeHandleView.resizeAction = @selector(resizeDeveloperToolsFromHandle:);
-  tab.developerToolsResizeHandleView.wantsLayer = YES;
-  tab.developerToolsResizeHandleView.layer.backgroundColor =
-      [BabelTheme.sharedTheme cgColorForToken:@"developerTools.handle.background"
-                                         view:tab.developerToolsResizeHandleView];
-  [tab.developerToolsPanelView addSubview:tab.developerToolsResizeHandleView];
-
-  tab.developerToolsHostView = [[BabelBrowserHostView alloc] initWithFrame:NSZeroRect];
-  tab.developerToolsHostView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-  tab.developerToolsHostView.wantsLayer = YES;
-  tab.developerToolsHostView.layer.backgroundColor =
-      [BabelTheme.sharedTheme cgColorForToken:@"developerTools.panel.background"
-                                         view:tab.developerToolsHostView];
-  [tab.developerToolsPanelView addSubview:tab.developerToolsHostView];
-  [self addDeveloperToolsControlsToTab:tab];
-  tab.developerToolsVisible = NO;
-
-  tab.tabItemView = [[BabelTabItemView alloc] initWithIdentifier:tab.identifier
-                                                          title:[self compactTitleForString:tab.title]];
-  tab.tabItemView.faviconImage = [faviconStore_ faviconImageForURLString:tab.urlString];
-  tab.tabItemView.target = self;
-  tab.tabItemView.action = @selector(selectTabFromItem:);
-  tab.tabItemView.closeTarget = self;
-  tab.tabItemView.closeAction = @selector(closeTabFromItem:);
-  tab.tabItemView.dragTarget = self;
-  tab.tabItemView.dragAction = @selector(dragTabFromItem:);
-  tab.tabItemView.dragEndTarget = self;
-  tab.tabItemView.dragEndAction = @selector(finishDraggingTabFromItem:);
-  return tab;
-}
-
-- (void)addDeveloperToolsControlsToTab:(BabelBrowserTab*)tab {
-  NSArray<NSButton*>* buttons = @[
-    [self developerToolsButtonWithImageName:@"devtools-close"
-                              fallbackTitle:@"x"
-                                toolTip:@"Close Developer Tools"
-                                    tag:0
-                                 action:@selector(closeDeveloperToolsFromButton:)],
-    [self developerToolsButtonWithImageName:@"devtools-dock-left"
-                              fallbackTitle:@"L"
-                                toolTip:@"Dock Developer Tools Left"
-                                    tag:kDeveloperToolsDockTagLeft
-                                 action:@selector(changeDeveloperToolsDockFromButton:)],
-    [self developerToolsButtonWithImageName:@"devtools-dock-right"
-                              fallbackTitle:@"R"
-                                toolTip:@"Dock Developer Tools Right"
-                                    tag:kDeveloperToolsDockTagRight
-                                 action:@selector(changeDeveloperToolsDockFromButton:)],
-    [self developerToolsButtonWithImageName:@"devtools-dock-bottom"
-                              fallbackTitle:@"B"
-                                toolTip:@"Dock Developer Tools Bottom"
-                                    tag:kDeveloperToolsDockTagBottom
-                                 action:@selector(changeDeveloperToolsDockFromButton:)],
-    [self developerToolsButtonWithImageName:@"devtools-dock-top"
-                              fallbackTitle:@"T"
-                                toolTip:@"Dock Developer Tools Top"
-                                    tag:kDeveloperToolsDockTagTop
-                                 action:@selector(changeDeveloperToolsDockFromButton:)]
-  ];
-
-  CGFloat x = 8.0;
-  for (NSButton* button in buttons) {
-    button.frame = NSMakeRect(x, 4.0, 26.0, 22.0);
-    [tab.developerToolsToolbarView addSubview:button];
-    x += 30.0;
-  }
-}
-
-- (NSButton*)developerToolsButtonWithImageName:(NSString*)imageName
-                                 fallbackTitle:(NSString*)fallbackTitle
-                                       toolTip:(NSString*)toolTip
-                                           tag:(NSInteger)tag
-                                        action:(SEL)action {
-  NSButton* button = BabelButton(fallbackTitle, self, action);
-  button.bezelStyle = NSBezelStyleTexturedRounded;
-  button.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
-  button.toolTip = toolTip;
-  button.tag = tag;
-  ConfigureIconButton(button, imageName, fallbackTitle);
-  return button;
+  return [browserTabFactory_ makeTabForURL:urlString
+                                identifier:identifier
+                                     title:title
+                                hostBounds:pagesPanel_.bounds];
 }
 
 - (BabelBrowserTab*)createTabForURL:(NSString*)urlString inGroup:(BabelBrowserGroup*)group {
@@ -739,24 +585,7 @@
 }
 
 - (NSArray<BabelBrowserTab*>*)adjacentTabsToPreloadAroundTab:(BabelBrowserTab*)tab {
-  NSUInteger selectedIndex = [tabs_ indexOfObject:tab];
-  if (selectedIndex == NSNotFound || tabs_.count < 2) {
-    return @[];
-  }
-
-  NSMutableArray<BabelBrowserTab*>* tabsToPreload = [NSMutableArray array];
-  if (selectedIndex > 0) {
-    [tabsToPreload addObject:tabs_[selectedIndex - 1]];
-  }
-
-  if (selectedIndex + 1 < tabs_.count) {
-    BabelBrowserTab* nextTab = tabs_[selectedIndex + 1];
-    if (![tabsToPreload containsObject:nextTab]) {
-      [tabsToPreload addObject:nextTab];
-    }
-  }
-
-  return tabsToPreload;
+  return [adjacentTabPreloadPlanner_ adjacentTabsToPreloadAroundTab:tab tabs:tabs_];
 }
 
 - (void)scheduleAdjacentTabPreloadForTabs:(NSArray<BabelBrowserTab*>*)tabsToPreload
@@ -791,26 +620,10 @@
 }
 
 - (NSMutableSet<NSString*>*)protectedLiveBrowserTabIdentifiers {
-  NSMutableSet<NSString*>* protectedIdentifiers = [NSMutableSet set];
-  if (selectedTab_.identifier.length > 0) {
-    [protectedIdentifiers addObject:selectedTab_.identifier];
-  }
-
-  for (BabelBrowserTab* tab in [self adjacentTabsToPreloadAroundTab:selectedTab_]) {
-    if (tab.identifier.length > 0) {
-      [protectedIdentifiers addObject:tab.identifier];
-    }
-  }
-
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if (tab.developerToolsVisible && tab.identifier.length > 0) {
-        [protectedIdentifiers addObject:tab.identifier];
-      }
-    }
-  }
-
-  return protectedIdentifiers;
+  return [adjacentTabPreloadPlanner_
+      protectedLiveBrowserTabIdentifiersForSelectedTab:selectedTab_
+                                          adjacentTabs:[self adjacentTabsToPreloadAroundTab:selectedTab_]
+                                                groups:groups_];
 }
 
 - (NSArray<BabelBrowserTab*>*)livePageBrowserTabsExcludingEvictions {

@@ -67,76 +67,17 @@
 }
 
 - (void)openBabelChromeCommandURL:(NSURL*)url {
-  if ([self openCompactBabelChromeCommandString:url.absoluteString]) {
-    return;
-  }
-
-  NSURLComponents* components = [NSURLComponents componentsWithURL:url
-                                           resolvingAgainstBaseURL:NO];
-  NSString* groupName = kDefaultGroupName;
-  NSString* targetURLString = nil;
-
-  for (NSURLQueryItem* item in components.queryItems) {
-    if ([item.name isEqualToString:@"group"] && item.value.length > 0) {
-      groupName = item.value;
-      continue;
-    }
-
-    if ([item.name isEqualToString:@"url"] && item.value.length > 0) {
-      targetURLString = item.value;
-    }
-  }
-
-  if (targetURLString.length == 0) {
-    targetURLString = BabelChromeConfiguration.defaultURLString;
-  }
-
-  [self openURLString:targetURLString groupName:groupName];
+  BabelChromeCommand* command = [chromeCommandParser_ commandFromURL:url];
+  [self openURLString:command.urlString groupName:command.groupName];
 }
 
 - (BOOL)openCompactBabelChromeCommandString:(NSString*)urlString {
-  NSString* payload = nil;
-  if ([urlString hasPrefix:kCompactCommandOpaquePrefix]) {
-    payload = [urlString substringFromIndex:kCompactCommandOpaquePrefix.length];
-  } else if ([urlString hasPrefix:kCompactCommandHierarchicalPrefix]) {
-    payload = [urlString substringFromIndex:kCompactCommandHierarchicalPrefix.length];
-  }
-
-  if (!payload) {
+  BabelChromeCommand* command = [chromeCommandParser_ compactCommandFromURLString:urlString];
+  if (!command) {
     return NO;
   }
 
-  NSArray<NSString*>* separators = @[
-    @"::|::url:",
-    @"::%7C::url:",
-    @"::%7c::url:"
-  ];
-
-  NSRange separatorRange = NSMakeRange(NSNotFound, 0);
-  for (NSString* separator in separators) {
-    separatorRange = [payload rangeOfString:separator];
-    if (separatorRange.location != NSNotFound) {
-      break;
-    }
-  }
-
-  if (separatorRange.location == NSNotFound) {
-    return NO;
-  }
-
-  NSString* encodedGroupName = [payload substringToIndex:separatorRange.location];
-  NSString* targetURLString =
-      [payload substringFromIndex:separatorRange.location + separatorRange.length];
-  NSString* groupName = encodedGroupName.stringByRemovingPercentEncoding ?: encodedGroupName;
-  if (groupName.length == 0) {
-    groupName = kDefaultGroupName;
-  }
-
-  if (targetURLString.length == 0) {
-    targetURLString = BabelChromeConfiguration.defaultURLString;
-  }
-
-  [self openURLString:targetURLString groupName:groupName];
+  [self openURLString:command.urlString groupName:command.groupName];
   return YES;
 }
 

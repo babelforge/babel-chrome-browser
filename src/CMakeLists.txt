@@ -10,12 +10,18 @@ set(BABEL_CHROME_SOURCES
   App/ApplicationDelegate.mm
   App/MainMenuBuilder.h
   App/MainMenuBuilder.mm
+  Browser/AdjacentTabPreloadPlanner.h
+  Browser/AdjacentTabPreloadPlanner.mm
   Browser/AppSettingsPageRenderer.h
   Browser/AppSettingsPageRenderer.mm
   Browser/BrowserClient.h
   Browser/BrowserClient.mm
   Browser/BrowserSettingsStore.h
   Browser/BrowserSettingsStore.mm
+  Browser/BrowserTabFactory.h
+  Browser/BrowserTabFactory.mm
+  Browser/ChromeCommandParser.h
+  Browser/ChromeCommandParser.mm
   Browser/ExtensionProfileStore.h
   Browser/ExtensionProfileStore.mm
   Browser/ExtensionsPageRenderer.h
@@ -70,6 +76,8 @@ set(BABEL_CHROME_SOURCES
   Browser/TabPlacementPolicy.mm
   Browser/TabStripLayoutCalculator.h
   Browser/TabStripLayoutCalculator.mm
+  Browser/TabURLMatcher.h
+  Browser/TabURLMatcher.mm
   Browser/WindowStateStore.h
   Browser/WindowStateStore.mm
   Browser/BrowserModels.h

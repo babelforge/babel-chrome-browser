@@ -60,6 +60,10 @@ BrowserWindowController
             |__ LocalDropBridgeScriptBuilder
             |__ LocalDropCoordinator
             |__ TabStripLayoutCalculator
+            |__ BrowserTabFactory
+            |__ TabURLMatcher
+            |__ AdjacentTabPreloadPlanner
+            |__ ChromeCommandParser
             |__ DeveloperToolsDockingPolicy
             |__ DeveloperToolsDockingStore
             |__ DeveloperToolsLayoutCalculator
@@ -74,10 +78,10 @@ BrowserWindowController
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
-| `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab creation/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Group list layout is delegated to `BabelGroupListCoordinator`; group session IO is delegated to `BabelGroupSessionStore`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser eviction is delegated to `BabelLiveBrowserEvictionPolicy`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`. |
+| `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Group list layout is delegated to `BabelGroupListCoordinator`; group session IO is delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser eviction is delegated to `BabelLiveBrowserEvictionPolicy`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`. |
 | `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, extension actions, and shared internal utilities. Body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`. |
-| `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL handling, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
+| `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
 | `BrowserWindowController+WindowLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, module lifecycle calls, main AppKit interface construction, main layout application, and window/sidebar view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`; sidebar/right-panel frame calculation is delegated to `BabelSidebarLayoutCalculator`; tab item frame calculation is delegated to `BabelTabStripLayoutCalculator`. |
 
 ## Already Extracted Classes
@@ -278,6 +282,46 @@ The controller may still create group item views, wire their target/actions, mut
 
 The controller may still track the currently dragged tab, schedule hover group selection, mutate groups/tabs, select moved tabs, and save state, but it must not duplicate drag insertion math directly.
 
+### `BabelBrowserTabFactory`
+
+`BabelBrowserTabFactory` owns native tab object construction:
+
+- tab identifiers, URL metadata, and initial title fallback;
+- page container creation and local-drop callback wiring;
+- embedded Developer Tools panel, toolbar, resize handle, and host view creation;
+- tab item view creation, favicon lookup, and action target wiring.
+
+The controller may decide when and where a tab is inserted, but it must not rebuild native tab view trees inline.
+
+### `BabelTabURLMatcher`
+
+`BabelTabURLMatcher` owns URL equivalence checks for existing tabs:
+
+- exact current/requested URL matching;
+- trailing slash normalization;
+- root URL matching for the same scheme, host, and port.
+
+The controller may use the matcher to find an existing tab, but it must not duplicate URL normalization or root matching rules.
+
+### `BabelAdjacentTabPreloadPlanner`
+
+`BabelAdjacentTabPreloadPlanner` owns adjacent tab preload planning:
+
+- previous/next visible tab selection around the active tab;
+- protected live browser identifier calculation for the selected tab, adjacent tabs, and tabs with visible Developer Tools.
+
+The controller may schedule delayed browser creation and perform CEF browser eviction, but it must not keep adjacent-tab selection or protection loops inline.
+
+### `BabelChromeCommandParser`
+
+`BabelChromeCommandParser` owns BabelChrome command URL parsing:
+
+- query-based `babelchrome://open?group=...&url=...` style commands;
+- compact `babelchrome:group:...::|::url:...` and hierarchical command syntax;
+- default group and default URL fallback resolution.
+
+The controller may execute parsed commands by opening tabs, but it must not parse command payload separators or query items directly.
+
 ### `BabelLocalDropBridgeScriptBuilder`
 
 `BabelLocalDropBridgeScriptBuilder` owns the JavaScript source injected into drop-aware pages:
@@ -470,31 +514,52 @@ The controller may refresh browser capabilities and reopen internal pages after 
 
 ## Extraction Candidates
 
-### Broader Internal Page Rendering
+### Internal Navigation Action Routing
 
-Continue moving page-specific HTML generation into renderer classes. Good next targets:
+`BrowserWindowController+InternalPages.inc.mm` remains large because it still owns internal URL action routing. The next clean extraction should not be another renderer. It should be an action router that can receive an internal URL, resolve the requested action, and return a small command/result object for the controller to execute.
 
-- settings page HTML;
-- modules page HTML;
-- module detail page HTML;
-- module updates page HTML;
-- extensions page HTML;
-- history page HTML.
+Good boundaries:
 
-The controller should provide view models and receive rendered HTML. It should not concatenate large page-specific HTML strings directly.
+- settings mutations;
+- module management actions;
+- extension management actions;
+- history reopen actions;
+- project launcher import actions.
 
-### `WindowStateStore`
+The controller should keep AppKit panels and CEF navigation execution, but it should not keep the full internal URL query routing tree inline.
 
-Move persisted window and sidebar state into a store:
+### Group And Tab Session Orchestration
 
-- window screen name;
-- window frame relative to visible screen bounds;
-- zoom state;
-- sidebar collapsed state;
-- expanded sidebar width;
-- long quit preference may remain in general settings unless a broader settings store is added.
+`BrowserWindowController+GroupsAndTabs.inc.mm` still mixes group mutations, tab mutations, session restore, and browser lifecycle scheduling. Further extraction should happen by behavior:
 
-The controller should apply state to AppKit objects, but should not know the serialized format.
+- group CRUD and rename validation;
+- tab close/reopen orchestration;
+- session restore sequencing;
+- browser creation/preload scheduling;
+- live browser limit enforcement.
+
+The controller should remain the owner of visible selection and AppKit/CEF side effects, but it should stop owning pure ordering and lifecycle decisions.
+
+### Address And Suggestion Coordination
+
+`BrowserWindowController+AddressAndSuggestions.inc.mm` still coordinates several workflows. The low-risk extractions are:
+
+- tab metadata update application after CEF title/URL/loading callbacks;
+- link-hover status bar formatting;
+- favicon download result handling.
+
+The controller should keep field delegate callbacks, but it should not accumulate unrelated CEF metadata update rules.
+
+### Window Lifecycle UI Construction
+
+`BrowserWindowController+WindowLifecycle.inc.mm` still builds a large amount of AppKit structure. Good next extractions:
+
+- main window view tree factory;
+- toolbar/address row factory;
+- sidebar header factory;
+- startup restore phase coordinator.
+
+The controller should wire callbacks and hold references, but repeated AppKit construction details should move behind factories.
 
 ## Rules For New Code
 
@@ -513,9 +578,10 @@ The controller should apply state to AppKit objects, but should not know the ser
 
 Recommended order from lowest risk to higher impact:
 
-1. `WindowStateStore`: isolated persistence but sensitive because startup restoration order matters.
-2. `InternalPageRenderer`: high payoff, but it touches many internal pages and should be done page family by page family.
-3. Tab/group services: defer until the current UI orchestration is stable enough to avoid regressions.
+1. `InternalNavigationActionRouter`: reduce `InternalPages` without moving UI side effects into the service.
+2. `GroupTabSessionOrchestrator`: reduce `GroupsAndTabs` by separating restore and mutation decisions from AppKit/CEF execution.
+3. `MainWindowViewFactory`: reduce `WindowLifecycle` by moving AppKit construction details out of the controller.
+4. `BrowserMetadataUpdateCoordinator`: reduce `AddressAndSuggestions` by separating CEF metadata application from field editing.
 
 ## Review Checklist
 
