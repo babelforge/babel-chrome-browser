@@ -43,6 +43,7 @@ BrowserWindowController
             |__ BrowserSettingsStore
             |__ SettingsOptionRenderer
             |__ AppSettingsPageRenderer
+            |__ ModuleSettingsPageRenderer
             |__ HistoryPageRenderer
             |__ ExtensionsPageRenderer
             |__ more focused collaborators as needed
@@ -71,7 +72,7 @@ BrowserWindowController
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
 | `BrowserWindowController+SettingsOptions.inc.mm` | Compatibility wrappers for app settings option HTML. Actual option rendering is delegated to `BabelSettingsOptionRenderer`, and settings value persistence/validation is delegated to `BabelBrowserSettingsStore`. |
-| `BrowserWindowController+SettingsPages.inc.mm` | Main Settings value collection, module settings shell rendering, and view-model collection for History and Extensions. Main Settings rendering is delegated to `BabelAppSettingsPageRenderer`; History page body rendering is delegated to `BabelHistoryPageRenderer`; Extensions page body rendering is delegated to `BabelExtensionsPageRenderer`. |
+| `BrowserWindowController+SettingsPages.inc.mm` | Main Settings value collection, module settings value collection, and view-model collection for History and Extensions. Main Settings rendering is delegated to `BabelAppSettingsPageRenderer`; module Settings rendering is delegated to `BabelModuleSettingsPageRenderer`; History page body rendering is delegated to `BabelHistoryPageRenderer`; Extensions page body rendering is delegated to `BabelExtensionsPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
 | `BrowserWindowController+StableViewerDisplay.inc.mm` | Stable viewer URL display wrappers and stable-server same-tab navigation. Stable viewer URL parsing and display formatting are delegated to `BabelStableViewerURLResolver`. |
 | `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
@@ -195,6 +196,17 @@ The controller may choose which settings blocks appear on a page, but it must no
 - composition of reusable option controls through `BabelSettingsOptionRenderer`.
 
 The controller may collect current setting values, but it must not concatenate the main Settings page body directly.
+
+### `BabelModuleSettingsPageRenderer`
+
+`BabelModuleSettingsPageRenderer` owns module Settings page body rendering:
+
+- Markdown Viewer settings body;
+- generic fallback body for modules without native settings;
+- navigation back to `babelchrome://modules`;
+- composition of reusable module option controls through `BabelSettingsOptionRenderer`.
+
+The controller may normalize module identifiers and collect module display names, but it must not concatenate module Settings page bodies directly.
 
 ### `BabelHistoryPageRenderer`
 

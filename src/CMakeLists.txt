@@ -30,6 +30,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ModuleActionService.mm
   Browser/ModulePageRenderer.h
   Browser/ModulePageRenderer.mm
+  Browser/ModuleSettingsPageRenderer.h
+  Browser/ModuleSettingsPageRenderer.mm
   Browser/ModuleUpdateService.h
   Browser/ModuleUpdateService.mm
   Browser/ModuleUIActionCoordinator.h

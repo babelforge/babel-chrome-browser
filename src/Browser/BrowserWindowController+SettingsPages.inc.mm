@@ -49,29 +49,14 @@
 
 - (NSString*)moduleSettingsPageHTMLForIdentifier:(NSString*)moduleIdentifier {
   NSString* normalizedIdentifier = [self normalizedModuleSettingsIdentifier:moduleIdentifier];
-  if ([normalizedIdentifier isEqualToString:@"babelforge.markdown-viewer"]) {
-    NSString* body = [NSString stringWithFormat:
-        @"<h1>Markdown Viewer Settings</h1>"
-         "<section>"
-         "<p class='note'>These settings belong to the Markdown Viewer module, not to BabelChrome itself.</p>"
-         "<dl>"
-         "<dt>Markdown theme</dt><dd>%@</dd>"
-         "</dl>"
-         "</section>"
-         "<p><a class='smallButton' data-can-open-menu='true' href='babelchrome://modules'>Back to modules</a></p>",
-        [self settingsMarkdownThemeHTML:[self markdownTheme] settingsURLString:@"babelchrome://settings/babelforge.markdown-viewer"]];
-    return [self internalPageHTMLWithTitle:@"Markdown Viewer Settings" body:body];
-  }
-
   NSString* moduleName = [self moduleNameForIdentifier:normalizedIdentifier] ?: normalizedIdentifier;
-  NSString* body = [NSString stringWithFormat:
-      @"<h1>%@ Settings</h1>"
-       "<section>"
-       "<p class='empty'>This module does not expose native BabelChrome settings yet.</p>"
-       "</section>"
-       "<p><a class='smallButton' data-can-open-menu='true' href='babelchrome://modules'>Back to modules</a></p>",
-      [self htmlEscapedString:moduleName]];
-  return [self internalPageHTMLWithTitle:[NSString stringWithFormat:@"%@ Settings", moduleName] body:body];
+  NSString* pageTitle = [normalizedIdentifier isEqualToString:@"babelforge.markdown-viewer"]
+      ? @"Markdown Viewer Settings"
+      : [NSString stringWithFormat:@"%@ Settings", moduleName];
+  NSString* body = [moduleSettingsPageRenderer_ moduleSettingsPageBodyForIdentifier:normalizedIdentifier
+                                                                         moduleName:moduleName
+                                                                      markdownTheme:[self markdownTheme]];
+  return [self internalPageHTMLWithTitle:pageTitle body:body];
 }
 
 - (NSString*)extensionsPageHTML {
