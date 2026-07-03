@@ -35,6 +35,13 @@
 - (void)tryToTerminateApplication;
 
 /**
+ * Handles the application quit command from the menu or Cmd+Q shortcut.
+ *
+ * @param sender The action sender.
+ */
+- (void)quitApplication:(id)sender;
+
+/**
  * Opens a new browser tab from a menu or keyboard shortcut.
  *
  * @param sender The action sender.

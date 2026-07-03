@@ -8,12 +8,16 @@
   NSMutableArray<NSURL*>* pendingURLs_;
   NSTimer* startupCollectionTimer_;
   NSWindow* startupWindow_;
+  NSTimer* longQuitTimer_;
+  id longQuitKeyUpMonitor_;
   BOOL didOpenInitialURL_;
 }
 
 static const NSTimeInterval kStartupInitialCollectionDuration = 2.0;
 static const NSTimeInterval kStartupURLQuietDuration = 6.0;
 static const NSTimeInterval kStartupWindowMinimumDisplayDuration = 2.5;
+static const NSTimeInterval kLongQuitShortcutDuration = 2.0;
+static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutEnabled";
 
 - (instancetype)init {
   self = [super init];
@@ -21,6 +25,8 @@ static const NSTimeInterval kStartupWindowMinimumDisplayDuration = 2.5;
     pendingURLs_ = [NSMutableArray array];
     startupCollectionTimer_ = nil;
     startupWindow_ = nil;
+    longQuitTimer_ = nil;
+    longQuitKeyUpMonitor_ = nil;
     didOpenInitialURL_ = NO;
     [NSAppleEventManager.sharedAppleEventManager setEventHandler:self
                                                     andSelector:@selector(handleGetURLEvent:
@@ -236,8 +242,75 @@ static const NSTimeInterval kStartupWindowMinimumDisplayDuration = 2.5;
 }
 
 - (void)tryToTerminateApplication {
+  [self cancelLongQuitTracking];
   [browserWindowController_ saveMainWindowState];
   [browserWindowController_ requestApplicationTermination];
+}
+
+- (void)quitApplication:(id)sender {
+  if (![self shouldRequireLongQuitForCurrentEvent]) {
+    [self tryToTerminateApplication];
+    return;
+  }
+
+  if (longQuitTimer_) {
+    return;
+  }
+
+  __weak BabelApplicationDelegate* weakSelf = self;
+  longQuitKeyUpMonitor_ = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyUp
+                                                                handler:^NSEvent*(NSEvent* event) {
+    BabelApplicationDelegate* strongSelf = weakSelf;
+    if (!strongSelf) {
+      return event;
+    }
+
+    if ([strongSelf isCommandQEvent:event]) {
+      [strongSelf cancelLongQuitTracking];
+    }
+    return event;
+  }];
+  longQuitTimer_ = [NSTimer scheduledTimerWithTimeInterval:kLongQuitShortcutDuration
+                                                    target:self
+                                                  selector:@selector(completeLongQuitShortcut:)
+                                                  userInfo:nil
+                                                   repeats:NO];
+}
+
+- (BOOL)shouldRequireLongQuitForCurrentEvent {
+  if (![NSUserDefaults.standardUserDefaults boolForKey:kLongQuitShortcutEnabledDefaultsKey]) {
+    return NO;
+  }
+
+  return [self isCommandQEvent:NSApp.currentEvent];
+}
+
+- (BOOL)isCommandQEvent:(NSEvent*)event {
+  if (!event || (event.type != NSEventTypeKeyDown && event.type != NSEventTypeKeyUp)) {
+    return NO;
+  }
+
+  NSEventModifierFlags flags = event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
+  if ((flags & NSEventModifierFlagCommand) == 0) {
+    return NO;
+  }
+
+  return [[event.charactersIgnoringModifiers lowercaseString] isEqualToString:@"q"];
+}
+
+- (void)completeLongQuitShortcut:(NSTimer*)timer {
+  [self cancelLongQuitTracking];
+  [self tryToTerminateApplication];
+}
+
+- (void)cancelLongQuitTracking {
+  [longQuitTimer_ invalidate];
+  longQuitTimer_ = nil;
+
+  if (longQuitKeyUpMonitor_) {
+    [NSEvent removeMonitor:longQuitKeyUpMonitor_];
+    longQuitKeyUpMonitor_ = nil;
+  }
 }
 
 - (void)newTab:(id)sender {

@@ -15,8 +15,9 @@
   NSString* quitTitle =
       [NSString stringWithFormat:@"Quit %@", BabelChromeConfiguration.applicationName];
   NSMenuItem* quitItem = [[NSMenuItem alloc] initWithTitle:quitTitle
-                                                    action:@selector(terminate:)
+                                                    action:@selector(quitApplication:)
                                              keyEquivalent:@"q"];
+  quitItem.target = target;
   [appMenu addItem:quitItem];
 
   NSMenuItem* settingsItem = [[NSMenuItem alloc] initWithTitle:@"Settings..."

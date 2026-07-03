@@ -53,6 +53,7 @@ static NSString* const kTabOpeningStrategyDefaultsKey = @"TabOpeningStrategy";
 static NSString* const kMarkdownThemeDefaultsKey = @"MarkdownTheme";
 static NSString* const kMainWindowFrameDefaultsKey = @"MainWindowFrame";
 static NSString* const kMainWindowZoomedDefaultsKey = @"MainWindowZoomed";
+static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutEnabled";
 static NSString* const kModuleUpdateURLDefaultsKey = @"ModuleUpdateURL";
 static NSString* const kModuleUpdateLocalDirectoryDefaultsKey = @"ModuleUpdateLocalDirectory";
 static NSString* const kModuleUpdateLocalIndexFilename = @"module-update-local-index.json";
@@ -3422,6 +3423,15 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
         break;
       }
 
+      if ([item.name isEqualToString:@"longQuitShortcut"]) {
+        BOOL enabled = [item.value isEqualToString:@"1"] ||
+                       [[item.value lowercaseString] isEqualToString:@"true"];
+        [NSUserDefaults.standardUserDefaults setBool:enabled
+                                              forKey:kLongQuitShortcutEnabledDefaultsKey];
+        [NSUserDefaults.standardUserDefaults synchronize];
+        break;
+      }
+
       if (![item.name isEqualToString:@"addressSuggestions"] ||
           ![self isSupportedAddressSuggestionsMode:item.value]) {
         if ([item.name isEqualToString:@"markdownTheme"] &&
@@ -3798,6 +3808,8 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   NSString* strategy = [self tabOpeningStrategy];
   NSString* addressSuggestionsMode = [self addressSuggestionsMode];
   NSString* appearanceTheme = [BabelTheme.sharedTheme appearanceMode];
+  BOOL longQuitShortcutEnabled =
+      [NSUserDefaults.standardUserDefaults boolForKey:kLongQuitShortcutEnabledDefaultsKey];
   NSString* body = [NSString stringWithFormat:
       @"<h1>Settings</h1>"
        "<section><a class='primaryButton' data-can-open-menu='true' href='babelchrome://extensions'>Extensions</a>"
@@ -3807,6 +3819,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "<dl>"
        "<dt>Default page</dt><dd>%@</dd>"
        "<dt>Application theme</dt><dd>%@</dd>"
+       "<dt>Quit shortcut</dt><dd>%@</dd>"
        "<dt>Tab opening strategy</dt><dd>%@</dd>"
        "<dt>Address suggestions</dt><dd>%@</dd>"
        "<dt>Groups file</dt><dd>Stored in the BabelChrome application support folder.</dd>"
@@ -3815,6 +3828,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
        "</section>",
       [self htmlEscapedString:BabelChromeConfiguration.defaultURLString],
       [self settingsAppearanceThemeHTML:appearanceTheme],
+      [self settingsLongQuitShortcutHTML:longQuitShortcutEnabled],
       [self settingsTabOpeningStrategyHTML:strategy],
       [self settingsAddressSuggestionsHTML:addressSuggestionsMode]];
   return [self internalPageHTMLWithTitle:@"Settings" body:body];
@@ -5024,6 +5038,20 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   }
   [html appendString:@"</div>"];
   return html;
+}
+
+- (NSString*)settingsLongQuitShortcutHTML:(BOOL)enabled {
+  NSString* offClass = enabled ? @"option" : @"option selected";
+  NSString* onClass = enabled ? @"option selected" : @"option";
+  return [NSString stringWithFormat:
+      @"<div class='options'>"
+       "<a class='%@' href='babelchrome://settings?longQuitShortcut=0'>"
+       "<strong>Immediate Cmd+Q</strong><span>Quit as soon as Cmd+Q is pressed.</span></a>"
+       "<a class='%@' href='babelchrome://settings?longQuitShortcut=1'>"
+       "<strong>Long Cmd+Q</strong><span>Require Cmd+Q to be held for 2 seconds before quitting.</span></a>"
+       "</div>",
+      offClass,
+      onClass];
 }
 
 - (NSString*)settingsMarkdownThemeHTML:(NSString*)selectedTheme {
