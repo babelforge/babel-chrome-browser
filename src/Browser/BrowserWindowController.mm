@@ -302,6 +302,24 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
 @end
 
+@interface BabelMainWindow : NSWindow
+
+@end
+
+@implementation BabelMainWindow
+
+- (NSRect)constrainFrameRect:(NSRect)frameRect toScreen:(NSScreen*)screen {
+  for (NSScreen* availableScreen in NSScreen.screens) {
+    if (NSIntersectsRect(frameRect, availableScreen.visibleFrame)) {
+      return frameRect;
+    }
+  }
+
+  return [super constrainFrameRect:frameRect toScreen:screen];
+}
+
+@end
+
 @implementation BabelBrowserWindowController {
   NSView* rootView_;
   NSView* splitView_;
@@ -365,13 +383,13 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 - (instancetype)init {
   NSRect frame = NSMakeRect(0, 0, 1280, 820);
   NSWindow* window =
-      [[NSWindow alloc] initWithContentRect:frame
-                                  styleMask:NSWindowStyleMaskTitled |
-                                            NSWindowStyleMaskClosable |
-                                            NSWindowStyleMaskMiniaturizable |
-                                            NSWindowStyleMaskResizable
-                                    backing:NSBackingStoreBuffered
-                                      defer:NO];
+      [[BabelMainWindow alloc] initWithContentRect:frame
+                                         styleMask:NSWindowStyleMaskTitled |
+                                                   NSWindowStyleMaskClosable |
+                                                   NSWindowStyleMaskMiniaturizable |
+                                                   NSWindowStyleMaskResizable
+                                           backing:NSBackingStoreBuffered
+                                             defer:NO];
   window.title = BabelChromeConfiguration.applicationName;
   window.minSize = NSMakeSize(900, 580);
   window.titleVisibility = NSWindowTitleHidden;
@@ -7742,7 +7760,7 @@ doCommandBySelector:(SEL)commandSelector {
                             visibleFrame.origin.y + relativeY,
                             width,
                             height);
-  return [self constrainedMainWindowFrame:frame toVisibleFrame:visibleFrame];
+  return frame;
 }
 
 - (NSScreen*)screenForPersistedMainWindowFrame:(NSDictionary*)persistedFrame {
@@ -7756,16 +7774,6 @@ doCommandBySelector:(SEL)commandSelector {
   }
 
   return NSScreen.screens.firstObject ?: NSScreen.mainScreen;
-}
-
-- (NSRect)constrainedMainWindowFrame:(NSRect)frame toVisibleFrame:(NSRect)visibleFrame {
-  if (NSIsEmptyRect(visibleFrame)) {
-    return frame;
-  }
-
-  CGFloat width = MIN(MAX(900.0, frame.size.width), visibleFrame.size.width);
-  CGFloat height = MIN(MAX(580.0, frame.size.height), visibleFrame.size.height);
-  return NSMakeRect(frame.origin.x, frame.origin.y, width, height);
 }
 
 - (NSRect)centeredMainWindowFrameOnScreen:(NSScreen*)screen {
