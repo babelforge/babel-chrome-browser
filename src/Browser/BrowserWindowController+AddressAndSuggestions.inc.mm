@@ -65,28 +65,11 @@
 }
 
 - (NSString*)displayURLStringForTab:(BabelBrowserTab*)tab {
-  if ([self isInternalPageTab:tab]) {
-    return tab.requestedURLString ?: @"";
-  }
-
-  NSString* urlString = tab.requestedURLString ?: tab.urlString ?: @"";
-  return [stableViewerURLResolver_ displayURLStringForStableViewerURLString:urlString];
+  return [addressBarDisplayResolver_ displayURLStringForTab:tab];
 }
 
 - (NSDictionary*)addressBadgeForTab:(BabelBrowserTab*)tab {
-  NSString* urlString = tab.requestedURLString ?: tab.urlString ?: @"";
-  if (![stableViewerURLResolver_ isStableViewerURLString:urlString]) {
-    return nil;
-  }
-
-  NSURL* badgeURL = [NSURL URLWithString:urlString];
-  NSDictionary* badge = [BabelLocalServiceHost.sharedHost addressBadgeForURL:badgeURL];
-  NSString* badgeText = [badge[@"text"] isKindOfClass:NSString.class] ? badge[@"text"] : @"";
-  if (badgeText.length == 0) {
-    return nil;
-  }
-
-  return badge;
+  return [addressBarDisplayResolver_ addressBadgeForTab:tab];
 }
 
 - (NSColor*)colorFromHexString:(NSString*)hexString fallbackColor:(NSColor*)fallbackColor {
@@ -586,56 +569,48 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser title:(NSString*)title {
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if ([tab browser] && [tab browser]->IsSame(browser)) {
-        BOOL isGeneratedTitle = [title hasPrefix:@"data:"] || [title containsString:@"data:text"];
-        tab.title = title.length > 0 && !isGeneratedTitle ? title : tab.urlString;
-        tab.tabItemView.title = [self compactTitleForString:tab.title];
-        [self saveGroupsState];
-        if (tab == selectedTab_) {
-          [self updateWindowTitleForSelectedTab];
-        }
-        return;
-      }
-    }
+  BabelBrowserTab* tab = [self tabForBrowser:browser];
+  if (!tab) {
+    return;
+  }
+
+  BOOL isGeneratedTitle = [title hasPrefix:@"data:"] || [title containsString:@"data:text"];
+  tab.title = title.length > 0 && !isGeneratedTitle ? title : tab.urlString;
+  tab.tabItemView.title = [self compactTitleForString:tab.title];
+  [self saveGroupsState];
+  if (tab == selectedTab_) {
+    [self updateWindowTitleForSelectedTab];
   }
 }
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser urlString:(NSString*)urlString {
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if ([tab browser] && [tab browser]->IsSame(browser)) {
-        if ([urlString hasPrefix:@"data:"]) {
-          return;
-        }
+  BabelBrowserTab* tab = [self tabForBrowser:browser];
+  if (!tab || [urlString hasPrefix:@"data:"]) {
+    return;
+  }
 
-        tab.urlString = urlString;
-        if ([self isStableServerURLString:tab.requestedURLString]) {
-          tab.requestedURLString = [self stableServerReloadURLStringForTab:tab];
-        } else if (![self isStableBabelChromeURLString:tab.requestedURLString] ||
-                   ![self isLocalServiceRuntimeURLString:urlString]) {
-          tab.requestedURLString = urlString;
-        }
-        if (![self isLocalServiceModuleURLString:urlString]) {
-          NSArray<NSString*>* pendingRefreshURLStrings =
-              [runtimeRefreshCoordinator_ consumeRefreshURLStringsForBrowserIdentifier:[tab browser]->GetIdentifier()];
-          if (pendingRefreshURLStrings.count > 0) {
-            [self reloadRequestedURLStrings:pendingRefreshURLStrings excludingTab:tab];
-          }
-        }
-        NSArray<NSString*>* directRefreshURLStrings =
-            [self refreshURLStringsForStableURLString:urlString];
-        if (directRefreshURLStrings.count > 0) {
-          [self reloadRequestedURLStrings:directRefreshURLStrings excludingTab:tab];
-        }
-        [self saveGroupsState];
-        if (tab == selectedTab_ && !urlTextField_.currentEditor) {
-          [self updateAddressBarForTab:tab];
-        }
-        return;
-      }
+  tab.urlString = urlString;
+  if ([self isStableServerURLString:tab.requestedURLString]) {
+    tab.requestedURLString = [self stableServerReloadURLStringForTab:tab];
+  } else if (![self isStableBabelChromeURLString:tab.requestedURLString] ||
+             ![self isLocalServiceRuntimeURLString:urlString]) {
+    tab.requestedURLString = urlString;
+  }
+  if (![self isLocalServiceModuleURLString:urlString]) {
+    NSArray<NSString*>* pendingRefreshURLStrings =
+        [runtimeRefreshCoordinator_ consumeRefreshURLStringsForBrowserIdentifier:[tab browser]->GetIdentifier()];
+    if (pendingRefreshURLStrings.count > 0) {
+      [self reloadRequestedURLStrings:pendingRefreshURLStrings excludingTab:tab];
     }
+  }
+  NSArray<NSString*>* directRefreshURLStrings =
+      [self refreshURLStringsForStableURLString:urlString];
+  if (directRefreshURLStrings.count > 0) {
+    [self reloadRequestedURLStrings:directRefreshURLStrings excludingTab:tab];
+  }
+  [self saveGroupsState];
+  if (tab == selectedTab_ && !urlTextField_.currentEditor) {
+    [self updateAddressBarForTab:tab];
   }
 }
 
@@ -670,14 +645,12 @@ doCommandBySelector:(SEL)commandSelector {
     return;
   }
 
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if ([tab browser] && [tab browser]->IsSame(browser)) {
-        tab.faviconImage = faviconImage;
-        tab.tabItemView.faviconImage = faviconImage;
-        [faviconStore_ cacheFaviconImage:faviconImage forURLString:tab.urlString];
-        return;
-      }
-    }
+  BabelBrowserTab* tab = [self tabForBrowser:browser];
+  if (!tab) {
+    return;
   }
+
+  tab.faviconImage = faviconImage;
+  tab.tabItemView.faviconImage = faviconImage;
+  [faviconStore_ cacheFaviconImage:faviconImage forURLString:tab.urlString];
 }

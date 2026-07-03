@@ -323,35 +323,15 @@
 }
 
 - (BOOL)isLocalServiceModuleURLString:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  NSString* path = components.path ?: @"";
-  return ([components.scheme isEqualToString:@"http"] || [components.scheme isEqualToString:@"https"]) &&
-         [components.host isEqualToString:@"127.0.0.1"] &&
-         [path hasPrefix:@"/module/"];
+  return [localServiceURLClassifier_ isLocalServiceModuleURLString:urlString];
 }
 
 - (BOOL)isLocalServiceRuntimeURLString:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  if (![components.host isEqualToString:@"127.0.0.1"] ||
-      (![components.scheme isEqualToString:@"http"] && ![components.scheme isEqualToString:@"https"])) {
-    return NO;
-  }
-
-  for (NSURLQueryItem* item in components.queryItems ?: @[]) {
-    if ([item.name isEqualToString:@"token"] && item.value.length > 0) {
-      return YES;
-    }
-  }
-
-  return NO;
+  return [localServiceURLClassifier_ isLocalServiceRuntimeURLString:urlString];
 }
 
 - (BOOL)isProjectLauncherModuleURLString:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  NSString* path = components.path ?: @"";
-  return ([components.scheme isEqualToString:@"http"] || [components.scheme isEqualToString:@"https"]) &&
-         [components.host isEqualToString:@"127.0.0.1"] &&
-         [path isEqualToString:@"/module/babelforge.project-launcher/index"];
+  return [localServiceURLClassifier_ isProjectLauncherModuleURLString:urlString];
 }
 
 - (BOOL)tab:(BabelBrowserTab*)tab matchesRefreshURLString:(NSString*)requestedURLString {
@@ -411,24 +391,7 @@
 }
 
 - (NSArray<NSString*>*)restoredProjectIdentifiersFromLifecycleResponse:(NSDictionary*)response {
-  NSMutableArray<NSString*>* identifiers = [NSMutableArray array];
-  NSArray* results = [response[@"results"] isKindOfClass:NSArray.class] ? response[@"results"] : @[];
-  for (NSDictionary* result in results) {
-    if (![result isKindOfClass:NSDictionary.class]) {
-      continue;
-    }
-
-    NSDictionary* payload = [result[@"payload"] isKindOfClass:NSDictionary.class] ? result[@"payload"] : nil;
-    NSArray* restored = [payload[@"restored"] isKindOfClass:NSArray.class] ? payload[@"restored"] : @[];
-    for (NSString* identifier in restored) {
-      if ([identifier isKindOfClass:NSString.class] && identifier.length > 0 &&
-          ![identifiers containsObject:identifier]) {
-        [identifiers addObject:identifier];
-      }
-    }
-  }
-
-  return identifiers;
+  return [projectLifecycleResponseParser_ restoredProjectIdentifiersFromLifecycleResponse:response];
 }
 
 - (NSString*)serverProjectIdentifierForStableURLString:(NSString*)urlString {

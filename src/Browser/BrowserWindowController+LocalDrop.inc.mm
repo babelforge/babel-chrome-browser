@@ -21,44 +21,7 @@
 
   [self markPendingLocalDropForBrowser:browser];
 
-  NSMutableArray<NSString*>* cleanPaths = [NSMutableArray array];
-  NSMutableArray<NSString*>* files = [NSMutableArray array];
-  NSMutableArray<NSString*>* folders = [NSMutableArray array];
-  NSFileManager* fileManager = NSFileManager.defaultManager;
-  for (NSString* path in paths) {
-    if (![path isKindOfClass:NSString.class] || path.length == 0) {
-      continue;
-    }
-
-    BOOL isDirectory = NO;
-    if (![fileManager fileExistsAtPath:path isDirectory:&isDirectory]) {
-      continue;
-    }
-
-    [cleanPaths addObject:path];
-    if (isDirectory) {
-      [folders addObject:path];
-    } else {
-      [files addObject:path];
-    }
-  }
-
-  if (cleanPaths.count == 0) {
-    return;
-  }
-
-  NSDictionary* payload = @{
-    @"paths" : cleanPaths,
-    @"files" : files,
-    @"folders" : folders,
-    @"source" : @"native"
-  };
-  NSData* payloadData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
-  if (!payloadData) {
-    return;
-  }
-
-  NSString* payloadJSON = [[NSString alloc] initWithData:payloadData encoding:NSUTF8StringEncoding];
+  NSString* payloadJSON = [localDropPayloadBuilder_ payloadJSONForLocalPaths:paths];
   if (payloadJSON.length == 0) {
     return;
   }
@@ -151,30 +114,7 @@
 }
 
 - (void)appendLocalDropLogLine:(NSString*)line {
-  NSURL* logURL = [BabelChromeConfiguration.applicationSupportDirectoryURL
-      URLByAppendingPathComponent:@"local-drop.log"
-                      isDirectory:NO];
-  [NSFileManager.defaultManager createDirectoryAtURL:logURL.URLByDeletingLastPathComponent
-                         withIntermediateDirectories:YES
-                                          attributes:nil
-                                               error:nil];
-  if (![NSFileManager.defaultManager fileExistsAtPath:logURL.path]) {
-    [NSFileManager.defaultManager createFileAtPath:logURL.path contents:nil attributes:nil];
-  }
-
-  NSFileHandle* fileHandle = [NSFileHandle fileHandleForWritingAtPath:logURL.path];
-  if (!fileHandle) {
-    NSLog(@"BabelChrome local drop: %@", line ?: @"");
-    return;
-  }
-
-  NSDateFormatter* formatter = [[NSDateFormatter alloc] init];
-  formatter.dateFormat = @"yyyy-MM-dd HH:mm:ss.SSS";
-  NSString* timestamp = [formatter stringFromDate:NSDate.date];
-  NSString* entry = [NSString stringWithFormat:@"%@ %@\n", timestamp, line ?: @""];
-  [fileHandle seekToEndOfFile];
-  [fileHandle writeData:[entry dataUsingEncoding:NSUTF8StringEncoding]];
-  [fileHandle closeFile];
+  [localDropLogWriter_ appendLine:line];
 }
 
 - (NSNumber*)browserIdentifierForBrowser:(CefRefPtr<CefBrowser>)browser {

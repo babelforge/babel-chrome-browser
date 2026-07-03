@@ -10,6 +10,8 @@ set(BABEL_CHROME_SOURCES
   App/ApplicationDelegate.mm
   App/MainMenuBuilder.h
   App/MainMenuBuilder.mm
+  Browser/AddressBarDisplayResolver.h
+  Browser/AddressBarDisplayResolver.mm
   Browser/AdjacentTabPreloadPlanner.h
   Browser/AdjacentTabPreloadPlanner.mm
   Browser/AppSettingsPageRenderer.h
@@ -62,6 +64,12 @@ set(BABEL_CHROME_SOURCES
   Browser/LocalDropBridgeScriptBuilder.mm
   Browser/LocalDropCoordinator.h
   Browser/LocalDropCoordinator.mm
+  Browser/LocalDropLogWriter.h
+  Browser/LocalDropLogWriter.mm
+  Browser/LocalDropPayloadBuilder.h
+  Browser/LocalDropPayloadBuilder.mm
+  Browser/LocalServiceURLClassifier.h
+  Browser/LocalServiceURLClassifier.mm
   Browser/ModuleActionService.h
   Browser/ModuleActionService.mm
   Browser/ModulePageRenderer.h
@@ -78,6 +86,8 @@ set(BABEL_CHROME_SOURCES
   Browser/OmniboxLocalSuggestionBuilder.mm
   Browser/OmniboxSuggestionsController.h
   Browser/OmniboxSuggestionsController.mm
+  Browser/ProjectLifecycleResponseParser.h
+  Browser/ProjectLifecycleResponseParser.mm
   Browser/RecentlyClosedTabStore.h
   Browser/RecentlyClosedTabStore.mm
   Browser/RuntimeRefreshCoordinator.h

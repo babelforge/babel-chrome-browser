@@ -1,25 +1,26 @@
 #import "Browser/BrowserWindowController.h"
 
-#import "Browser/BrowserClient.h"
+#import "Browser/AddressBarDisplayResolver.h"
 #import "Browser/AdjacentTabPreloadPlanner.h"
 #import "Browser/AppSettingsPageRenderer.h"
-#import "Browser/DeveloperToolsDockingPolicy.h"
+#import "Browser/BrowserClient.h"
+#import "Browser/BrowserGroupCollection.h"
+#import "Browser/BrowserGroupFactory.h"
+#import "Browser/BrowserGroupMoveCoordinator.h"
 #import "Browser/BrowserSettingsStore.h"
+#import "Browser/BrowserTabCollection.h"
 #import "Browser/BrowserTabFactory.h"
+#import "Browser/BrowserTabInsertionCoordinator.h"
+#import "Browser/BrowserTabMoveCoordinator.h"
 #import "Browser/ChromeCommandParser.h"
 #import "Browser/ClosedTabRestorationPlanner.h"
+#import "Browser/DeveloperToolsDockingPolicy.h"
 #import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/DeveloperToolsLayoutCalculator.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/ExtensionsPageRenderer.h"
 #import "Browser/FaviconStore.h"
 #import "Browser/GoogleSuggestClient.h"
-#import "Browser/BrowserGroupCollection.h"
-#import "Browser/BrowserGroupFactory.h"
-#import "Browser/BrowserGroupMoveCoordinator.h"
-#import "Browser/BrowserTabCollection.h"
-#import "Browser/BrowserTabInsertionCoordinator.h"
-#import "Browser/BrowserTabMoveCoordinator.h"
 #import "Browser/GroupListCoordinator.h"
 #import "Browser/GroupSessionStore.h"
 #import "Browser/HistoryPageRenderer.h"
@@ -29,6 +30,9 @@
 #import "Browser/LiveBrowserEvictionPolicy.h"
 #import "Browser/LocalDropBridgeScriptBuilder.h"
 #import "Browser/LocalDropCoordinator.h"
+#import "Browser/LocalDropLogWriter.h"
+#import "Browser/LocalDropPayloadBuilder.h"
+#import "Browser/LocalServiceURLClassifier.h"
 #import "Browser/ModuleActionService.h"
 #import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleSettingsPageRenderer.h"
@@ -37,6 +41,7 @@
 #import "Browser/NewTabURLResolver.h"
 #import "Browser/OmniboxLocalSuggestionBuilder.h"
 #import "Browser/OmniboxSuggestionsController.h"
+#import "Browser/ProjectLifecycleResponseParser.h"
 #import "Browser/RecentlyClosedTabStore.h"
 #import "Browser/RuntimeRefreshCoordinator.h"
 #import "Browser/SettingsOptionRenderer.h"
@@ -138,6 +143,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSView* linkStatusBarView_;
   NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
+  BabelAddressBarDisplayResolver* addressBarDisplayResolver_;
   BabelAdjacentTabPreloadPlanner* adjacentTabPreloadPlanner_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelBrowserSettingsStore* browserSettingsStore_;
@@ -166,6 +172,9 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
   BabelLocalDropBridgeScriptBuilder* localDropBridgeScriptBuilder_;
   BabelLocalDropCoordinator* localDropCoordinator_;
+  BabelLocalDropLogWriter* localDropLogWriter_;
+  BabelLocalDropPayloadBuilder* localDropPayloadBuilder_;
+  BabelLocalServiceURLClassifier* localServiceURLClassifier_;
   BabelModuleActionService* moduleActionService_;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
@@ -174,6 +183,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelNewTabURLResolver* newTabURLResolver_;
   BabelOmniboxLocalSuggestionBuilder* omniboxLocalSuggestionBuilder_;
   BabelOmniboxSuggestionsController* omniboxSuggestionsController_;
+  BabelProjectLifecycleResponseParser* projectLifecycleResponseParser_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
   BabelRuntimeRefreshCoordinator* runtimeRefreshCoordinator_;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
@@ -303,6 +313,13 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     liveBrowserEvictionPolicy_ = [[BabelLiveBrowserEvictionPolicy alloc] init];
     localDropBridgeScriptBuilder_ = [[BabelLocalDropBridgeScriptBuilder alloc] init];
     localDropCoordinator_ = [[BabelLocalDropCoordinator alloc] init];
+    localDropLogWriter_ =
+        [[BabelLocalDropLogWriter alloc]
+            initWithLogURL:[BabelChromeConfiguration.applicationSupportDirectoryURL
+                               URLByAppendingPathComponent:@"local-drop.log"
+                                               isDirectory:NO]];
+    localDropPayloadBuilder_ = [[BabelLocalDropPayloadBuilder alloc] init];
+    localServiceURLClassifier_ = [[BabelLocalServiceURLClassifier alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];
     modulePageRenderer_ =
         [[BabelModulePageRenderer alloc]
@@ -331,6 +348,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
               return strongSelf ? [strongSelf->stableViewerURLResolver_ isStableViewerURLString:urlString] : NO;
             }];
     omniboxLocalSuggestionBuilder_ = [[BabelOmniboxLocalSuggestionBuilder alloc] init];
+    projectLifecycleResponseParser_ = [[BabelProjectLifecycleResponseParser alloc] init];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     runtimeRefreshCoordinator_ = [[BabelRuntimeRefreshCoordinator alloc] init];
     settingsOptionRenderer_ = [[BabelSettingsOptionRenderer alloc] init];
@@ -345,6 +363,12 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelModuleSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
     stableServerURLResolver_ = [[BabelStableServerURLResolver alloc] init];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
+    addressBarDisplayResolver_ =
+        [[BabelAddressBarDisplayResolver alloc]
+            initWithStableViewerURLResolver:stableViewerURLResolver_
+                    internalPageTabPredicate:^BOOL(BabelBrowserTab* tab) {
+                      return [weakSelf isInternalPageTab:tab];
+                    }];
     tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
     browserTabMoveCoordinator_ =
         [[BabelBrowserTabMoveCoordinator alloc] initWithDragCoordinator:tabDragCoordinator_];
