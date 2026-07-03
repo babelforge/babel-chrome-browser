@@ -77,6 +77,30 @@ NSButton* BabelButton(NSString* title, id target, SEL action);
 @end
 
 /**
+ * Provides a background view that never starts native window dragging.
+ */
+@interface BabelNonMovableView : NSView
+
+@end
+
+/**
+ * Provides a flipped background view that never starts native window dragging.
+ */
+@interface BabelNonMovableFlippedView : BabelFlippedView
+
+@end
+
+/**
+ * Handles titlebar background interactions for the custom tab strip.
+ */
+@interface BabelTitlebarView : NSView
+
+@property(nonatomic, weak) id doubleClickTarget;
+@property(nonatomic, assign) SEL doubleClickAction;
+
+@end
+
+/**
  * Tracks pointer drags on the split edge between the page and developer tools.
  */
 @interface BabelDeveloperToolsResizeHandleView : NSView

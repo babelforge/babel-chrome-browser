@@ -20,6 +20,7 @@ static const CGFloat kSidebarHeaderButtonSize = 28.0;
 static const CGFloat kSidebarHeaderLeadingInset = 10.0;
 static const CGFloat kSidebarHeaderButtonGap = 8.0;
 static const CGFloat kSidebarHeaderTrailingInset = 12.0;
+static const CGFloat kSidebarTitleRenderPadding = 4.0;
 static const CGFloat kSidebarMaximumWidth = 360.0;
 static const CGFloat kSidebarCollapsedWidth = 48.0;
 static const CGFloat kTabBarHeight = 40.0;
@@ -485,6 +486,15 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   [self dispatchApplicationDidStartModuleLifecycleHook];
 }
 
+- (void)maximizeWindowToVisibleFrame:(id)sender {
+  NSScreen* screen = self.window.screen ?: NSScreen.mainScreen;
+  if (!screen) {
+    return;
+  }
+
+  [self.window setFrame:screen.visibleFrame display:YES animate:YES];
+}
+
 - (void)dispatchApplicationDidStartModuleLifecycleHook {
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
     NSError* error = nil;
@@ -522,7 +532,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   splitView_ = [[NSView alloc] initWithFrame:rootView_.bounds];
   splitView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
-  sidebarView_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, kSidebarInitialWidth, 820)];
+  sidebarView_ = [[BabelNonMovableView alloc] initWithFrame:NSMakeRect(0, 0, kSidebarInitialWidth, 820)];
   sidebarView_.wantsLayer = YES;
 
   sidebarTitle_ = [NSTextField labelWithString:@"BabelForge"];
@@ -552,7 +562,7 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   newGroupButton_.autoresizingMask = NSViewMinYMargin | NSViewMinXMargin;
   [sidebarView_ addSubview:newGroupButton_];
 
-  groupsListView_ = [[BabelFlippedView alloc] initWithFrame:NSMakeRect(5, 24, 230, 740)];
+  groupsListView_ = [[BabelNonMovableFlippedView alloc] initWithFrame:NSMakeRect(5, 24, 230, 740)];
   groupsListView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   [sidebarView_ addSubview:groupsListView_];
 
@@ -565,7 +575,11 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   rightView_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   rightView_.wantsLayer = YES;
 
-  tabsBarPanel_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 780, 1040, kTabBarHeight)];
+  BabelTitlebarView* tabsBarPanel =
+      [[BabelTitlebarView alloc] initWithFrame:NSMakeRect(0, 780, 1040, kTabBarHeight)];
+  tabsBarPanel.doubleClickTarget = self;
+  tabsBarPanel.doubleClickAction = @selector(maximizeWindowToVisibleFrame:);
+  tabsBarPanel_ = tabsBarPanel;
   tabsBarPanel_.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
   tabsBarPanel_.wantsLayer = YES;
   [rootView_ addSubview:tabsBarPanel_];
@@ -7637,9 +7651,13 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (CGFloat)minimumExpandedSidebarWidth {
-  CGFloat titleWidth = sidebarTitle_ ? [sidebarTitle_ intrinsicContentSize].width : 0.0;
+  CGFloat titleWidth = sidebarTitle_ ? [self sidebarTitleWidth] : 0.0;
   return kSidebarHeaderLeadingInset + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap +
       titleWidth + kSidebarHeaderButtonGap + kSidebarHeaderButtonSize + kSidebarHeaderTrailingInset;
+}
+
+- (CGFloat)sidebarTitleWidth {
+  return [sidebarTitle_ intrinsicContentSize].width + kSidebarTitleRenderPadding;
 }
 
 - (CGFloat)targetSidebarWidth {
@@ -7801,7 +7819,7 @@ doCommandBySelector:(SEL)commandSelector {
                       sidebarCollapsed_ ? @"collapse-right" : @"collapse-left",
                       sidebarCollapsed_ ? @">>" : @"<<");
   CGFloat titleX = collapseButtonX + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap;
-  CGFloat titleIntrinsicWidth = [sidebarTitle_ intrinsicContentSize].width;
+  CGFloat titleIntrinsicWidth = [self sidebarTitleWidth];
   CGFloat titleRightEdge = titleX + titleIntrinsicWidth;
   CGFloat minimumAddButtonX = titleRightEdge + kSidebarHeaderButtonGap;
   CGFloat addButtonX =

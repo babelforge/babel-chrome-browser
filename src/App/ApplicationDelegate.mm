@@ -13,7 +13,7 @@
 
 static const NSTimeInterval kStartupInitialCollectionDuration = 2.0;
 static const NSTimeInterval kStartupURLQuietDuration = 6.0;
-static const NSTimeInterval kStartupWindowMinimumDisplayDuration = 5.0;
+static const NSTimeInterval kStartupWindowMinimumDisplayDuration = 2.5;
 
 - (instancetype)init {
   self = [super init];

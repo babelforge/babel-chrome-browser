@@ -217,6 +217,38 @@ NSButton* BabelButton(NSString* title, id target, SEL action) {
 
 @end
 
+@implementation BabelNonMovableView
+
+- (BOOL)mouseDownCanMoveWindow {
+  return NO;
+}
+
+@end
+
+@implementation BabelNonMovableFlippedView
+
+- (BOOL)mouseDownCanMoveWindow {
+  return NO;
+}
+
+@end
+
+@implementation BabelTitlebarView
+
+@synthesize doubleClickTarget;
+@synthesize doubleClickAction;
+
+- (void)mouseUp:(NSEvent*)event {
+  if (event.clickCount == 2 && self.doubleClickTarget && self.doubleClickAction) {
+    [NSApp sendAction:self.doubleClickAction to:self.doubleClickTarget from:self];
+    return;
+  }
+
+  [super mouseUp:event];
+}
+
+@end
+
 @implementation BabelDeveloperToolsResizeHandleView
 
 @synthesize resizeTarget;
