@@ -23,6 +23,7 @@ static const CGFloat kSidebarHeaderTrailingInset = 12.0;
 static const CGFloat kSidebarTitleRenderPadding = 4.0;
 static const CGFloat kSidebarMaximumWidth = 360.0;
 static const CGFloat kSidebarCollapsedWidth = 48.0;
+static const CGFloat kWindowFrameComparisonTolerance = 2.0;
 static const CGFloat kTabBarHeight = 40.0;
 static const CGFloat kTitlebarTabLeadingInset = 88.0;
 static const CGFloat kToolbarHeight = 44.0;
@@ -7796,16 +7797,30 @@ doCommandBySelector:(SEL)commandSelector {
   return bestScreen ?: NSScreen.screens.firstObject;
 }
 
+- (BOOL)mainWindowFrameIsEffectivelyZoomed:(NSRect)frame onScreen:(NSScreen*)screen {
+  if (!screen) {
+    return NO;
+  }
+
+  NSRect visibleFrame = screen.visibleFrame;
+  return fabs(frame.origin.x - visibleFrame.origin.x) <= kWindowFrameComparisonTolerance &&
+      fabs(frame.origin.y - visibleFrame.origin.y) <= kWindowFrameComparisonTolerance &&
+      fabs(frame.size.width - visibleFrame.size.width) <= kWindowFrameComparisonTolerance &&
+      fabs(frame.size.height - visibleFrame.size.height) <= kWindowFrameComparisonTolerance;
+}
+
 - (void)saveMainWindowState {
   if (!self.window) {
     return;
   }
 
-  [NSUserDefaults.standardUserDefaults setBool:self.window.isZoomed
+  NSRect frame = self.window.frame;
+  NSScreen* screen = [self bestScreenForMainWindowFrame:frame];
+  BOOL shouldRestoreZoom = self.window.isZoomed &&
+      [self mainWindowFrameIsEffectivelyZoomed:frame onScreen:screen];
+  [NSUserDefaults.standardUserDefaults setBool:shouldRestoreZoom
                                         forKey:kMainWindowZoomedDefaultsKey];
   if (!self.window.isMiniaturized) {
-    NSRect frame = self.window.frame;
-    NSScreen* screen = [self bestScreenForMainWindowFrame:frame];
     NSRect visibleFrame = screen.visibleFrame;
     NSDictionary* persistedFrame = @{
       @"version": @1,
