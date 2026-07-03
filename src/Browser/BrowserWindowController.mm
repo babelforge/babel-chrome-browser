@@ -6,6 +6,7 @@
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/ExtensionsPageRenderer.h"
 #import "Browser/FaviconStore.h"
+#import "Browser/GoogleSuggestClient.h"
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/InternalPageRenderer.h"
 #import "Browser/ModuleActionService.h"
@@ -113,12 +114,12 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
   NSMutableArray<NSDictionary*>* omniboxSuggestions_;
-  NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
   BabelFaviconStore* faviconStore_;
+  BabelGoogleSuggestClient* googleSuggestClient_;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelInternalPageRenderer* internalPageRenderer_;
   BabelModuleActionService* moduleActionService_;
@@ -185,7 +186,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   if (self) {
     groups_ = [NSMutableArray array];
     omniboxSuggestions_ = [NSMutableArray array];
-    googleSuggestCache_ = [NSMutableDictionary dictionary];
     browserSettingsStore_ =
         [[BabelBrowserSettingsStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     extensionProfileStore_ =
@@ -200,6 +200,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelExtensionsPageRenderer alloc] initWithTrashIconHTML:[self trashIconHTML]];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
+    googleSuggestClient_ = [[BabelGoogleSuggestClient alloc] init];
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];

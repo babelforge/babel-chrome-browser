@@ -67,7 +67,7 @@
     return;
   }
 
-  NSArray<NSString*>* cachedSuggestions = googleSuggestCache_[query.lowercaseString];
+  NSArray<NSString*>* cachedSuggestions = [googleSuggestClient_ cachedSuggestionsForQuery:query];
   if (cachedSuggestions) {
     [self appendGoogleSuggestions:cachedSuggestions forQuery:query generation:generation];
     return;
@@ -80,77 +80,13 @@
       return;
     }
 
-    [self fetchGoogleSuggestionsForQuery:query generation:generation];
-  });
-}
-
-- (void)fetchGoogleSuggestionsForQuery:(NSString*)query generation:(NSUInteger)generation {
-  NSURL* url = [self googleSuggestURLForQuery:query];
-  if (!url) {
-    return;
-  }
-
-  NSURLSessionConfiguration* configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration;
-  configuration.timeoutIntervalForRequest = 1.5;
-  NSURLSession* session = [NSURLSession sessionWithConfiguration:configuration];
-  NSURLSessionDataTask* task =
-      [session dataTaskWithURL:url
-             completionHandler:^(NSData* data, NSURLResponse* response, NSError* error) {
-    if (error || data.length == 0) {
-      [session finishTasksAndInvalidate];
-      return;
-    }
-
-    NSArray<NSString*>* suggestions = [self googleSuggestionsFromData:data];
-    dispatch_async(dispatch_get_main_queue(), ^{
-      self->googleSuggestCache_[query.lowercaseString] = suggestions ?: @[];
+    [googleSuggestClient_ fetchSuggestionsForQuery:query
+                                        completion:^(NSArray<NSString*>* suggestions) {
       [self appendGoogleSuggestions:suggestions ?: @[]
                             forQuery:query
                          generation:generation];
-    });
-    [session finishTasksAndInvalidate];
-  }];
-  [task resume];
-}
-
-- (NSURL*)googleSuggestURLForQuery:(NSString*)query {
-  NSString* encodedQuery = [self googleQueryEscapedString:query];
-  if (encodedQuery.length == 0) {
-    return nil;
-  }
-
-  NSString* urlString =
-      [NSString stringWithFormat:@"https://suggestqueries.google.com/complete/search?client=firefox&q=%@",
-                                 encodedQuery];
-  return [NSURL URLWithString:urlString];
-}
-
-- (NSString*)googleQueryEscapedString:(NSString*)query {
-  NSMutableCharacterSet* allowedCharacters = [NSCharacterSet.URLQueryAllowedCharacterSet mutableCopy];
-  [allowedCharacters removeCharactersInString:@"&+=?"];
-  return [query stringByAddingPercentEncodingWithAllowedCharacters:allowedCharacters];
-}
-
-- (NSArray<NSString*>*)googleSuggestionsFromData:(NSData*)data {
-  NSError* error = nil;
-  id json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
-  if (error || ![json isKindOfClass:NSArray.class]) {
-    return @[];
-  }
-
-  NSArray* root = (NSArray*)json;
-  if (root.count < 2 || ![root[1] isKindOfClass:NSArray.class]) {
-    return @[];
-  }
-
-  NSMutableArray<NSString*>* suggestions = [NSMutableArray array];
-  for (id value in (NSArray*)root[1]) {
-    if (![value isKindOfClass:NSString.class] || [suggestions containsObject:value]) {
-      continue;
-    }
-    [suggestions addObject:value];
-  }
-  return suggestions;
+    }];
+  });
 }
 
 - (void)appendGoogleSuggestions:(NSArray<NSString*>*)suggestions
@@ -175,7 +111,7 @@
     }
 
     [self addOmniboxSuggestionWithTitle:suggestion
-                              urlString:[self googleSearchURLStringForQuery:suggestion]
+                              urlString:[googleSuggestClient_ googleSearchURLStringForQuery:suggestion]
                               groupName:@"Google Search"
                           tabIdentifier:nil
                                   action:@"google-search"
@@ -183,11 +119,6 @@
   }
 
   [self showOmniboxSuggestions];
-}
-
-- (NSString*)googleSearchURLStringForQuery:(NSString*)query {
-  NSString* encodedQuery = [self googleQueryEscapedString:query];
-  return [@"https://www.google.com/search?q=" stringByAppendingString:(encodedQuery ?: @"")];
 }
 
 - (void)addOmniboxSuggestionWithTitle:(NSString*)title

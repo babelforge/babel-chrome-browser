@@ -49,6 +49,7 @@ BrowserWindowController
             |__ HistoryPageRenderer
             |__ ExtensionsPageRenderer
             |__ OmniboxLocalSuggestionBuilder
+            |__ GoogleSuggestClient
             |__ more focused collaborators as needed
 ```
 
@@ -70,7 +71,7 @@ BrowserWindowController
 | `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, URL/path escaping, shell quoting, icon loading, restart launching, and compatibility wrappers for internal page rendering. Shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
-| `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, suggestion AppKit rendering, keyboard navigation, and favicon lookup. Local suggestion matching/deduplication is delegated to `BabelOmniboxLocalSuggestionBuilder`. |
+| `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest debounce/generation, suggestion AppKit rendering, keyboard navigation, and favicon lookup. Local suggestion matching/deduplication is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest HTTP/cache/parsing is delegated to `BabelGoogleSuggestClient`. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. Stable server identifier parsing is delegated to `BabelStableServerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
@@ -198,6 +199,19 @@ The controller may still decide which tabs to reload and when a runtime URL is e
 - maximum result count enforcement.
 
 The controller may collect tab row view models, add favicons, and render AppKit rows, but it must not implement local suggestion matching loops directly.
+
+### `BabelGoogleSuggestClient`
+
+`BabelGoogleSuggestClient` owns Google Suggest integration:
+
+- query URL construction;
+- network request execution;
+- JSON response parsing;
+- result de-duplication;
+- query result caching;
+- Google Search URL construction.
+
+The controller may debounce calls and reject stale generations, but it must not own Google Suggest HTTP, cache, or parsing logic.
 
 ### `BabelBrowserSettingsStore`
 
