@@ -72,9 +72,9 @@
 }
 
 - (CGFloat)restoredExpandedSidebarWidth {
-  double storedWidth = [NSUserDefaults.standardUserDefaults doubleForKey:kSidebarWidthDefaultsKey];
-  CGFloat width = storedWidth > 0.0 ? (CGFloat)storedWidth : kSidebarInitialWidth;
-  return [self normalizedExpandedSidebarWidth:width];
+  return [windowStateStore_ restoredExpandedSidebarWidthWithDefault:kSidebarInitialWidth
+                                                            minimum:[self minimumExpandedSidebarWidth]
+                                                            maximum:kSidebarMaximumWidth];
 }
 
 - (CGFloat)normalizedExpandedSidebarWidth:(CGFloat)width {
@@ -83,8 +83,7 @@
 
 - (void)saveExpandedSidebarWidth:(CGFloat)width {
   expandedSidebarWidth_ = [self normalizedExpandedSidebarWidth:width];
-  [NSUserDefaults.standardUserDefaults setDouble:expandedSidebarWidth_ forKey:kSidebarWidthDefaultsKey];
-  [NSUserDefaults.standardUserDefaults synchronize];
+  [windowStateStore_ setExpandedSidebarWidth:expandedSidebarWidth_];
 }
 
 - (CGFloat)minimumExpandedSidebarWidth {
@@ -105,25 +104,7 @@
 }
 
 - (void)restoreMainWindowFrame {
-  id persistedFrame = [NSUserDefaults.standardUserDefaults objectForKey:kMainWindowFrameDefaultsKey];
-  if (!persistedFrame) {
-    [self.window center];
-    return;
-  }
-
-  NSRect frame = [self restoredMainWindowFrameFromPersistedValue:persistedFrame];
-  if (![self mainWindowFrameIsVisible:frame]) {
-    NSScreen* fallbackScreen = NSScreen.screens.firstObject ?: NSScreen.mainScreen;
-    if (fallbackScreen) {
-      [self.window setFrame:[self centeredMainWindowFrameOnScreen:fallbackScreen]
-                    display:NO];
-    } else {
-      [self.window center];
-    }
-    return;
-  }
-
-  [self.window setFrame:frame display:NO];
+  [windowStateStore_ restoreWindowFrame:self.window];
 }
 
 - (void)restoreMainWindowZoomStateIfNeeded {
@@ -132,131 +113,11 @@
   }
 
   didRestoreMainWindowState_ = YES;
-  NSScreen* screen = [self bestScreenForMainWindowFrame:self.window.frame];
-  BOOL shouldRestoreZoom = [NSUserDefaults.standardUserDefaults boolForKey:kMainWindowZoomedDefaultsKey] &&
-      [self mainWindowFrameIsEffectivelyZoomed:self.window.frame onScreen:screen];
-  if (shouldRestoreZoom && !self.window.isZoomed) {
-    [self.window zoom:nil];
-  }
-}
-
-- (BOOL)mainWindowFrameIsVisible:(NSRect)frame {
-  if (NSIsEmptyRect(frame) || frame.size.width < 200.0 || frame.size.height < 200.0) {
-    return NO;
-  }
-
-  for (NSScreen* screen in NSScreen.screens) {
-    if (NSIntersectsRect(frame, screen.visibleFrame)) {
-      return YES;
-    }
-  }
-  return NO;
-}
-
-- (NSRect)restoredMainWindowFrameFromPersistedValue:(id)persistedValue {
-  if ([persistedValue isKindOfClass:NSString.class]) {
-    return NSRectFromString((NSString*)persistedValue);
-  }
-
-  if (![persistedValue isKindOfClass:NSDictionary.class]) {
-    return NSZeroRect;
-  }
-
-  NSDictionary* persistedFrame = (NSDictionary*)persistedValue;
-  NSScreen* screen = [self screenForPersistedMainWindowFrame:persistedFrame];
-  if (!screen) {
-    return NSZeroRect;
-  }
-
-  NSRect visibleFrame = screen.visibleFrame;
-  CGFloat width = [persistedFrame[@"width"] doubleValue];
-  CGFloat height = [persistedFrame[@"height"] doubleValue];
-  CGFloat relativeX = [persistedFrame[@"x"] doubleValue];
-  CGFloat relativeY = [persistedFrame[@"y"] doubleValue];
-
-  NSRect frame = NSMakeRect(visibleFrame.origin.x + relativeX,
-                            visibleFrame.origin.y + relativeY,
-                            width,
-                            height);
-  return frame;
-}
-
-- (NSScreen*)screenForPersistedMainWindowFrame:(NSDictionary*)persistedFrame {
-  NSString* screenName = [persistedFrame[@"screenName"] isKindOfClass:NSString.class]
-      ? persistedFrame[@"screenName"]
-      : @"";
-  for (NSScreen* screen in NSScreen.screens) {
-    if (screenName.length > 0 && [screen.localizedName isEqualToString:screenName]) {
-      return screen;
-    }
-  }
-
-  return NSScreen.screens.firstObject ?: NSScreen.mainScreen;
-}
-
-- (NSRect)centeredMainWindowFrameOnScreen:(NSScreen*)screen {
-  NSRect visibleFrame = screen.visibleFrame;
-  NSSize windowSize = self.window.frame.size;
-  CGFloat width = MIN(MAX(900.0, windowSize.width), visibleFrame.size.width);
-  CGFloat height = MIN(MAX(580.0, windowSize.height), visibleFrame.size.height);
-  return NSMakeRect(NSMidX(visibleFrame) - (width / 2.0),
-                    NSMidY(visibleFrame) - (height / 2.0),
-                    width,
-                    height);
-}
-
-- (NSScreen*)bestScreenForMainWindowFrame:(NSRect)frame {
-  NSScreen* bestScreen = self.window.screen ?: NSScreen.mainScreen;
-  CGFloat bestIntersectionArea = 0.0;
-  for (NSScreen* screen in NSScreen.screens) {
-    NSRect intersection = NSIntersectionRect(frame, screen.visibleFrame);
-    CGFloat intersectionArea = intersection.size.width * intersection.size.height;
-    if (intersectionArea > bestIntersectionArea) {
-      bestIntersectionArea = intersectionArea;
-      bestScreen = screen;
-    }
-  }
-
-  return bestScreen ?: NSScreen.screens.firstObject;
-}
-
-- (BOOL)mainWindowFrameIsEffectivelyZoomed:(NSRect)frame onScreen:(NSScreen*)screen {
-  if (!screen) {
-    return NO;
-  }
-
-  NSRect visibleFrame = screen.visibleFrame;
-  return fabs(frame.origin.x - visibleFrame.origin.x) <= kWindowFrameComparisonTolerance &&
-      fabs(frame.origin.y - visibleFrame.origin.y) <= kWindowFrameComparisonTolerance &&
-      fabs(frame.size.width - visibleFrame.size.width) <= kWindowFrameComparisonTolerance &&
-      fabs(frame.size.height - visibleFrame.size.height) <= kWindowFrameComparisonTolerance;
+  [windowStateStore_ restoreWindowZoomIfNeeded:self.window];
 }
 
 - (void)saveMainWindowState {
-  if (!self.window) {
-    return;
-  }
-
-  NSRect frame = self.window.frame;
-  NSScreen* screen = [self bestScreenForMainWindowFrame:frame];
-  BOOL shouldRestoreZoom = self.window.isZoomed &&
-      [self mainWindowFrameIsEffectivelyZoomed:frame onScreen:screen];
-  [NSUserDefaults.standardUserDefaults setBool:shouldRestoreZoom
-                                        forKey:kMainWindowZoomedDefaultsKey];
-  if (!self.window.isMiniaturized) {
-    NSRect visibleFrame = screen.visibleFrame;
-    NSDictionary* persistedFrame = @{
-      @"version": @1,
-      @"screenName": screen.localizedName ?: @"",
-      @"x": @(frame.origin.x - visibleFrame.origin.x),
-      @"y": @(frame.origin.y - visibleFrame.origin.y),
-      @"width": @(frame.size.width),
-      @"height": @(frame.size.height)
-    };
-    [NSUserDefaults.standardUserDefaults setObject:persistedFrame
-                                            forKey:kMainWindowFrameDefaultsKey];
-  }
-  [NSUserDefaults.standardUserDefaults synchronize];
+  [windowStateStore_ saveWindowState:self.window];
 }
 
 - (void)applyThemeColors {

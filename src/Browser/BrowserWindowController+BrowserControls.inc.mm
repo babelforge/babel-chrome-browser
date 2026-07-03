@@ -132,8 +132,7 @@
     [self saveExpandedSidebarWidth:sidebarView_.frame.size.width];
   }
   sidebarCollapsed_ = !sidebarCollapsed_;
-  [NSUserDefaults.standardUserDefaults setBool:sidebarCollapsed_
-                                        forKey:kSidebarCollapsedDefaultsKey];
+  [windowStateStore_ setSidebarCollapsed:sidebarCollapsed_];
   [self layoutInterfaceForCurrentSplitViewSize];
   [splitView_ setNeedsDisplay:YES];
   [sidebarView_ setNeedsDisplay:YES];

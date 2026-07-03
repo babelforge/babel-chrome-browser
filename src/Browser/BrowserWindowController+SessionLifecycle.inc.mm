@@ -29,7 +29,7 @@
 }
 
 - (void)restoreSessionSidebarCollapsedState {
-  sidebarCollapsed_ = [NSUserDefaults.standardUserDefaults boolForKey:kSidebarCollapsedDefaultsKey];
+  sidebarCollapsed_ = [windowStateStore_ restoredSidebarCollapsed];
 }
 
 - (void)restoreSessionSidebarExpandedWidth {

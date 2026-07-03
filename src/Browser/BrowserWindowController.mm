@@ -10,6 +10,7 @@
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
+#import "Browser/WindowStateStore.h"
 #import "Configuration/Configuration.h"
 #import "LocalServices/LocalServiceHost.h"
 
@@ -29,7 +30,6 @@ static const CGFloat kSidebarHeaderTrailingInset = 12.0;
 static const CGFloat kSidebarTitleRenderPadding = 4.0;
 static const CGFloat kSidebarMaximumWidth = 360.0;
 static const CGFloat kSidebarCollapsedWidth = 48.0;
-static const CGFloat kWindowFrameComparisonTolerance = 2.0;
 static const CGFloat kTabBarHeight = 40.0;
 static const CGFloat kTitlebarTabLeadingInset = 88.0;
 static const CGFloat kToolbarHeight = 44.0;
@@ -52,13 +52,9 @@ static NSString* const kDefaultGroupIdentifier = @"default";
 static NSString* const kDefaultGroupName = @"default";
 static NSString* const kDeveloperToolsDockModeDefaultsKey = @"DeveloperToolsDockMode";
 static NSString* const kDeveloperToolsSizeRatioDefaultsKey = @"DeveloperToolsSizeRatio";
-static NSString* const kSidebarCollapsedDefaultsKey = @"SidebarCollapsed";
-static NSString* const kSidebarWidthDefaultsKey = @"SidebarWidth";
 static NSString* const kAddressSuggestionsModeDefaultsKey = @"AddressSuggestionsMode";
 static NSString* const kTabOpeningStrategyDefaultsKey = @"TabOpeningStrategy";
 static NSString* const kMarkdownThemeDefaultsKey = @"MarkdownTheme";
-static NSString* const kMainWindowFrameDefaultsKey = @"MainWindowFrame";
-static NSString* const kMainWindowZoomedDefaultsKey = @"MainWindowZoomed";
 static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutEnabled";
 static NSString* const kModuleUpdateURLDefaultsKey = @"ModuleUpdateURL";
 static NSString* const kModuleUpdateLocalDirectoryDefaultsKey = @"ModuleUpdateLocalDirectory";
@@ -129,6 +125,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleUpdateService* moduleUpdateService_;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
+  BabelWindowStateStore* windowStateStore_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
   NSMutableDictionary<NSNumber*, NSDate*>* pendingLocalDropBrowserIdentifiers_;
@@ -209,6 +206,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     moduleUIActionCoordinator_ =
         [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
                                                         moduleUpdateService:moduleUpdateService_];
+    windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
     evictingBrowserTabIdentifiers_ = [NSMutableSet set];
     pendingLocalDropBrowserIdentifiers_ = [NSMutableDictionary dictionary];

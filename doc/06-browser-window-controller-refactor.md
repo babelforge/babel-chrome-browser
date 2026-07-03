@@ -56,7 +56,7 @@ BrowserWindowController
 | `BrowserWindowController+InternalPageLoading.inc.mm` | Loading rendered internal HTML into the selected browser tab. |
 | `BrowserWindowController+InternalPageOpeners.inc.mm` | Convenience methods that open built-in internal pages from menu items, buttons, shortcuts, or module routes. Module page methods collect snapshots/update data and delegate body rendering to `BabelModulePageRenderer`. |
 | `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, escaping, formatting, and small HTML utilities. Candidate for extraction into renderer/view helpers. |
-| `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, window persistence, and view resizing. Candidate for `WindowStateStore` plus layout helpers. |
+| `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. |
@@ -96,6 +96,18 @@ The controller may ask for favicon lookup, but it must not recreate origin-key o
 - restores disabled extension packages moved by older BabelChrome versions.
 
 The controller may open panels, show alerts, render extension pages, and route user actions, but it must not manipulate Chromium extension profile paths or preferences directly.
+
+### `BabelWindowStateStore`
+
+`BabelWindowStateStore` owns main window and sidebar persistence:
+
+- reads and writes the collapsed sidebar state;
+- reads and writes the expanded sidebar width;
+- restores the main window frame on the best available screen;
+- persists frame coordinates relative to the screen visible frame;
+- restores zoom only when the stored frame matches the visible-frame zoom shape.
+
+The controller may compute UI constraints such as the minimum sidebar width, but it must not serialize window frames or directly read/write window/sidebar defaults.
 
 ### `BabelModuleUpdateService`
 
