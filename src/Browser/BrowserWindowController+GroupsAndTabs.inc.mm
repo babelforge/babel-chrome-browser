@@ -589,19 +589,18 @@
     return;
   }
 
-  NSUInteger currentIndex = [tabs_ indexOfObject:tab];
   NSPoint tabStripPoint = [tabsItemsPanel_ convertPoint:currentEvent.locationInWindow fromView:nil];
   NSUInteger targetIndex = [self tabInsertionIndexForTabStripX:tabStripPoint.x];
-  targetIndex = [tabDragCoordinator_ targetIndexForMovingItemAtIndex:currentIndex
-                                                    toInsertionIndex:targetIndex
-                                                           itemCount:tabs_.count];
-  if (targetIndex == currentIndex) {
+  BabelBrowserTabMoveResult* moveResult =
+      [browserTabMoveCoordinator_ moveTab:tab
+                                fromGroup:selectedGroup_
+                                  toGroup:selectedGroup_
+                            insertionIndex:targetIndex];
+  if (!moveResult.didMove) {
     return;
   }
 
   isReorderingTabs_ = YES;
-  [tabs_ removeObjectAtIndex:currentIndex];
-  [tabs_ insertObject:tab atIndex:targetIndex];
   [self layoutTabItemsSelectingLastTab:NO];
 }
 
