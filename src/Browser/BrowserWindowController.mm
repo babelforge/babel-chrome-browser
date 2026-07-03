@@ -13,6 +13,7 @@
 #import "Browser/InternalPageRenderer.h"
 #import "Browser/LiveBrowserEvictionPolicy.h"
 #import "Browser/LocalDropBridgeScriptBuilder.h"
+#import "Browser/LocalDropCoordinator.h"
 #import "Browser/ModuleActionService.h"
 #import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleSettingsPageRenderer.h"
@@ -132,6 +133,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelInternalPageRenderer* internalPageRenderer_;
   BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
   BabelLocalDropBridgeScriptBuilder* localDropBridgeScriptBuilder_;
+  BabelLocalDropCoordinator* localDropCoordinator_;
   BabelModuleActionService* moduleActionService_;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
@@ -147,7 +149,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelTabDragCoordinator* tabDragCoordinator_;
   BabelTabPlacementPolicy* tabPlacementPolicy_;
   BabelWindowStateStore* windowStateStore_;
-  NSMutableDictionary<NSNumber*, NSDate*>* pendingLocalDropBrowserIdentifiers_;
   BabelBrowserGroup* selectedGroup_;
   NSMutableArray<BabelBrowserTab*>* tabs_;
   NSMutableArray<BabelBrowserTab*>* pendingTabs_;
@@ -216,6 +217,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
     liveBrowserEvictionPolicy_ = [[BabelLiveBrowserEvictionPolicy alloc] init];
     localDropBridgeScriptBuilder_ = [[BabelLocalDropBridgeScriptBuilder alloc] init];
+    localDropCoordinator_ = [[BabelLocalDropCoordinator alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];
     modulePageRenderer_ =
         [[BabelModulePageRenderer alloc]
@@ -244,7 +246,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
     tabPlacementPolicy_ = [[BabelTabPlacementPolicy alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
-    pendingLocalDropBrowserIdentifiers_ = [NSMutableDictionary dictionary];
     tabs_ = [NSMutableArray array];
     pendingTabs_ = [NSMutableArray array];
     browserClient_ = new BabelBrowserClient(self);

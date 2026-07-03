@@ -36,6 +36,8 @@ set(BABEL_CHROME_SOURCES
   Browser/LiveBrowserEvictionPolicy.mm
   Browser/LocalDropBridgeScriptBuilder.h
   Browser/LocalDropBridgeScriptBuilder.mm
+  Browser/LocalDropCoordinator.h
+  Browser/LocalDropCoordinator.mm
   Browser/ModuleActionService.h
   Browser/ModuleActionService.mm
   Browser/ModulePageRenderer.h

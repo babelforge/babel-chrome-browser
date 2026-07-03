@@ -199,7 +199,7 @@
     return;
   }
 
-  pendingLocalDropBrowserIdentifiers_[browserIdentifier] = NSDate.date;
+  [localDropCoordinator_ markPendingLocalDropForBrowserIdentifier:browserIdentifier];
   [self appendLocalDropLogLine:[NSString stringWithFormat:
       @"Marked pending local drop for browser=%@",
       browserIdentifier]];
@@ -211,24 +211,12 @@
     return NO;
   }
 
-  NSDate* createdAt = pendingLocalDropBrowserIdentifiers_[browserIdentifier];
-  if (!createdAt) {
-    return NO;
-  }
-
-  if ([NSDate.date timeIntervalSinceDate:createdAt] > 10.0) {
-    [pendingLocalDropBrowserIdentifiers_ removeObjectForKey:browserIdentifier];
-    return NO;
-  }
-
-  return YES;
+  return [localDropCoordinator_ hasPendingLocalDropForBrowserIdentifier:browserIdentifier];
 }
 
 - (void)clearPendingLocalDropForBrowser:(CefRefPtr<CefBrowser>)browser {
   NSNumber* browserIdentifier = [self browserIdentifierForBrowser:browser];
-  if (browserIdentifier) {
-    [pendingLocalDropBrowserIdentifiers_ removeObjectForKey:browserIdentifier];
-  }
+  [localDropCoordinator_ clearPendingLocalDropForBrowserIdentifier:browserIdentifier];
 }
 
 - (BOOL)tabSupportsLocalDropPaths:(BabelBrowserTab*)tab {

@@ -57,6 +57,7 @@ BrowserWindowController
             |__ GroupSessionStore
             |__ TabDragCoordinator
             |__ LocalDropBridgeScriptBuilder
+            |__ LocalDropCoordinator
             |__ more focused collaborators as needed
 ```
 
@@ -77,7 +78,7 @@ BrowserWindowController
 | `BrowserWindowController+InternalPageOpeners.inc.mm` | Convenience methods that open built-in internal pages from menu items, buttons, shortcuts, or module routes. Module page methods collect snapshots/update data and delegate body rendering to `BabelModulePageRenderer`. |
 | `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, URL/path escaping, shell quoting, icon loading, restart launching, and compatibility wrappers for internal page rendering. Shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
-| `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`. |
+| `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion orchestration, Google Suggest debounce/generation, favicon lookup, and selected suggestion actions. Local suggestion matching/deduplication is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest HTTP/cache/parsing is delegated to `BabelGoogleSuggestClient`; suggestion list state and AppKit row rendering are delegated to `BabelOmniboxSuggestionsController`. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. Stable server identifier parsing is delegated to `BabelStableServerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
@@ -297,6 +298,16 @@ The controller may still track the currently dragged tab, schedule hover group s
 - dispatching the `babelchrome:local-drop` custom event.
 
 The controller may still decide when a page is drop-aware and execute JavaScript through CEF, but it must not embed the full bridge script inline.
+
+### `BabelLocalDropCoordinator`
+
+`BabelLocalDropCoordinator` owns pending native local-drop state:
+
+- marking browser identifiers that have just received a local file drag;
+- expiring stale pending drop markers;
+- clearing markers after file-navigation suppression decisions.
+
+The controller may still translate CEF browsers to identifiers and log decisions, but it must not own the pending-drop dictionary directly.
 
 ### `BabelBrowserSettingsStore`
 
