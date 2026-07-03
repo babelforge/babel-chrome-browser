@@ -236,6 +236,7 @@ static const NSTimeInterval kStartupWindowMinimumDisplayDuration = 2.5;
 }
 
 - (void)tryToTerminateApplication {
+  [browserWindowController_ saveMainWindowState];
   [browserWindowController_ requestApplicationTermination];
 }
 

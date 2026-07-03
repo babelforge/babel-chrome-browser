@@ -7803,7 +7803,7 @@ doCommandBySelector:(SEL)commandSelector {
 
   [NSUserDefaults.standardUserDefaults setBool:self.window.isZoomed
                                         forKey:kMainWindowZoomedDefaultsKey];
-  if (!self.window.isZoomed && !self.window.isMiniaturized) {
+  if (!self.window.isMiniaturized) {
     NSRect frame = self.window.frame;
     NSScreen* screen = [self bestScreenForMainWindowFrame:frame];
     NSRect visibleFrame = screen.visibleFrame;

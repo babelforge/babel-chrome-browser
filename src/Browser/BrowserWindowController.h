@@ -265,6 +265,11 @@
  */
 - (void)requestApplicationTermination;
 
+/**
+ * Persists the current main window placement and zoom state.
+ */
+- (void)saveMainWindowState;
+
 @end
 
 #endif
