@@ -728,36 +728,22 @@
     return;
   }
 
-  if (sourceGroup == destinationGroup) {
-    NSUInteger currentIndex = [destinationGroup.tabs indexOfObject:draggingTab_];
-    if (currentIndex == NSNotFound) {
-      return;
-    }
-    NSUInteger targetIndex = [tabDragCoordinator_ targetIndexForMovingItemAtIndex:currentIndex
-                                                                 toInsertionIndex:insertionIndex
-                                                                        itemCount:destinationGroup.tabs.count];
-    if (targetIndex == currentIndex) {
-      return;
-    }
-    [destinationGroup.tabs removeObjectAtIndex:currentIndex];
-    targetIndex = MIN(targetIndex, destinationGroup.tabs.count);
-    [destinationGroup.tabs insertObject:draggingTab_ atIndex:targetIndex];
-    isReorderingTabs_ = YES;
+  BabelBrowserTabMoveResult* moveResult =
+      [browserTabMoveCoordinator_ moveTab:draggingTab_
+                                fromGroup:sourceGroup
+                                  toGroup:destinationGroup
+                            insertionIndex:insertionIndex];
+  if (!moveResult.didMove) {
+    return;
+  }
+
+  isReorderingTabs_ = YES;
+  if (!moveResult.movedAcrossGroups) {
     [self layoutTabItemsSelectingLastTab:NO];
     return;
   }
 
-  [sourceGroup.tabs removeObject:draggingTab_];
-  if ([sourceGroup.selectedTabIdentifier isEqualToString:draggingTab_.identifier]) {
-    sourceGroup.selectedTabIdentifier = sourceGroup.tabs.lastObject.identifier ?: @"";
-  }
-
-  NSUInteger targetIndex = MIN(insertionIndex, destinationGroup.tabs.count);
-  [destinationGroup.tabs insertObject:draggingTab_ atIndex:targetIndex];
-  destinationGroup.selectedTabIdentifier = draggingTab_.identifier;
-  isReorderingTabs_ = YES;
   isDraggingTabAcrossGroups_ = YES;
-
   [self selectGroup:destinationGroup];
   if (selectMovedTab) {
     [self selectTab:draggingTab_];

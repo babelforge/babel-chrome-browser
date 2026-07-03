@@ -17,6 +17,7 @@
 #import "Browser/BrowserGroupFactory.h"
 #import "Browser/BrowserTabCollection.h"
 #import "Browser/BrowserTabInsertionCoordinator.h"
+#import "Browser/BrowserTabMoveCoordinator.h"
 #import "Browser/GroupListCoordinator.h"
 #import "Browser/GroupSessionStore.h"
 #import "Browser/HistoryPageRenderer.h"
@@ -150,6 +151,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserGroupFactory* browserGroupFactory_;
   BabelBrowserTabCollection* browserTabCollection_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
+  BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
   BabelGroupListCoordinator* groupListCoordinator_;
   BabelGroupSessionStore* groupSessionStore_;
   BabelHistoryPageRenderer* historyPageRenderer_;
@@ -319,6 +321,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     stableServerURLResolver_ = [[BabelStableServerURLResolver alloc] init];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
+    browserTabMoveCoordinator_ =
+        [[BabelBrowserTabMoveCoordinator alloc] initWithDragCoordinator:tabDragCoordinator_];
     tabStripLayoutCalculator_ =
         [[BabelTabStripLayoutCalculator alloc] initWithNormalWidth:kTabNormalWidth
                                                        activeWidth:kTabActiveWidth
