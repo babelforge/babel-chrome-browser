@@ -37,6 +37,7 @@ BrowserWindowController
             |__ ModuleActionService
             |__ ModuleUIActionCoordinator
             |__ BrowserSupportViews
+            |__ RecentlyClosedTabStore
             |__ InternalPageRenderer
             |__ more focused collaborators as needed
 ```
@@ -68,7 +69,7 @@ BrowserWindowController
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
 | `BrowserWindowController+StableViewerDisplay.inc.mm` | Address bar display and badge metadata for stable viewer URLs. |
 | `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
-| `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tabs. |
+| `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tab reopening orchestration. Recently closed tab stack ownership is delegated to `BabelRecentlyClosedTabStore`. |
 | `BrowserWindowController+URLOpening.inc.mm` | External URL opening, command URL handling, new tab placement, and open requests from macOS or CEF. |
 
 ## Already Extracted Classes
@@ -120,6 +121,16 @@ The controller may compute UI constraints such as the minimum sidebar width, but
 - `BabelReloadIgnoreCacheCallback`.
 
 The controller may instantiate these helpers, but it must not define view/helper classes in an included `.inc.mm` fragment.
+
+### `BabelRecentlyClosedTabStore`
+
+`BabelRecentlyClosedTabStore` owns the recently closed tab stack:
+
+- stores closed tab snapshots in insertion order;
+- exposes immutable snapshots for history and address suggestions;
+- pops a closed tab by index for history links and keyboard restoration.
+
+The controller may create `BabelClosedTab` snapshots and reopen tabs from them, but it must not own the mutable recently closed tab stack directly.
 
 ### `BabelModuleUpdateService`
 

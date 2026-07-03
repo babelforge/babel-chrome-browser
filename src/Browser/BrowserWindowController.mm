@@ -7,6 +7,7 @@
 #import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/ModuleUIActionCoordinator.h"
+#import "Browser/RecentlyClosedTabStore.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserSupportViews.h"
 #import "Browser/BrowserTheme.h"
@@ -115,7 +116,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSView* linkStatusBarView_;
   NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
-  NSMutableArray<BabelClosedTab*>* closedTabs_;
   NSMutableArray<NSDictionary*>* omniboxSuggestions_;
   NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
   BabelExtensionProfileStore* extensionProfileStore_;
@@ -124,6 +124,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleUpdateService* moduleUpdateService_;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
+  BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
   BabelWindowStateStore* windowStateStore_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
@@ -177,7 +178,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   self = [super initWithWindow:window];
   if (self) {
     groups_ = [NSMutableArray array];
-    closedTabs_ = [NSMutableArray array];
     omniboxSuggestions_ = [NSMutableArray array];
     googleSuggestCache_ = [NSMutableDictionary dictionary];
     extensionProfileStore_ =
@@ -205,6 +205,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     moduleUIActionCoordinator_ =
         [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
                                                         moduleUpdateService:moduleUpdateService_];
+    recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
     evictingBrowserTabIdentifiers_ = [NSMutableSet set];

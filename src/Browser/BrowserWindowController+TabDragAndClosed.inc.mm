@@ -287,24 +287,22 @@
   closedTab.title = tab.title ?: tab.urlString;
   closedTab.groupIdentifier = group.identifier;
   closedTab.groupName = group.name ?: kDefaultGroupName;
-  [closedTabs_ addObject:closedTab];
+  [recentlyClosedTabStore_ pushClosedTab:closedTab];
 }
 
 - (void)reopenLastClosedTab {
-  if (closedTabs_.count == 0) {
+  if (recentlyClosedTabStore_.count == 0) {
     return;
   }
 
-  [self reopenClosedTabAtIndex:closedTabs_.count - 1];
+  [self reopenClosedTabAtIndex:recentlyClosedTabStore_.count - 1];
 }
 
 - (void)reopenClosedTabAtIndex:(NSUInteger)closedTabIndex {
-  if (closedTabIndex >= closedTabs_.count) {
+  BabelClosedTab* closedTab = [recentlyClosedTabStore_ popClosedTabAtIndex:closedTabIndex];
+  if (!closedTab) {
     return;
   }
-
-  BabelClosedTab* closedTab = closedTabs_[closedTabIndex];
-  [closedTabs_ removeObjectAtIndex:closedTabIndex];
 
   BabelBrowserGroup* group = [self groupWithIdentifier:closedTab.groupIdentifier];
   if (!group) {

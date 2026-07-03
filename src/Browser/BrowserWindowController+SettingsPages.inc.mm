@@ -19,12 +19,13 @@
   [body appendString:@"</ul>"];
 
   [body appendString:@"<h2>Recently Closed Tabs</h2>"];
-  if (closedTabs_.count == 0) {
+  NSArray<BabelClosedTab*>* closedTabs = [recentlyClosedTabStore_ allClosedTabs];
+  if (closedTabs.count == 0) {
     [body appendString:@"<p class='empty'>No recently closed tab.</p>"];
   } else {
     [body appendString:@"<ul>"];
-    for (NSInteger index = (NSInteger)closedTabs_.count - 1; index >= 0; index--) {
-      BabelClosedTab* closedTab = closedTabs_[(NSUInteger)index];
+    for (NSInteger index = (NSInteger)closedTabs.count - 1; index >= 0; index--) {
+      BabelClosedTab* closedTab = closedTabs[(NSUInteger)index];
       NSString* title = closedTab.title.length > 0 ? closedTab.title : closedTab.requestedURLString;
       [body appendFormat:
           @"<li><span>%@</span><small>%@</small><em>%@</em>"

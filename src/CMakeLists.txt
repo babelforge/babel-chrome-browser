@@ -24,6 +24,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ModuleUpdateService.mm
   Browser/ModuleUIActionCoordinator.h
   Browser/ModuleUIActionCoordinator.mm
+  Browser/RecentlyClosedTabStore.h
+  Browser/RecentlyClosedTabStore.mm
   Browser/WindowStateStore.h
   Browser/WindowStateStore.mm
   Browser/BrowserModels.h

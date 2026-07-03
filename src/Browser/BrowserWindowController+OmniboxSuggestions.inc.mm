@@ -35,8 +35,9 @@
     }
   }
 
-  for (NSInteger index = (NSInteger)closedTabs_.count - 1; index >= 0; index--) {
-    BabelClosedTab* closedTab = closedTabs_[(NSUInteger)index];
+  NSArray<BabelClosedTab*>* closedTabs = [recentlyClosedTabStore_ allClosedTabs];
+  for (NSInteger index = (NSInteger)closedTabs.count - 1; index >= 0; index--) {
+    BabelClosedTab* closedTab = closedTabs[(NSUInteger)index];
     if (![self omniboxQuery:trimmedQuery matchesTitle:closedTab.title urlString:closedTab.urlString] &&
         ![self omniboxQuery:trimmedQuery matchesTitle:closedTab.title urlString:closedTab.requestedURLString]) {
       continue;
