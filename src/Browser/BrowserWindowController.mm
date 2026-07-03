@@ -8,6 +8,7 @@
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/ModuleUIActionCoordinator.h"
 #import "Browser/BrowserModels.h"
+#import "Browser/BrowserSupportViews.h"
 #import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
 #import "Browser/WindowStateStore.h"
@@ -90,8 +91,6 @@ static const int64_t kAdjacentTabPreloadStepDelayNanoseconds = 350 * NSEC_PER_MS
 static const int64_t kTabDragGroupHoverDelayNanoseconds = 450 * NSEC_PER_MSEC;
 static const NSUInteger kMaximumLivePageBrowsers = 8;
 
-
-#include "BrowserWindowController+SupportViews.inc.mm"
 @implementation BabelBrowserWindowController {
   NSView* rootView_;
   NSView* splitView_;

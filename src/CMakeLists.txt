@@ -28,6 +28,8 @@ set(BABEL_CHROME_SOURCES
   Browser/WindowStateStore.mm
   Browser/BrowserModels.h
   Browser/BrowserModels.mm
+  Browser/BrowserSupportViews.h
+  Browser/BrowserSupportViews.mm
   Browser/BrowserTheme.h
   Browser/BrowserTheme.mm
   Browser/BrowserViews.h

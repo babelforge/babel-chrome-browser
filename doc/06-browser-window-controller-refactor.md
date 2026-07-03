@@ -36,6 +36,7 @@ BrowserWindowController
             |__ ModulePageRenderer
             |__ ModuleActionService
             |__ ModuleUIActionCoordinator
+            |__ BrowserSupportViews
             |__ InternalPageRenderer
             |__ more focused collaborators as needed
 ```
@@ -66,7 +67,6 @@ BrowserWindowController
 | `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML and module settings shell rendering. Candidate for `InternalPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
 | `BrowserWindowController+StableViewerDisplay.inc.mm` | Address bar display and badge metadata for stable viewer URLs. |
-| `BrowserWindowController+SupportViews.inc.mm` | Small AppKit helper views/classes used by the window controller. Stable helpers should move into regular view classes when they grow. |
 | `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
 | `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tabs. |
 | `BrowserWindowController+URLOpening.inc.mm` | External URL opening, command URL handling, new tab placement, and open requests from macOS or CEF. |
@@ -108,6 +108,18 @@ The controller may open panels, show alerts, render extension pages, and route u
 - restores zoom only when the stored frame matches the visible-frame zoom shape.
 
 The controller may compute UI constraints such as the minimum sidebar width, but it must not serialize window frames or directly read/write window/sidebar defaults.
+
+### `BrowserSupportViews`
+
+`BrowserSupportViews` owns small stable AppKit helpers that used to live inside the window controller translation unit:
+
+- `BabelMainWindow`;
+- `BabelThemeRootView`;
+- `BabelBadgeLabel`;
+- `BabelOmniboxSuggestionRowView`;
+- `BabelReloadIgnoreCacheCallback`.
+
+The controller may instantiate these helpers, but it must not define view/helper classes in an included `.inc.mm` fragment.
 
 ### `BabelModuleUpdateService`
 

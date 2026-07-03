@@ -1,33 +1,15 @@
-// This file is included by BrowserWindowController.mm.
-// It remains in the same translation unit so private Objective-C++ ivars stay accessible.
-class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
- public:
-  explicit BabelReloadIgnoreCacheCallback(CefRefPtr<CefBrowser> browser)
-      : browser_(browser) {}
+#import "Browser/BrowserSupportViews.h"
 
-  void OnComplete() override {
-    if (browser_) {
-      browser_->ReloadIgnoreCache();
-    }
+#import "Browser/BrowserTheme.h"
+
+BabelReloadIgnoreCacheCallback::BabelReloadIgnoreCacheCallback(CefRefPtr<CefBrowser> browser)
+    : browser_(browser) {}
+
+void BabelReloadIgnoreCacheCallback::OnComplete() {
+  if (browser_) {
+    browser_->ReloadIgnoreCache();
   }
-
- private:
-  CefRefPtr<CefBrowser> browser_;
-
-  IMPLEMENT_REFCOUNTING(BabelReloadIgnoreCacheCallback);
-};
-
-@interface BabelOmniboxSuggestionRowView : NSControl
-
-@property(nonatomic, strong) NSTextField* titleLabel;
-@property(nonatomic, strong) NSTextField* subtitleLabel;
-@property(nonatomic, strong) NSImage* iconImage;
-@property(nonatomic, assign, getter=isSuggestionHighlighted) BOOL suggestionHighlighted;
-
-- (instancetype)initWithFrame:(NSRect)frame;
-- (void)configureWithTitle:(NSString*)title subtitle:(NSString*)subtitle iconImage:(NSImage*)iconImage;
-
-@end
+}
 
 @implementation BabelOmniboxSuggestionRowView {
   NSImageView* iconImageView_;
@@ -101,13 +83,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 
 @end
 
-@interface BabelThemeRootView : NSView
-
-@property(nonatomic, weak) id themeTarget;
-@property(nonatomic, assign) SEL themeAction;
-
-@end
-
 @implementation BabelThemeRootView
 
 @synthesize themeTarget;
@@ -119,18 +94,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
     [NSApp sendAction:self.themeAction to:self.themeTarget from:self];
   }
 }
-
-@end
-
-@interface BabelBadgeLabel : NSView
-
-@property(nonatomic, copy) NSString* settingsRoute;
-@property(nonatomic, weak) id settingsTarget;
-@property(nonatomic, assign) SEL settingsAction;
-
-- (void)configureWithText:(NSString*)text
-                textColor:(NSColor*)textColor
-          backgroundColor:(NSColor*)backgroundColor;
 
 @end
 
@@ -212,10 +175,6 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
   [menu addItem:settingsItem];
   [NSMenu popUpContextMenu:menu withEvent:event forView:self];
 }
-
-@end
-
-@interface BabelMainWindow : NSWindow
 
 @end
 
