@@ -1,42 +1,36 @@
 // This file is included by BrowserWindowController.mm.
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (NSString*)historyPageHTML {
-  NSMutableString* body = [NSMutableString string];
-  [body appendString:@"<h1>History</h1>"];
-  [body appendString:@"<h2>Open Tabs</h2><ul>"];
+  NSMutableArray<NSDictionary*>* openTabRows = [NSMutableArray array];
   for (BabelBrowserGroup* group in groups_) {
     for (BabelBrowserTab* tab in group.tabs) {
       if ([self isInternalPageTab:tab]) {
         continue;
       }
       NSString* title = tab.title.length > 0 ? tab.title : tab.requestedURLString;
-      [body appendFormat:@"<li><span>%@</span><small>%@</small><em>%@</em></li>",
-                         [self htmlEscapedString:title],
-                         [self htmlEscapedString:tab.requestedURLString ?: tab.urlString],
-                         [self htmlEscapedString:group.name ?: kDefaultGroupName]];
+      [openTabRows addObject:@{
+        BabelHistoryRowTitleKey : title ?: @"",
+        BabelHistoryRowURLStringKey : tab.requestedURLString ?: tab.urlString ?: @"",
+        BabelHistoryRowGroupNameKey : group.name ?: kDefaultGroupName,
+      }];
     }
   }
-  [body appendString:@"</ul>"];
 
-  [body appendString:@"<h2>Recently Closed Tabs</h2>"];
+  NSMutableArray<NSDictionary*>* recentlyClosedTabRows = [NSMutableArray array];
   NSArray<BabelClosedTab*>* closedTabs = [recentlyClosedTabStore_ allClosedTabs];
-  if (closedTabs.count == 0) {
-    [body appendString:@"<p class='empty'>No recently closed tab.</p>"];
-  } else {
-    [body appendString:@"<ul>"];
-    for (NSInteger index = (NSInteger)closedTabs.count - 1; index >= 0; index--) {
-      BabelClosedTab* closedTab = closedTabs[(NSUInteger)index];
-      NSString* title = closedTab.title.length > 0 ? closedTab.title : closedTab.requestedURLString;
-      [body appendFormat:
-          @"<li><span>%@</span><small>%@</small><em>%@</em>"
-           "<div class='actions'><a class='smallButton' href='babelchrome://history?reopen=%ld'>Re-open</a></div></li>",
-          [self htmlEscapedString:title],
-          [self htmlEscapedString:closedTab.requestedURLString ?: closedTab.urlString],
-          [self htmlEscapedString:closedTab.groupName ?: kDefaultGroupName],
-          (long)index];
-    }
-    [body appendString:@"</ul>"];
+  for (NSInteger index = (NSInteger)closedTabs.count - 1; index >= 0; index--) {
+    BabelClosedTab* closedTab = closedTabs[(NSUInteger)index];
+    NSString* title = closedTab.title.length > 0 ? closedTab.title : closedTab.requestedURLString;
+    [recentlyClosedTabRows addObject:@{
+      BabelHistoryRowTitleKey : title ?: @"",
+      BabelHistoryRowURLStringKey : closedTab.requestedURLString ?: closedTab.urlString ?: @"",
+      BabelHistoryRowGroupNameKey : closedTab.groupName ?: kDefaultGroupName,
+      BabelHistoryRowReopenIndexKey : @((NSUInteger)index),
+    }];
   }
+
+  NSString* body = [historyPageRenderer_ historyPageBodyWithOpenTabRows:openTabRows
+                                                   recentlyClosedTabRows:recentlyClosedTabRows];
   return [self internalPageHTMLWithTitle:@"History" body:body];
 }
 

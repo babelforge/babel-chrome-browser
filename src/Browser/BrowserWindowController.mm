@@ -4,6 +4,7 @@
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/FaviconStore.h"
+#import "Browser/HistoryPageRenderer.h"
 #import "Browser/InternalPageRenderer.h"
 #import "Browser/ModuleActionService.h"
 #import "Browser/ModulePageRenderer.h"
@@ -112,6 +113,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelFaviconStore* faviconStore_;
+  BabelHistoryPageRenderer* historyPageRenderer_;
   BabelInternalPageRenderer* internalPageRenderer_;
   BabelModuleActionService* moduleActionService_;
   BabelModulePageRenderer* modulePageRenderer_;
@@ -187,6 +189,7 @@ disabledProfileExtensionIdentifiersDefaultsKey:BabelChromeConfiguration.disabled
 pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pendingProfileExtensionRestartStatesDefaultsKey];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
+    historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];
     modulePageRenderer_ =

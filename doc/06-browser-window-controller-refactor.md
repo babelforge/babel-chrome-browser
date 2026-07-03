@@ -42,6 +42,7 @@ BrowserWindowController
             |__ StableViewerURLResolver
             |__ BrowserSettingsStore
             |__ SettingsOptionRenderer
+            |__ HistoryPageRenderer
             |__ more focused collaborators as needed
 ```
 
@@ -68,7 +69,7 @@ BrowserWindowController
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
 | `BrowserWindowController+SettingsOptions.inc.mm` | Compatibility wrappers for app settings option HTML. Actual option rendering is delegated to `BabelSettingsOptionRenderer`, and settings value persistence/validation is delegated to `BabelBrowserSettingsStore`. |
-| `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML and module settings shell rendering. Candidate for `InternalPageRenderer`. |
+| `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML, module settings shell rendering, and view-model collection for History. History page body rendering is delegated to `BabelHistoryPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
 | `BrowserWindowController+StableViewerDisplay.inc.mm` | Stable viewer URL display wrappers and stable-server same-tab navigation. Stable viewer URL parsing and display formatting are delegated to `BabelStableViewerURLResolver`. |
 | `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
@@ -182,6 +183,17 @@ The controller may route settings URLs and refresh affected UI, but it must not 
 - Markdown viewer theme controls.
 
 The controller may choose which settings blocks appear on a page, but it must not concatenate option-control HTML directly.
+
+### `BabelHistoryPageRenderer`
+
+`BabelHistoryPageRenderer` owns History page body rendering:
+
+- open tab rows;
+- recently closed tab rows;
+- recently closed tab reopen links;
+- History-specific escaping.
+
+The controller may collect tab and recently closed tab view models, but it must not concatenate the History page HTML directly.
 
 ### `BabelModuleUpdateService`
 

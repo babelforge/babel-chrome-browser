@@ -18,6 +18,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ExtensionProfileStore.mm
   Browser/FaviconStore.h
   Browser/FaviconStore.mm
+  Browser/HistoryPageRenderer.h
+  Browser/HistoryPageRenderer.mm
   Browser/InternalPageRenderer.h
   Browser/InternalPageRenderer.mm
   Browser/ModuleActionService.h
