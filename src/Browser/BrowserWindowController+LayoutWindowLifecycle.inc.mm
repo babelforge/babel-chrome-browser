@@ -260,7 +260,7 @@
   CGFloat suggestionsHeight = omniboxSuggestionsPanel_.hidden
       ? 0.0
       : MIN(kOmniboxSuggestionPanelMaximumHeight,
-            kOmniboxSuggestionRowHeight * omniboxSuggestions_.count);
+            kOmniboxSuggestionRowHeight * [omniboxSuggestionsController_ suggestionCount]);
   omniboxSuggestionsPanel_.frame = NSMakeRect(addressFieldX,
                                               MAX(0.0, totalHeight - kToolbarHeight -
                                                            suggestionsHeight - 2.0),

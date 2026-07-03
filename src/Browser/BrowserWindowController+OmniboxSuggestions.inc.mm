@@ -3,8 +3,7 @@
 - (void)updateOmniboxSuggestionsForQuery:(NSString*)query {
   NSString* trimmedQuery = [query stringByTrimmingCharactersInSet:
       NSCharacterSet.whitespaceAndNewlineCharacterSet];
-  [omniboxSuggestions_ removeAllObjects];
-  selectedOmniboxSuggestionIndex_ = -1;
+  [omniboxSuggestionsController_ removeAllSuggestions];
   ++googleSuggestGeneration_;
 
   if (trimmedQuery.length == 0) {
@@ -55,7 +54,7 @@
     if (faviconImage) {
       suggestion[@"icon"] = faviconImage;
     }
-    [omniboxSuggestions_ addObject:suggestion];
+    [omniboxSuggestionsController_ addSuggestion:suggestion];
   }
 
   [self showOmniboxSuggestions];
@@ -99,14 +98,14 @@
   }
 
   NSMutableSet<NSString*>* seenSuggestionKeys = [NSMutableSet set];
-  for (NSDictionary* suggestion in omniboxSuggestions_) {
+  for (NSDictionary* suggestion in [omniboxSuggestionsController_ suggestions]) {
     NSString* action = suggestion[@"action"] ?: @"";
     NSString* key = [NSString stringWithFormat:@"%@|%@", action, suggestion[@"url"] ?: @""];
     [seenSuggestionKeys addObject:key];
   }
 
   for (NSString* suggestion in suggestions) {
-    if (omniboxSuggestions_.count >= kOmniboxSuggestionMaximumCount) {
+    if ([omniboxSuggestionsController_ suggestionCount] >= kOmniboxSuggestionMaximumCount) {
       break;
     }
 
@@ -148,7 +147,7 @@
   if (faviconImage) {
     suggestion[@"icon"] = faviconImage;
   }
-  [omniboxSuggestions_ addObject:suggestion];
+  [omniboxSuggestionsController_ addSuggestion:suggestion];
 }
 
 - (NSImage*)faviconImageForSuggestionTitle:(NSString*)title urlString:(NSString*)urlString {
@@ -193,99 +192,57 @@
 }
 
 - (void)showOmniboxSuggestions {
-  if (omniboxSuggestions_.count == 0) {
+  if ([omniboxSuggestionsController_ suggestionCount] == 0) {
     [self hideOmniboxSuggestions];
     return;
   }
 
-  [omniboxSuggestionsPanel_.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
-  omniboxSuggestionsPanel_.hidden = NO;
   [self layoutInterfaceForCurrentSplitViewSize];
-
-  CGFloat panelWidth = omniboxSuggestionsPanel_.bounds.size.width;
-  CGFloat panelHeight = omniboxSuggestionsPanel_.bounds.size.height;
-  for (NSUInteger index = 0; index < omniboxSuggestions_.count; index++) {
-    NSDictionary* suggestion = omniboxSuggestions_[index];
-    BabelOmniboxSuggestionRowView* row =
-        [[BabelOmniboxSuggestionRowView alloc] initWithFrame:
-            NSMakeRect(0,
-                       panelHeight - (kOmniboxSuggestionRowHeight * (index + 1)),
-                       panelWidth,
-                       kOmniboxSuggestionRowHeight)];
-    row.target = self;
-    row.action = @selector(selectOmniboxSuggestionFromRow:);
-    row.tag = (NSInteger)index;
-    row.suggestionHighlighted = (NSInteger)index == selectedOmniboxSuggestionIndex_;
-    NSImage* iconImage = [suggestion[@"icon"] isKindOfClass:NSImage.class] ? suggestion[@"icon"] : nil;
-    [row configureWithTitle:suggestion[@"title"]
-                   subtitle:[NSString stringWithFormat:@"%@ - %@",
-                                                       suggestion[@"group"],
-                                                       suggestion[@"url"]]
-                  iconImage:iconImage];
-    [omniboxSuggestionsPanel_ addSubview:row];
-  }
+  [omniboxSuggestionsController_ showWithTarget:self
+                                         action:@selector(selectOmniboxSuggestionFromRow:)
+                                      rowHeight:kOmniboxSuggestionRowHeight];
 }
 
 - (void)hideOmniboxSuggestions {
-  [omniboxSuggestions_ removeAllObjects];
-  selectedOmniboxSuggestionIndex_ = -1;
-  omniboxSuggestionsPanel_.hidden = YES;
-  [omniboxSuggestionsPanel_.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
+  [omniboxSuggestionsController_ hide];
   [self layoutInterfaceForCurrentSplitViewSize];
 }
 
 - (void)selectNextOmniboxSuggestion {
-  if (omniboxSuggestions_.count == 0) {
+  if ([omniboxSuggestionsController_ suggestionCount] == 0) {
     [self updateOmniboxSuggestionsForQuery:urlTextField_.stringValue];
   }
 
-  if (omniboxSuggestions_.count == 0) {
+  if ([omniboxSuggestionsController_ suggestionCount] == 0) {
     return;
   }
 
-  selectedOmniboxSuggestionIndex_ =
-      (selectedOmniboxSuggestionIndex_ + 1) % (NSInteger)omniboxSuggestions_.count;
-  [self refreshOmniboxSuggestionHighlight];
+  [omniboxSuggestionsController_ selectNextSuggestion];
 }
 
 - (void)selectPreviousOmniboxSuggestion {
-  if (omniboxSuggestions_.count == 0) {
+  if ([omniboxSuggestionsController_ suggestionCount] == 0) {
     [self updateOmniboxSuggestionsForQuery:urlTextField_.stringValue];
   }
 
-  if (omniboxSuggestions_.count == 0) {
+  if ([omniboxSuggestionsController_ suggestionCount] == 0) {
     return;
   }
 
-  selectedOmniboxSuggestionIndex_ = selectedOmniboxSuggestionIndex_ <= 0
-      ? (NSInteger)omniboxSuggestions_.count - 1
-      : selectedOmniboxSuggestionIndex_ - 1;
-  [self refreshOmniboxSuggestionHighlight];
-}
-
-- (void)refreshOmniboxSuggestionHighlight {
-  for (NSView* view in omniboxSuggestionsPanel_.subviews) {
-    if (![view isKindOfClass:BabelOmniboxSuggestionRowView.class]) {
-      continue;
-    }
-
-    BabelOmniboxSuggestionRowView* row = (BabelOmniboxSuggestionRowView*)view;
-    row.suggestionHighlighted = row.tag == selectedOmniboxSuggestionIndex_;
-  }
+  [omniboxSuggestionsController_ selectPreviousSuggestion];
 }
 
 - (void)selectOmniboxSuggestionFromRow:(BabelOmniboxSuggestionRowView*)row {
-  selectedOmniboxSuggestionIndex_ = row.tag;
+  [omniboxSuggestionsController_ selectSuggestionAtIndex:row.tag];
   [self acceptSelectedOmniboxSuggestion];
 }
 
 - (BOOL)acceptSelectedOmniboxSuggestion {
-  if (selectedOmniboxSuggestionIndex_ < 0 ||
-      selectedOmniboxSuggestionIndex_ >= (NSInteger)omniboxSuggestions_.count) {
+  NSDictionary* suggestion = [omniboxSuggestionsController_ selectedSuggestion];
+  if (!suggestion) {
     return NO;
   }
 
-  NSDictionary* suggestion = omniboxSuggestions_[(NSUInteger)selectedOmniboxSuggestionIndex_];
   NSString* action = suggestion[@"action"];
   if ([action isEqualToString:@"focus-tab"]) {
     NSString* tabIdentifier = suggestion[@"tabId"];

@@ -15,6 +15,7 @@
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/ModuleUIActionCoordinator.h"
 #import "Browser/OmniboxLocalSuggestionBuilder.h"
+#import "Browser/OmniboxSuggestionsController.h"
 #import "Browser/RecentlyClosedTabStore.h"
 #import "Browser/RuntimeRefreshCoordinator.h"
 #import "Browser/SettingsOptionRenderer.h"
@@ -113,7 +114,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSView* linkStatusBarView_;
   NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
-  NSMutableArray<NSDictionary*>* omniboxSuggestions_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelExtensionProfileStore* extensionProfileStore_;
@@ -128,6 +128,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleUpdateService* moduleUpdateService_;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
   BabelOmniboxLocalSuggestionBuilder* omniboxLocalSuggestionBuilder_;
+  BabelOmniboxSuggestionsController* omniboxSuggestionsController_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
   BabelRuntimeRefreshCoordinator* runtimeRefreshCoordinator_;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
@@ -162,7 +163,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSUInteger adjacentTabPreloadGeneration_;
   NSUInteger tabDragHoverGeneration_;
   NSUInteger googleSuggestGeneration_;
-  NSInteger selectedOmniboxSuggestionIndex_;
 }
 
 - (instancetype)init {
@@ -185,7 +185,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   self = [super initWithWindow:window];
   if (self) {
     groups_ = [NSMutableArray array];
-    omniboxSuggestions_ = [NSMutableArray array];
     browserSettingsStore_ =
         [[BabelBrowserSettingsStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     extensionProfileStore_ =
@@ -252,11 +251,12 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     adjacentTabPreloadGeneration_ = 0;
     tabDragHoverGeneration_ = 0;
     googleSuggestGeneration_ = 0;
-    selectedOmniboxSuggestionIndex_ = -1;
     [extensionProfileStore_ restoreProfileExtensionsMovedByOlderVersions];
     [extensionProfileStore_ clearPendingProfileExtensionRestartStates];
     window.delegate = self;
     [self buildInterface];
+    omniboxSuggestionsController_ =
+        [[BabelOmniboxSuggestionsController alloc] initWithPanel:omniboxSuggestionsPanel_];
     [faviconStore_ restore];
     [self restoreSessionByPriority];
   }

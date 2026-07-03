@@ -50,6 +50,7 @@ BrowserWindowController
             |__ ExtensionsPageRenderer
             |__ OmniboxLocalSuggestionBuilder
             |__ GoogleSuggestClient
+            |__ OmniboxSuggestionsController
             |__ more focused collaborators as needed
 ```
 
@@ -71,7 +72,7 @@ BrowserWindowController
 | `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, URL/path escaping, shell quoting, icon loading, restart launching, and compatibility wrappers for internal page rendering. Shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
-| `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest debounce/generation, suggestion AppKit rendering, keyboard navigation, and favicon lookup. Local suggestion matching/deduplication is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest HTTP/cache/parsing is delegated to `BabelGoogleSuggestClient`. |
+| `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion orchestration, Google Suggest debounce/generation, favicon lookup, and selected suggestion actions. Local suggestion matching/deduplication is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest HTTP/cache/parsing is delegated to `BabelGoogleSuggestClient`; suggestion list state and AppKit row rendering are delegated to `BabelOmniboxSuggestionsController`. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. Stable server identifier parsing is delegated to `BabelStableServerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
@@ -212,6 +213,18 @@ The controller may collect tab row view models, add favicons, and render AppKit 
 - Google Search URL construction.
 
 The controller may debounce calls and reject stale generations, but it must not own Google Suggest HTTP, cache, or parsing logic.
+
+### `BabelOmniboxSuggestionsController`
+
+`BabelOmniboxSuggestionsController` owns omnibox suggestion UI state:
+
+- current suggestion dictionaries;
+- selected suggestion index;
+- row rendering into the suggestions panel;
+- highlight refresh;
+- show/hide panel state.
+
+The controller may add favicon-enriched suggestions and execute selected suggestion actions, but it must not own the mutable suggestions array or row rendering loop directly.
 
 ### `BabelBrowserSettingsStore`
 
