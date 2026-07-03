@@ -24,6 +24,7 @@
 #import "Browser/SettingsOptionRenderer.h"
 #import "Browser/StableServerURLResolver.h"
 #import "Browser/StableViewerURLResolver.h"
+#import "Browser/TabDragCoordinator.h"
 #import "Browser/TabPlacementPolicy.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserSupportViews.h"
@@ -141,6 +142,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
   BabelStableServerURLResolver* stableServerURLResolver_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
+  BabelTabDragCoordinator* tabDragCoordinator_;
   BabelTabPlacementPolicy* tabPlacementPolicy_;
   BabelWindowStateStore* windowStateStore_;
   NSMutableDictionary<NSNumber*, NSDate*>* pendingLocalDropBrowserIdentifiers_;
@@ -236,6 +238,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelModuleSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
     stableServerURLResolver_ = [[BabelStableServerURLResolver alloc] init];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
+    tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
     tabPlacementPolicy_ = [[BabelTabPlacementPolicy alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     pendingLocalDropBrowserIdentifiers_ = [NSMutableDictionary dictionary];

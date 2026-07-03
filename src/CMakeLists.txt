@@ -58,6 +58,8 @@ set(BABEL_CHROME_SOURCES
   Browser/StableServerURLResolver.mm
   Browser/StableViewerURLResolver.h
   Browser/StableViewerURLResolver.mm
+  Browser/TabDragCoordinator.h
+  Browser/TabDragCoordinator.mm
   Browser/TabPlacementPolicy.h
   Browser/TabPlacementPolicy.mm
   Browser/WindowStateStore.h

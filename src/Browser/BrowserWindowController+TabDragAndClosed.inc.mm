@@ -37,10 +37,9 @@
   NSUInteger currentIndex = [tabs_ indexOfObject:tab];
   NSPoint tabStripPoint = [tabsItemsPanel_ convertPoint:currentEvent.locationInWindow fromView:nil];
   NSUInteger targetIndex = [self tabInsertionIndexForTabStripX:tabStripPoint.x];
-  if (targetIndex > currentIndex) {
-    targetIndex--;
-  }
-  targetIndex = MIN(targetIndex, tabs_.count - 1);
+  targetIndex = [tabDragCoordinator_ targetIndexForMovingItemAtIndex:currentIndex
+                                                    toInsertionIndex:targetIndex
+                                                           itemCount:tabs_.count];
   if (targetIndex == currentIndex) {
     return;
   }
@@ -76,16 +75,9 @@
 
 - (BabelBrowserGroup*)groupAtWindowPoint:(NSPoint)windowPoint {
   NSPoint listPoint = [groupsListView_ convertPoint:windowPoint fromView:nil];
-  if (!NSPointInRect(listPoint, groupsListView_.bounds)) {
-    return nil;
-  }
-
-  for (BabelBrowserGroup* group in groups_) {
-    if (NSPointInRect(listPoint, group.groupItemView.frame)) {
-      return group;
-    }
-  }
-  return nil;
+  return [tabDragCoordinator_ groupAtListPoint:listPoint
+                                        groups:groups_
+                              groupsListBounds:groupsListView_.bounds];
 }
 
 - (BOOL)isWindowPointInsideSidebar:(NSPoint)windowPoint {
@@ -163,10 +155,9 @@
     if (currentIndex == NSNotFound) {
       return;
     }
-    NSUInteger targetIndex = MIN(insertionIndex, destinationGroup.tabs.count);
-    if (targetIndex > currentIndex) {
-      targetIndex--;
-    }
+    NSUInteger targetIndex = [tabDragCoordinator_ targetIndexForMovingItemAtIndex:currentIndex
+                                                                 toInsertionIndex:insertionIndex
+                                                                        itemCount:destinationGroup.tabs.count];
     if (targetIndex == currentIndex) {
       return;
     }
@@ -198,17 +189,7 @@
 }
 
 - (NSUInteger)tabInsertionIndexForTabStripX:(CGFloat)x {
-  if (tabs_.count == 0) {
-    return 0;
-  }
-
-  for (NSUInteger index = 0; index < tabs_.count; index++) {
-    BabelBrowserTab* tab = tabs_[index];
-    if (x < NSMidX(tab.tabItemView.frame)) {
-      return index;
-    }
-  }
-  return tabs_.count;
+  return [tabDragCoordinator_ insertionIndexForTabStripX:x tabs:tabs_];
 }
 
 - (void)finishDraggingTabFromItem:(BabelTabItemView*)tabItemView {

@@ -55,6 +55,7 @@ BrowserWindowController
             |__ LiveBrowserEvictionPolicy
             |__ GroupListCoordinator
             |__ GroupSessionStore
+            |__ TabDragCoordinator
             |__ more focused collaborators as needed
 ```
 
@@ -84,7 +85,7 @@ BrowserWindowController
 | `BrowserWindowController+SettingsPages.inc.mm` | Main Settings value collection, module settings value collection, and view-model collection for History and Extensions. Main Settings rendering is delegated to `BabelAppSettingsPageRenderer`; module Settings rendering is delegated to `BabelModuleSettingsPageRenderer`; History page body rendering is delegated to `BabelHistoryPageRenderer`; Extensions page body rendering is delegated to `BabelExtensionsPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. Stable server URL parsing and internal query handling are delegated to `BabelStableServerURLResolver`. |
 | `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limit orchestration. New-tab insertion policy is delegated to `BabelTabPlacementPolicy`; live-browser LRU and eviction-state policy is delegated to `BabelLiveBrowserEvictionPolicy`. |
-| `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tab reopening orchestration. Recently closed tab stack ownership is delegated to `BabelRecentlyClosedTabStore`. |
+| `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop orchestration, cross-group moves, close behavior, and recently closed tab reopening orchestration. Drag hit-testing and insertion-index calculations are delegated to `BabelTabDragCoordinator`; recently closed tab stack ownership is delegated to `BabelRecentlyClosedTabStore`. |
 | `BrowserWindowController+URLOpening.inc.mm` | External URL opening, command URL handling, new tab placement, and open requests from macOS or CEF. |
 
 ## Already Extracted Classes
@@ -274,6 +275,16 @@ The controller may still create native groups, tabs, host views, and CEF browser
 - computing drag insertion index from a group-list Y coordinate.
 
 The controller may still create group item views, wire their target/actions, mutate group order, and save state, but it must not duplicate group-list row geometry or palette indexing logic.
+
+### `BabelTabDragCoordinator`
+
+`BabelTabDragCoordinator` owns tab drag hit-testing and index calculations:
+
+- resolving the group under a group-list point;
+- computing tab-strip insertion index from an X coordinate;
+- adjusting insertion indexes when moving an existing tab within the same list.
+
+The controller may still track the currently dragged tab, schedule hover group selection, mutate groups/tabs, select moved tabs, and save state, but it must not duplicate drag insertion math directly.
 
 ### `BabelBrowserSettingsStore`
 
