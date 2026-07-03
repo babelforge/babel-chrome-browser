@@ -12,6 +12,7 @@
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/InternalPageRenderer.h"
 #import "Browser/LiveBrowserEvictionPolicy.h"
+#import "Browser/LocalDropBridgeScriptBuilder.h"
 #import "Browser/ModuleActionService.h"
 #import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleSettingsPageRenderer.h"
@@ -130,6 +131,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelInternalPageRenderer* internalPageRenderer_;
   BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
+  BabelLocalDropBridgeScriptBuilder* localDropBridgeScriptBuilder_;
   BabelModuleActionService* moduleActionService_;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
@@ -213,6 +215,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
     liveBrowserEvictionPolicy_ = [[BabelLiveBrowserEvictionPolicy alloc] init];
+    localDropBridgeScriptBuilder_ = [[BabelLocalDropBridgeScriptBuilder alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];
     modulePageRenderer_ =
         [[BabelModulePageRenderer alloc]
