@@ -215,7 +215,10 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
 
 #include "BrowserWindowController+GroupsSession.inc.mm"
 
-#include "BrowserWindowController+URLRoutingAndViewers.inc.mm"
+#include "BrowserWindowController+URLOpening.inc.mm"
+#include "BrowserWindowController+StableURLRouting.inc.mm"
+#include "BrowserWindowController+RuntimeRefreshRouting.inc.mm"
+#include "BrowserWindowController+StableViewerDisplay.inc.mm"
 
 #include "BrowserWindowController+TabBrowserCore.inc.mm"
 
@@ -225,11 +228,30 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
 
 #include "BrowserWindowController+ModuleGroupRouting.inc.mm"
 
-#include "BrowserWindowController+InternalPages.inc.mm"
+#include "BrowserWindowController+InternalPageOpeners.inc.mm"
+#include "BrowserWindowController+InternalNavigationRouter.inc.mm"
+#include "BrowserWindowController+InternalPageLoading.inc.mm"
+#include "BrowserWindowController+SettingsPages.inc.mm"
+#include "BrowserWindowController+ModulePages.inc.mm"
+#include "BrowserWindowController+ModuleUpdateActions.inc.mm"
+#include "BrowserWindowController+ModuleUpdateSources.inc.mm"
+#include "BrowserWindowController+ModuleUpdateZipParsing.inc.mm"
+#include "BrowserWindowController+ModuleUpdatePreferences.inc.mm"
+#include "BrowserWindowController+ModuleActions.inc.mm"
+#include "BrowserWindowController+SettingsOptions.inc.mm"
+#include "BrowserWindowController+ExtensionDiscovery.inc.mm"
+#include "BrowserWindowController+ExtensionProfileState.inc.mm"
+#include "BrowserWindowController+ExtensionActions.inc.mm"
+#include "BrowserWindowController+InternalUtilities.inc.mm"
 
 #include "BrowserWindowController+BrowserControls.inc.mm"
 
-#include "BrowserWindowController+SelectionAddressOmnibox.inc.mm"
+#include "BrowserWindowController+SelectionAddressBar.inc.mm"
+#include "BrowserWindowController+BrowserAttachment.inc.mm"
+#include "BrowserWindowController+DeveloperToolsEmbedding.inc.mm"
+#include "BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm"
+#include "BrowserWindowController+AddressFieldEditing.inc.mm"
+#include "BrowserWindowController+OmniboxSuggestions.inc.mm"
 
 #include "BrowserWindowController+LayoutWindowLifecycle.inc.mm"
 
