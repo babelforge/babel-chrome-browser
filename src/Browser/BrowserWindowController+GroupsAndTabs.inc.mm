@@ -30,41 +30,13 @@
 }
 
 - (void)restoreGroupsFromState:(NSDictionary*)state {
-  NSArray* groupStates = state[@"groups"];
-  if (![groupStates isKindOfClass:NSArray.class]) {
-    return;
-  }
+  for (BabelRestoredGroupState* groupState in [groupSessionStore_ restoredGroupStatesFromState:state]) {
+    BabelBrowserGroup* group = [self createGroupWithName:groupState.name identifier:groupState.identifier];
+    group.selectedTabIdentifier = groupState.selectedTabIdentifier;
 
-  for (NSDictionary* groupState in groupStates) {
-    if (![groupState isKindOfClass:NSDictionary.class]) {
-      continue;
-    }
-
-    NSString* groupName = groupState[@"name"];
-    NSString* groupIdentifier = groupState[@"id"];
-    if (groupName.length == 0 || groupIdentifier.length == 0) {
-      continue;
-    }
-
-    BabelBrowserGroup* group = [self createGroupWithName:groupName identifier:groupIdentifier];
-    group.selectedTabIdentifier = groupState[@"selectedTabId"];
-
-    NSArray* tabStates = groupState[@"tabs"];
-    if (![tabStates isKindOfClass:NSArray.class]) {
-      continue;
-    }
-
-    for (NSDictionary* tabState in tabStates) {
-      if (![tabState isKindOfClass:NSDictionary.class]) {
-        continue;
-      }
-
-      NSString* urlString = tabState[@"url"];
-      if (urlString.length == 0) {
-        continue;
-      }
-
-      NSString* requestedURLString = tabState[@"requestedUrl"] ?: urlString;
+    for (BabelRestoredTabState* tabState in groupState.tabs) {
+      NSString* urlString = tabState.urlString;
+      NSString* requestedURLString = tabState.requestedURLString;
       NSString* restoredNavigationURLString =
           [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
       if (restoredNavigationURLString.length > 0) {
@@ -77,13 +49,11 @@
         continue;
       }
 
-      NSString* tabIdentifier = tabState[@"id"] ?: NSUUID.UUID.UUIDString;
-      NSString* title = tabState[@"title"] ?: urlString;
       BabelBrowserTab* tab = [self makeTabForURL:urlString
-                                      identifier:tabIdentifier
-                                           title:title];
+                                      identifier:tabState.identifier
+                                           title:tabState.title];
       tab.requestedURLString = requestedURLString;
-      tab.parentTabIdentifier = tabState[@"parentTabId"];
+      tab.parentTabIdentifier = tabState.parentTabIdentifier;
       [group.tabs addObject:tab];
       [pagesPanel_ addSubview:tab.hostView];
       [pagesPanel_ addSubview:tab.developerToolsPanelView];

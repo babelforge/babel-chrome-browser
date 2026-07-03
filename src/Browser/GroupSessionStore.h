@@ -7,6 +7,31 @@
 @class BabelBrowserTab;
 
 /**
+ * Represents one tab restored from persisted session state.
+ */
+@interface BabelRestoredTabState : NSObject
+
+@property(nonatomic, strong) NSString* identifier;
+@property(nonatomic, strong) NSString* urlString;
+@property(nonatomic, strong) NSString* requestedURLString;
+@property(nonatomic, strong) NSString* title;
+@property(nonatomic, strong) NSString* parentTabIdentifier;
+
+@end
+
+/**
+ * Represents one group restored from persisted session state.
+ */
+@interface BabelRestoredGroupState : NSObject
+
+@property(nonatomic, strong) NSString* identifier;
+@property(nonatomic, strong) NSString* name;
+@property(nonatomic, strong) NSString* selectedTabIdentifier;
+@property(nonatomic, strong) NSArray<BabelRestoredTabState*>* tabs;
+
+@end
+
+/**
  * Decides whether a tab should be excluded from persisted group session state.
  *
  * @param tab The tab being serialized.
@@ -46,6 +71,15 @@ typedef BOOL (^BabelGroupSessionTabExclusionBlock)(BabelBrowserTab* tab);
  */
 - (NSString*)selectedGroupIdentifierFromState:(NSDictionary*)state
                            fallbackIdentifier:(NSString*)fallbackIdentifier;
+
+/**
+ * Reads restored group state objects from persisted state.
+ *
+ * @param state The persisted group session state.
+ *
+ * @return The valid restored group states.
+ */
+- (NSArray<BabelRestoredGroupState*>*)restoredGroupStatesFromState:(NSDictionary*)state;
 
 /**
  * Saves group and tab session state.
