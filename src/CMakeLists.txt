@@ -40,6 +40,8 @@ set(BABEL_CHROME_SOURCES
   Browser/InternalNavigationActionParser.mm
   Browser/InternalPageRenderer.h
   Browser/InternalPageRenderer.mm
+  Browser/InternalSettingsNavigationHandler.h
+  Browser/InternalSettingsNavigationHandler.mm
   Browser/LiveBrowserEvictionPolicy.h
   Browser/LiveBrowserEvictionPolicy.mm
   Browser/LocalDropBridgeScriptBuilder.h

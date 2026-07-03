@@ -253,69 +253,23 @@
   if ([commandName isEqualToString:@"settings"]) {
     NSString* moduleSettingsIdentifier = [self moduleSettingsIdentifierFromSettingsComponents:components];
     if (moduleSettingsIdentifier.length > 0) {
-      BOOL markdownThemeDidChange = NO;
-      for (NSURLQueryItem* item in components.queryItems) {
-        if ([item.name isEqualToString:@"markdownTheme"] &&
-            [[self normalizedModuleSettingsIdentifier:moduleSettingsIdentifier]
-                isEqualToString:@"babelforge.markdown-viewer"]) {
-          NSString* previousTheme = [self markdownTheme];
-          if ([browserSettingsStore_ setMarkdownTheme:item.value]) {
-            markdownThemeDidChange = ![previousTheme isEqualToString:item.value];
-            break;
-          }
-        }
-      }
-
-      if (markdownThemeDidChange) {
+      BabelInternalSettingsNavigationResult* result =
+          [internalSettingsNavigationHandler_
+              applyModuleSettingsComponents:components
+                            moduleIdentifier:[self normalizedModuleSettingsIdentifier:moduleSettingsIdentifier]];
+      if (result.markdownThemeDidChange) {
         [self reloadMarkdownViewerTabsUsingCurrentTheme];
       }
       [self openModuleSettingsPageForIdentifier:moduleSettingsIdentifier browser:browser];
       return YES;
     }
 
-    BOOL markdownThemeDidChange = NO;
-    BOOL appearanceThemeDidChange = NO;
-    for (NSURLQueryItem* item in components.queryItems) {
-      if ([item.name isEqualToString:@"tabOpeningStrategy"] &&
-          [browserSettingsStore_ setTabOpeningStrategy:item.value]) {
-        break;
-      }
-
-      if ([item.name isEqualToString:@"longQuitShortcut"]) {
-        BOOL enabled = [item.value isEqualToString:@"1"] ||
-                       [[item.value lowercaseString] isEqualToString:@"true"];
-        [browserSettingsStore_ setLongQuitShortcutEnabled:enabled];
-        break;
-      }
-
-      if (![item.name isEqualToString:@"addressSuggestions"] ||
-          ![browserSettingsStore_ setAddressSuggestionsMode:item.value]) {
-        if ([item.name isEqualToString:@"markdownTheme"]) {
-          NSString* previousTheme = [self markdownTheme];
-          if ([browserSettingsStore_ setMarkdownTheme:item.value]) {
-            markdownThemeDidChange = ![previousTheme isEqualToString:item.value];
-            break;
-          }
-        }
-
-        if ([item.name isEqualToString:@"appearanceTheme"] &&
-            [BabelTheme.sharedTheme isSupportedAppearanceMode:item.value]) {
-          NSString* previousTheme = [BabelTheme.sharedTheme appearanceMode];
-          [NSUserDefaults.standardUserDefaults setObject:item.value
-                                                  forKey:BabelThemeAppearanceDefaultsKey];
-          [NSUserDefaults.standardUserDefaults synchronize];
-          appearanceThemeDidChange = ![previousTheme isEqualToString:item.value];
-          break;
-        }
-        continue;
-      }
-      break;
-    }
-
-    if (markdownThemeDidChange) {
+    BabelInternalSettingsNavigationResult* result =
+        [internalSettingsNavigationHandler_ applyApplicationSettingsComponents:components];
+    if (result.markdownThemeDidChange) {
       [self reloadMarkdownViewerTabsUsingCurrentTheme];
     }
-    if (appearanceThemeDidChange) {
+    if (result.appearanceThemeDidChange) {
       [self applyThemeColors];
       [self layoutTabItemsSelectingLastTab:NO];
       [self layoutGroupItems];

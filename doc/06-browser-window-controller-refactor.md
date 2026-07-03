@@ -43,6 +43,7 @@ BrowserWindowController
             |__ StableServerURLResolver
             |__ RuntimeRefreshCoordinator
             |__ InternalNavigationActionParser
+            |__ InternalSettingsNavigationHandler
             |__ BrowserSettingsStore
             |__ SettingsOptionRenderer
             |__ SidebarLayoutCalculator
@@ -80,7 +81,7 @@ BrowserWindowController
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
 | `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Group list layout is delegated to `BabelGroupListCoordinator`; group session IO is delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser eviction is delegated to `BabelLiveBrowserEvictionPolicy`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`. |
-| `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, action execution, and shared internal utilities. Extensions/modules/history query parsing is delegated to `BabelInternalNavigationActionParser`; body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
+| `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, action execution, and shared internal utilities. Extensions/modules/history query parsing is delegated to `BabelInternalNavigationActionParser`; settings query mutation is delegated to `BabelInternalSettingsNavigationHandler`; body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`. |
 | `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
 | `BrowserWindowController+WindowLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, module lifecycle calls, main AppKit interface construction, main layout application, and window/sidebar view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`; sidebar/right-panel frame calculation is delegated to `BabelSidebarLayoutCalculator`; tab item frame calculation is delegated to `BabelTabStripLayoutCalculator`. |
@@ -202,6 +203,16 @@ The controller may still decide which tabs to reload and when a runtime URL is e
 - multi-value module update selections.
 
 The controller may still execute actions because they can involve AppKit panels, CEF navigation, alerts, and capability refreshes, but it must not manually scan these query item sets inline.
+
+### `BabelInternalSettingsNavigationHandler`
+
+`BabelInternalSettingsNavigationHandler` owns internal settings mutation rules:
+
+- main Settings query handling for tab opening strategy, address suggestions, Markdown theme, app appearance theme, and long Cmd+Q;
+- module Settings query handling for Markdown Viewer theme changes;
+- mutation result flags that tell the controller which UI refreshes are required.
+
+The controller may still reload Markdown viewer tabs, reapply theme colors, relayout groups/tabs, and reopen settings pages, but it must not directly encode settings query mutation rules.
 
 ### `BabelOmniboxLocalSuggestionBuilder`
 

@@ -18,6 +18,7 @@
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/InternalNavigationActionParser.h"
 #import "Browser/InternalPageRenderer.h"
+#import "Browser/InternalSettingsNavigationHandler.h"
 #import "Browser/LiveBrowserEvictionPolicy.h"
 #import "Browser/LocalDropBridgeScriptBuilder.h"
 #import "Browser/LocalDropCoordinator.h"
@@ -146,6 +147,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelInternalNavigationActionParser* internalNavigationActionParser_;
   BabelInternalPageRenderer* internalPageRenderer_;
+  BabelInternalSettingsNavigationHandler* internalSettingsNavigationHandler_;
   BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
   BabelLocalDropBridgeScriptBuilder* localDropBridgeScriptBuilder_;
   BabelLocalDropCoordinator* localDropCoordinator_;
@@ -266,6 +268,9 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
     internalNavigationActionParser_ = [[BabelInternalNavigationActionParser alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
+    internalSettingsNavigationHandler_ =
+        [[BabelInternalSettingsNavigationHandler alloc] initWithSettingsStore:browserSettingsStore_
+                                                                 userDefaults:NSUserDefaults.standardUserDefaults];
     liveBrowserEvictionPolicy_ = [[BabelLiveBrowserEvictionPolicy alloc] init];
     localDropBridgeScriptBuilder_ = [[BabelLocalDropBridgeScriptBuilder alloc] init];
     localDropCoordinator_ = [[BabelLocalDropCoordinator alloc] init];
