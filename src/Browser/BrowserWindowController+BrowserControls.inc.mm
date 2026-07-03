@@ -91,8 +91,8 @@
   }
 
   developerToolsDockMode_ = dockMode;
-  [NSUserDefaults.standardUserDefaults setObject:dockMode
-                                          forKey:kDeveloperToolsDockModeDefaultsKey];
+  [developerToolsDockingStore_ setDockMode:dockMode
+                              allowedModes:[self allowedDeveloperToolsDockModes]];
   [self layoutInterfaceForCurrentSplitViewSize];
 }
 
@@ -111,10 +111,8 @@
     signedDelta = -signedDelta;
   }
 
-  developerToolsSizeRatio_ = MIN(0.78, MAX(0.20, developerToolsSizeRatio_ +
-                                                    (signedDelta / axisLength)));
-  [NSUserDefaults.standardUserDefaults setDouble:developerToolsSizeRatio_
-                                          forKey:kDeveloperToolsSizeRatioDefaultsKey];
+  developerToolsSizeRatio_ =
+      [developerToolsDockingStore_ setSizeRatio:developerToolsSizeRatio_ + (signedDelta / axisLength)];
   [self layoutInterfaceForCurrentSplitViewSize];
 }
 
@@ -167,26 +165,25 @@
 }
 
 - (NSString*)restoredDeveloperToolsDockMode {
-  NSString* mode = [NSUserDefaults.standardUserDefaults stringForKey:kDeveloperToolsDockModeDefaultsKey];
-  NSSet<NSString*>* allowedModes = [NSSet setWithObjects:kDeveloperToolsDockModeBottom,
-                                                        kDeveloperToolsDockModeTop,
-                                                        kDeveloperToolsDockModeLeft,
-                                                        kDeveloperToolsDockModeRight,
-                                                        nil];
-  return [allowedModes containsObject:mode] ? mode : kDeveloperToolsDockModeBottom;
+  return [developerToolsDockingStore_ restoredDockModeWithFallback:kDeveloperToolsDockModeBottom
+                                                      allowedModes:[self allowedDeveloperToolsDockModes]];
 }
 
 - (CGFloat)restoredDeveloperToolsSizeRatio {
-  double ratio = [NSUserDefaults.standardUserDefaults doubleForKey:kDeveloperToolsSizeRatioDefaultsKey];
-  if (ratio <= 0.0) {
-    return 0.38;
-  }
-  return MIN(0.78, MAX(0.20, ratio));
+  return [developerToolsDockingStore_ restoredSizeRatio];
 }
 
 - (BOOL)developerToolsDockModeIsHorizontal {
   return [developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeBottom] ||
          [developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeTop];
+}
+
+- (NSSet<NSString*>*)allowedDeveloperToolsDockModes {
+  return [NSSet setWithObjects:kDeveloperToolsDockModeBottom,
+                              kDeveloperToolsDockModeTop,
+                              kDeveloperToolsDockModeLeft,
+                              kDeveloperToolsDockModeRight,
+                              nil];
 }
 
 - (void)navigateSelectedTabBack {

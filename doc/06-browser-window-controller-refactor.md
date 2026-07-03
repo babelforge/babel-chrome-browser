@@ -58,6 +58,7 @@ BrowserWindowController
             |__ TabDragCoordinator
             |__ LocalDropBridgeScriptBuilder
             |__ LocalDropCoordinator
+            |__ DeveloperToolsDockingStore
             |__ more focused collaborators as needed
 ```
 
@@ -69,7 +70,7 @@ BrowserWindowController
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. |
 | `BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm` | CEF browser title, URL, loading, favicon, status updates, and browser-client capability refresh. Favicon persistence is delegated to `BabelFaviconStore`. |
-| `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, docking mode, resizing, closing, and keyboard/menu integration. |
+| `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, docking layout, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`. |
 | `BrowserWindowController+ExtensionActions.inc.mm` | Extension install, remove, enable, disable, restart, and page action handlers. |
 | `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group selection, group restore orchestration, and default group placement for module-created tabs. Group list layout/drop-index calculations are delegated to `BabelGroupListCoordinator`; group session file IO and JSON serialization are delegated to `BabelGroupSessionStore`. |
 | `BrowserWindowController+InterfaceBuilding.inc.mm` | Main AppKit interface construction and initial view hierarchy wiring. |
@@ -308,6 +309,17 @@ The controller may still decide when a page is drop-aware and execute JavaScript
 - clearing markers after file-navigation suppression decisions.
 
 The controller may still translate CEF browsers to identifiers and log decisions, but it must not own the pending-drop dictionary directly.
+
+### `BabelDeveloperToolsDockingStore`
+
+`BabelDeveloperToolsDockingStore` owns embedded Developer Tools docking preferences:
+
+- restoring persisted dock mode with allowed-mode validation;
+- persisting dock mode;
+- restoring persisted size ratio;
+- clamping and persisting size ratio.
+
+The controller may still map toolbar button tags to dock modes and apply AppKit/CEF layout, but it must not read or write these DevTools defaults directly.
 
 ### `BabelBrowserSettingsStore`
 

@@ -3,6 +3,7 @@
 #import "Browser/BrowserClient.h"
 #import "Browser/AppSettingsPageRenderer.h"
 #import "Browser/BrowserSettingsStore.h"
+#import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/ExtensionsPageRenderer.h"
 #import "Browser/FaviconStore.h"
@@ -123,6 +124,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelBrowserGroup*>* groups_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelBrowserSettingsStore* browserSettingsStore_;
+  BabelDeveloperToolsDockingStore* developerToolsDockingStore_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
   BabelFaviconStore* faviconStore_;
@@ -198,6 +200,10 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     groups_ = [NSMutableArray array];
     browserSettingsStore_ =
         [[BabelBrowserSettingsStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
+    developerToolsDockingStore_ =
+        [[BabelDeveloperToolsDockingStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults
+                                                  dockModeDefaultsKey:kDeveloperToolsDockModeDefaultsKey
+                                                 sizeRatioDefaultsKey:kDeveloperToolsSizeRatioDefaultsKey];
     extensionProfileStore_ =
         [[BabelExtensionProfileStore alloc]
             initWithProfileDirectoryURL:BabelChromeConfiguration.profileDirectoryURL

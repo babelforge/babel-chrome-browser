@@ -76,6 +76,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserTheme.mm
   Browser/BrowserViews.h
   Browser/BrowserViews.mm
+  Browser/DeveloperToolsDockingStore.h
+  Browser/DeveloperToolsDockingStore.mm
   Browser/BrowserWindowController.h
   Browser/BrowserWindowController.mm
   Configuration/Configuration.h
