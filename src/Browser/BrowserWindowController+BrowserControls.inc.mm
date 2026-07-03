@@ -70,12 +70,12 @@
 - (NSURL*)viewerSourceFileURLForBrowser:(CefRefPtr<CefBrowser>)browser {
   BabelBrowserTab* tab = [self tabForBrowser:browser];
   NSString* requestedURLString = tab.requestedURLString ?: @"";
-  if (![self isStableViewerURLString:requestedURLString] ||
-      ![[self sourceKindForStableViewerURLString:requestedURLString] isEqualToString:@"file"]) {
+  if (![stableViewerURLResolver_ isStableViewerURLString:requestedURLString] ||
+      ![[stableViewerURLResolver_ sourceKindForStableViewerURLString:requestedURLString] isEqualToString:@"file"]) {
     return nil;
   }
 
-  NSURL* sourceURL = [self sourceURLForViewerURLString:requestedURLString];
+  NSURL* sourceURL = [stableViewerURLResolver_ sourceURLForViewerURLString:requestedURLString];
   return sourceURL.isFileURL ? sourceURL : nil;
 }
 
@@ -261,7 +261,7 @@
 
 - (void)reloadMarkdownViewerTabsUsingCurrentTheme {
   for (BabelBrowserTab* tab in tabs_) {
-    if (![[self resolvedViewerKindForStableViewerURLString:tab.requestedURLString] isEqualToString:@"markdown"]) {
+    if (![[stableViewerURLResolver_ resolvedViewerKindForStableViewerURLString:tab.requestedURLString] isEqualToString:@"markdown"]) {
       continue;
     }
 

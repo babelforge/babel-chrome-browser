@@ -4,6 +4,33 @@
   return [self handleInternalNavigationURLString:urlString browser:nullptr];
 }
 
+- (BOOL)navigateBrowser:(CefRefPtr<CefBrowser>)browser toInternalURLStringInSameTab:(NSString*)urlString {
+  BabelBrowserTab* tab = [self tabForBrowser:browser];
+  if (!tab || ![stableServerURLResolver_ stableServerURLStringRequestsStart:urlString]) {
+    return NO;
+  }
+
+  NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:urlString];
+  if (navigationURLString.length == 0) {
+    return NO;
+  }
+
+  NSString* requestedURLString =
+      [stableServerURLResolver_ stableURLStringByRemovingInternalQueryParameters:urlString];
+  NSArray<NSString*>* refreshURLStrings =
+      [stableServerURLResolver_ refreshURLStringsForStableURLString:urlString];
+  if (refreshURLStrings.count > 0) {
+    [runtimeRefreshCoordinator_ enqueueRefreshURLStrings:refreshURLStrings
+                                    forBrowserIdentifier:browser->GetIdentifier()];
+  }
+
+  tab.requestedURLString = requestedURLString;
+  tab.urlString = navigationURLString;
+  browser->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
+  [self saveGroupsState];
+  return YES;
+}
+
 - (BOOL)handleInternalNavigationURLString:(NSString*)urlString browser:(CefRefPtr<CefBrowser>)browser {
   if (browser && [self navigateBrowser:browser toInternalURLStringInSameTab:urlString]) {
     return YES;
@@ -285,7 +312,7 @@
     return YES;
   }
 
-  if ([self isStableViewerURLString:urlString]) {
+  if ([stableViewerURLResolver_ isStableViewerURLString:urlString]) {
     [self navigateSelectedTabToViewerURLString:urlString];
     return YES;
   }

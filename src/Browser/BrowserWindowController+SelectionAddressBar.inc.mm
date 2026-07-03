@@ -70,12 +70,12 @@
   }
 
   NSString* urlString = tab.requestedURLString ?: tab.urlString ?: @"";
-  return [self displayURLStringForStableViewerURLString:urlString];
+  return [stableViewerURLResolver_ displayURLStringForStableViewerURLString:urlString];
 }
 
 - (NSDictionary*)addressBadgeForTab:(BabelBrowserTab*)tab {
   NSString* urlString = tab.requestedURLString ?: tab.urlString ?: @"";
-  if (![self isStableViewerURLString:urlString]) {
+  if (![stableViewerURLResolver_ isStableViewerURLString:urlString]) {
     return nil;
   }
 

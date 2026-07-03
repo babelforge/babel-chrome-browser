@@ -268,7 +268,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
 #include "BrowserWindowController+URLOpening.inc.mm"
 #include "BrowserWindowController+StableURLRouting.inc.mm"
 #include "BrowserWindowController+RuntimeRefreshRouting.inc.mm"
-#include "BrowserWindowController+StableViewerDisplay.inc.mm"
 
 #include "BrowserWindowController+TabBrowserCore.inc.mm"
 

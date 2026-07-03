@@ -1,7 +1,7 @@
 // This file is included by BrowserWindowController.mm.
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (NSString*)viewerURLStringForSupportedURLString:(NSString*)urlString {
-  NSURL* url = [self sourceURLForViewerURLString:urlString];
+  NSURL* url = [stableViewerURLResolver_ sourceURLForViewerURLString:urlString];
   if (!url || ![BabelLocalServiceHost.sharedHost supportsURL:url]) {
     return nil;
   }
@@ -15,7 +15,7 @@
   NSURL* viewerURL = [BabelLocalServiceHost.sharedHost viewerURLForURL:url];
   NSURLComponents* viewerComponents = viewerURL ? [NSURLComponents componentsWithURL:viewerURL
                                                              resolvingAgainstBaseURL:NO] : nil;
-  NSString* viewerKind = [self resolvedViewerKindForStableViewerURLString:urlString];
+  NSString* viewerKind = [stableViewerURLResolver_ resolvedViewerKindForStableViewerURLString:urlString];
   if (viewerKind.length == 0) {
     viewerKind = [BabelLocalServiceHost.sharedHost viewerKindForURL:url];
   }
@@ -28,7 +28,7 @@
   }
 
   NSString* viewerURLString = viewerURL.absoluteString;
-  NSString* fragment = [self stableViewerFragmentForURLString:urlString];
+  NSString* fragment = [stableViewerURLResolver_ fragmentForStableViewerURLString:urlString];
   if (viewerURLString.length > 0 && fragment.length > 0) {
     return [viewerURLString stringByAppendingString:fragment];
   }
@@ -37,7 +37,7 @@
 }
 
 - (NSString*)noViewerInstalledPageURLStringForStableViewerURLString:(NSString*)urlString {
-  NSURL* sourceURL = [self sourceURLForViewerURLString:urlString];
+  NSURL* sourceURL = [stableViewerURLResolver_ sourceURLForViewerURLString:urlString];
   NSString* sourceDisplayString = sourceURL.isFileURL ? sourceURL.path : sourceURL.absoluteString;
   if (sourceDisplayString.length == 0) {
     sourceDisplayString = urlString ?: @"";
@@ -69,7 +69,7 @@
 }
 
 - (NSString*)stableViewerURLStringForSupportedURLString:(NSString*)urlString {
-  if ([self isStableViewerURLString:urlString]) {
+  if ([stableViewerURLResolver_ isStableViewerURLString:urlString]) {
     return urlString;
   }
 
@@ -86,7 +86,7 @@
   BOOL isRemoteURL = [url.scheme isEqualToString:@"http"] || [url.scheme isEqualToString:@"https"];
   NSString* sourceKind = isRemoteURL ? @"url" : @"file";
   NSString* sourceValue = isRemoteURL ? url.absoluteString : url.path;
-  NSString* encodedSourceValue = [self stableViewerEscapedString:sourceValue];
+  NSString* encodedSourceValue = [stableViewerURLResolver_ escapedStableViewerString:sourceValue];
   if (encodedSourceValue.length == 0) {
     return nil;
   }
@@ -107,7 +107,7 @@
     return viewerURLString;
   }
 
-  if ([self isStableViewerURLString:urlString]) {
+  if ([stableViewerURLResolver_ isStableViewerURLString:urlString]) {
     return [self noViewerInstalledPageURLStringForStableViewerURLString:urlString];
   }
 

@@ -52,7 +52,7 @@
 
 - (void)openURL:(NSURL*)url {
   if ([url.scheme isEqualToString:@"babelchrome"]) {
-    if ([self isStableViewerURLString:url.absoluteString]) {
+    if ([stableViewerURLResolver_ isStableViewerURLString:url.absoluteString]) {
       [self openURLString:url.absoluteString groupName:kDefaultGroupName];
       return;
     }
@@ -147,7 +147,7 @@
   NSString* requestedURLString = [self stableViewerURLStringForSupportedURLString:urlString] ?: urlString;
   NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
   if (navigationURLString.length == 0) {
-    if ([self isStableViewerURLString:requestedURLString] ||
+    if ([stableViewerURLResolver_ isStableViewerURLString:requestedURLString] ||
         [self stableViewerURLStringForSupportedURLString:urlString]) {
       return;
     }
