@@ -24,6 +24,8 @@ set(BABEL_CHROME_SOURCES
   Browser/FaviconStore.mm
   Browser/GoogleSuggestClient.h
   Browser/GoogleSuggestClient.mm
+  Browser/GroupSessionStore.h
+  Browser/GroupSessionStore.mm
   Browser/HistoryPageRenderer.h
   Browser/HistoryPageRenderer.mm
   Browser/InternalPageRenderer.h

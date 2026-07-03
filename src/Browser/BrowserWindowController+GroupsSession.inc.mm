@@ -1,19 +1,11 @@
 // This file is included by BrowserWindowController.mm.
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (NSData*)persistedGroupsAndTabsStateData {
-  return [NSData dataWithContentsOfURL:BabelChromeConfiguration.groupsStateFileURL];
+  return [groupSessionStore_ persistedGroupsAndTabsStateData];
 }
 
 - (NSDictionary*)persistedGroupsAndTabsStateFromData:(NSData*)data {
-  if (data.length == 0) {
-    return @{};
-  }
-
-  NSError* error = nil;
-  NSDictionary* state = [NSJSONSerialization JSONObjectWithData:data
-                                                        options:0
-                                                          error:&error];
-  return [state isKindOfClass:NSDictionary.class] ? state : @{};
+  return [groupSessionStore_ persistedGroupsAndTabsStateFromData:data];
 }
 
 - (void)restoreSessionTabsFromState:(NSDictionary*)state {
@@ -33,8 +25,8 @@
 }
 
 - (NSString*)persistedSelectedGroupIdentifierFromState:(NSDictionary*)state {
-  NSString* selectedGroupIdentifier = state[@"selectedGroupId"];
-  return selectedGroupIdentifier.length > 0 ? selectedGroupIdentifier : kDefaultGroupIdentifier;
+  return [groupSessionStore_ selectedGroupIdentifierFromState:state
+                                           fallbackIdentifier:kDefaultGroupIdentifier];
 }
 
 - (void)restoreGroupsFromState:(NSDictionary*)state {
@@ -437,42 +429,10 @@
 }
 
 - (void)saveGroupsState {
-  NSMutableArray<NSDictionary*>* groupStates = [NSMutableArray array];
-  for (BabelBrowserGroup* group in groups_) {
-    NSMutableArray<NSDictionary*>* tabStates = [NSMutableArray array];
-    for (BabelBrowserTab* tab in group.tabs) {
-      if ([self isInternalPageTab:tab]) {
-        continue;
-      }
-      [tabStates addObject:@{
-        @"id": tab.identifier ?: @"",
-        @"url": tab.urlString ?: @"",
-        @"requestedUrl": tab.requestedURLString ?: tab.urlString ?: @"",
-        @"title": tab.title ?: tab.urlString ?: @"",
-        @"parentTabId": tab.parentTabIdentifier ?: @""
-      }];
-    }
-
-    [groupStates addObject:@{
-      @"id": group.identifier ?: @"",
-      @"name": group.name ?: @"",
-      @"selectedTabId": group.selectedTabIdentifier ?: @"",
-      @"tabs": tabStates
-    }];
-  }
-
-  NSDictionary* state = @{
-    @"selectedGroupId": selectedGroup_.identifier ?: kDefaultGroupIdentifier,
-    @"groups": groupStates
-  };
-
-  NSURL* stateURL = BabelChromeConfiguration.groupsStateFileURL;
-  [NSFileManager.defaultManager createDirectoryAtURL:stateURL.URLByDeletingLastPathComponent
-                         withIntermediateDirectories:YES
-                                          attributes:nil
-                                               error:nil];
-  NSData* data = [NSJSONSerialization dataWithJSONObject:state
-                                                 options:NSJSONWritingPrettyPrinted
-                                                   error:nil];
-  [data writeToURL:stateURL atomically:YES];
+  [groupSessionStore_ saveGroups:groups_
+          selectedGroupIdentifier:selectedGroup_.identifier
+  fallbackSelectedGroupIdentifier:kDefaultGroupIdentifier
+              excludingTabsMatching:^BOOL(BabelBrowserTab* tab) {
+    return [self isInternalPageTab:tab];
+  }];
 }

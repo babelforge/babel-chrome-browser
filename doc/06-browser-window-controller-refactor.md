@@ -53,6 +53,7 @@ BrowserWindowController
             |__ OmniboxSuggestionsController
             |__ TabPlacementPolicy
             |__ LiveBrowserEvictionPolicy
+            |__ GroupSessionStore
             |__ more focused collaborators as needed
 ```
 
@@ -66,7 +67,7 @@ BrowserWindowController
 | `BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm` | CEF browser title, URL, loading, favicon, status updates, and browser-client capability refresh. Favicon persistence is delegated to `BabelFaviconStore`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, docking mode, resizing, closing, and keyboard/menu integration. |
 | `BrowserWindowController+ExtensionActions.inc.mm` | Extension install, remove, enable, disable, restart, and page action handlers. |
-| `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group persistence, group selection, group list refresh, group restore data, and default group placement for module-created tabs. |
+| `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group selection, group list refresh, group restore orchestration, and default group placement for module-created tabs. Group session file IO and JSON serialization are delegated to `BabelGroupSessionStore`. |
 | `BrowserWindowController+InterfaceBuilding.inc.mm` | Main AppKit interface construction and initial view hierarchy wiring. |
 | `BrowserWindowController+InternalNavigationRouter.inc.mm` | Routing for `babelchrome://settings`, `babelchrome://modules`, `babelchrome://extensions`, `babelchrome://history`, related internal URLs, and stable-server same-tab navigation requests. |
 | `BrowserWindowController+InternalPageLoading.inc.mm` | Loading rendered internal HTML into the selected browser tab. |
@@ -249,6 +250,18 @@ The controller may still mutate the group tab array and build lightweight identi
 - least-recently-used evictable tab selection.
 
 The controller may still decide which tabs are protected by current UI state and may still perform the CEF `CloseBrowser` call, but it must not own LRU arrays or eviction marker sets directly.
+
+### `BabelGroupSessionStore`
+
+`BabelGroupSessionStore` owns persisted group and tab session state:
+
+- reading the group session JSON data;
+- parsing invalid or missing state into an empty state;
+- resolving persisted selected group identifiers with fallbacks;
+- serializing groups and tabs into the persisted JSON shape;
+- writing the state file under the configured application support path.
+
+The controller may still create native groups, tabs, host views, and CEF browser views during restore, but it must not manually build or write the persisted JSON session file.
 
 ### `BabelBrowserSettingsStore`
 
