@@ -7696,8 +7696,10 @@ doCommandBySelector:(SEL)commandSelector {
   }
 
   didRestoreMainWindowState_ = YES;
-  if ([NSUserDefaults.standardUserDefaults boolForKey:kMainWindowZoomedDefaultsKey] &&
-      !self.window.isZoomed) {
+  NSScreen* screen = [self bestScreenForMainWindowFrame:self.window.frame];
+  BOOL shouldRestoreZoom = [NSUserDefaults.standardUserDefaults boolForKey:kMainWindowZoomedDefaultsKey] &&
+      [self mainWindowFrameIsEffectivelyZoomed:self.window.frame onScreen:screen];
+  if (shouldRestoreZoom && !self.window.isZoomed) {
     [self.window zoom:nil];
   }
 }
@@ -7763,12 +7765,7 @@ doCommandBySelector:(SEL)commandSelector {
 
   CGFloat width = MIN(MAX(900.0, frame.size.width), visibleFrame.size.width);
   CGFloat height = MIN(MAX(580.0, frame.size.height), visibleFrame.size.height);
-  CGFloat maximumX = NSMaxX(visibleFrame) - width;
-  CGFloat maximumY = NSMaxY(visibleFrame) - height;
-  CGFloat originX = MIN(MAX(NSMinX(visibleFrame), frame.origin.x), maximumX);
-  CGFloat originY = MIN(MAX(NSMinY(visibleFrame), frame.origin.y), maximumY);
-
-  return NSMakeRect(originX, originY, width, height);
+  return NSMakeRect(frame.origin.x, frame.origin.y, width, height);
 }
 
 - (NSRect)centeredMainWindowFrameOnScreen:(NSScreen*)screen {
