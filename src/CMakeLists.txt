@@ -36,6 +36,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ModuleUpdateService.mm
   Browser/ModuleUIActionCoordinator.h
   Browser/ModuleUIActionCoordinator.mm
+  Browser/OmniboxLocalSuggestionBuilder.h
+  Browser/OmniboxLocalSuggestionBuilder.mm
   Browser/RecentlyClosedTabStore.h
   Browser/RecentlyClosedTabStore.mm
   Browser/RuntimeRefreshCoordinator.h

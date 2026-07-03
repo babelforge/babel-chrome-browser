@@ -13,6 +13,7 @@
 #import "Browser/ModuleSettingsPageRenderer.h"
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/ModuleUIActionCoordinator.h"
+#import "Browser/OmniboxLocalSuggestionBuilder.h"
 #import "Browser/RecentlyClosedTabStore.h"
 #import "Browser/RuntimeRefreshCoordinator.h"
 #import "Browser/SettingsOptionRenderer.h"
@@ -125,6 +126,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
   BabelModuleUpdateService* moduleUpdateService_;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
+  BabelOmniboxLocalSuggestionBuilder* omniboxLocalSuggestionBuilder_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
   BabelRuntimeRefreshCoordinator* runtimeRefreshCoordinator_;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
@@ -215,6 +217,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     moduleUIActionCoordinator_ =
         [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
                                                         moduleUpdateService:moduleUpdateService_];
+    omniboxLocalSuggestionBuilder_ = [[BabelOmniboxLocalSuggestionBuilder alloc] init];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     runtimeRefreshCoordinator_ = [[BabelRuntimeRefreshCoordinator alloc] init];
     settingsOptionRenderer_ = [[BabelSettingsOptionRenderer alloc] init];

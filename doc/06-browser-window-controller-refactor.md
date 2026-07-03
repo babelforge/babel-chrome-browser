@@ -48,6 +48,7 @@ BrowserWindowController
             |__ ModuleSettingsPageRenderer
             |__ HistoryPageRenderer
             |__ ExtensionsPageRenderer
+            |__ OmniboxLocalSuggestionBuilder
             |__ more focused collaborators as needed
 ```
 
@@ -69,7 +70,7 @@ BrowserWindowController
 | `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, URL/path escaping, shell quoting, icon loading, restart launching, and compatibility wrappers for internal page rendering. Shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
-| `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
+| `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, suggestion AppKit rendering, keyboard navigation, and favicon lookup. Local suggestion matching/deduplication is delegated to `BabelOmniboxLocalSuggestionBuilder`. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. Stable server identifier parsing is delegated to `BabelStableServerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
@@ -186,6 +187,17 @@ The controller may decide when to navigate or reload actual tabs, but it must no
 - keeps the mutable pending-refresh map out of `BrowserWindowController`.
 
 The controller may still decide which tabs to reload and when a runtime URL is eligible, but it must not store pending refresh arrays directly.
+
+### `BabelOmniboxLocalSuggestionBuilder`
+
+`BabelOmniboxLocalSuggestionBuilder` owns local omnibox suggestion matching:
+
+- open tab matching;
+- recently closed tab matching;
+- local suggestion deduplication;
+- maximum result count enforcement.
+
+The controller may collect tab row view models, add favicons, and render AppKit rows, but it must not implement local suggestion matching loops directly.
 
 ### `BabelBrowserSettingsStore`
 

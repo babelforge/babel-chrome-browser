@@ -12,56 +12,54 @@
     return;
   }
 
-  NSMutableSet<NSString*>* seenSuggestionKeys = [NSMutableSet set];
+  NSMutableArray<NSDictionary*>* openTabRows = [NSMutableArray array];
   for (BabelBrowserGroup* group in groups_) {
     for (BabelBrowserTab* tab in group.tabs) {
-      if ([self isInternalPageTab:tab] ||
-          (![self omniboxQuery:trimmedQuery matchesTitle:tab.title urlString:tab.urlString] &&
-           ![self omniboxQuery:trimmedQuery matchesTitle:tab.title urlString:tab.requestedURLString])) {
+      if ([self isInternalPageTab:tab]) {
         continue;
       }
 
-      [self addOmniboxSuggestionWithTitle:tab.title
-                                urlString:tab.urlString ?: tab.requestedURLString
-                                groupName:group.name
-                            tabIdentifier:tab.identifier
-                                    action:@"focus-tab"
-                                  seenKeys:seenSuggestionKeys];
-      if (omniboxSuggestions_.count >= kOmniboxSuggestionMaximumCount) {
-        [self showOmniboxSuggestions];
-        [self scheduleGoogleSuggestionsForQuery:trimmedQuery generation:googleSuggestGeneration_];
-        return;
-      }
+      [openTabRows addObject:@{
+        BabelOmniboxLocalRowTitleKey : tab.title ?: @"",
+        BabelOmniboxLocalRowURLStringKey : tab.urlString ?: @"",
+        BabelOmniboxLocalRowRequestedURLStringKey : tab.requestedURLString ?: @"",
+        BabelOmniboxLocalRowGroupNameKey : group.name ?: kDefaultGroupName,
+        BabelOmniboxLocalRowTabIdentifierKey : tab.identifier ?: @"",
+      }];
     }
   }
 
+  NSMutableArray<NSDictionary*>* closedTabRows = [NSMutableArray array];
   NSArray<BabelClosedTab*>* closedTabs = [recentlyClosedTabStore_ allClosedTabs];
   for (NSInteger index = (NSInteger)closedTabs.count - 1; index >= 0; index--) {
     BabelClosedTab* closedTab = closedTabs[(NSUInteger)index];
-    if (![self omniboxQuery:trimmedQuery matchesTitle:closedTab.title urlString:closedTab.urlString] &&
-        ![self omniboxQuery:trimmedQuery matchesTitle:closedTab.title urlString:closedTab.requestedURLString]) {
-      continue;
-    }
+    [closedTabRows addObject:@{
+      BabelOmniboxLocalRowTitleKey : closedTab.title ?: @"",
+      BabelOmniboxLocalRowURLStringKey : closedTab.urlString ?: @"",
+      BabelOmniboxLocalRowRequestedURLStringKey : closedTab.requestedURLString ?: @"",
+      BabelOmniboxLocalRowGroupNameKey : closedTab.groupName ?: kDefaultGroupName,
+      BabelOmniboxLocalRowTabIdentifierKey : @"",
+    }];
+  }
 
-    [self addOmniboxSuggestionWithTitle:closedTab.title
-                              urlString:closedTab.urlString ?: closedTab.requestedURLString
-                              groupName:closedTab.groupName
-                          tabIdentifier:nil
-                                  action:@"navigate"
-                                seenKeys:seenSuggestionKeys];
-    if (omniboxSuggestions_.count >= kOmniboxSuggestionMaximumCount) {
-      break;
+  NSArray<NSDictionary*>* localSuggestions =
+      [omniboxLocalSuggestionBuilder_ localSuggestionsForQuery:trimmedQuery
+                                                   openTabRows:openTabRows
+                                                 closedTabRows:closedTabRows
+                                                  maximumCount:kOmniboxSuggestionMaximumCount];
+  for (NSDictionary* localSuggestion in localSuggestions) {
+    NSMutableDictionary* suggestion = [localSuggestion mutableCopy];
+    NSString* title = [suggestion[@"title"] isKindOfClass:NSString.class] ? suggestion[@"title"] : @"";
+    NSString* urlString = [suggestion[@"url"] isKindOfClass:NSString.class] ? suggestion[@"url"] : @"";
+    NSImage* faviconImage = [self faviconImageForSuggestionTitle:title urlString:urlString];
+    if (faviconImage) {
+      suggestion[@"icon"] = faviconImage;
     }
+    [omniboxSuggestions_ addObject:suggestion];
   }
 
   [self showOmniboxSuggestions];
   [self scheduleGoogleSuggestionsForQuery:trimmedQuery generation:googleSuggestGeneration_];
-}
-
-- (BOOL)omniboxQuery:(NSString*)query matchesTitle:(NSString*)title urlString:(NSString*)urlString {
-  NSString* normalizedQuery = query.lowercaseString;
-  return [[title ?: @"" lowercaseString] containsString:normalizedQuery] ||
-         [[urlString ?: @"" lowercaseString] containsString:normalizedQuery];
 }
 
 - (void)scheduleGoogleSuggestionsForQuery:(NSString*)query generation:(NSUInteger)generation {
