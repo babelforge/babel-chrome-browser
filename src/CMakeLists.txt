@@ -26,6 +26,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserTabCollection.mm
   Browser/BrowserTabFactory.h
   Browser/BrowserTabFactory.mm
+  Browser/BrowserTabInsertionCoordinator.h
+  Browser/BrowserTabInsertionCoordinator.mm
   Browser/ChromeCommandParser.h
   Browser/ChromeCommandParser.mm
   Browser/ExtensionProfileStore.h

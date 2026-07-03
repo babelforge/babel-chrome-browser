@@ -16,6 +16,7 @@
 #import "Browser/BrowserGroupCollection.h"
 #import "Browser/BrowserGroupFactory.h"
 #import "Browser/BrowserTabCollection.h"
+#import "Browser/BrowserTabInsertionCoordinator.h"
 #import "Browser/GroupListCoordinator.h"
 #import "Browser/GroupSessionStore.h"
 #import "Browser/HistoryPageRenderer.h"
@@ -148,6 +149,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserGroupCollection* browserGroupCollection_;
   BabelBrowserGroupFactory* browserGroupFactory_;
   BabelBrowserTabCollection* browserTabCollection_;
+  BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
   BabelGroupListCoordinator* groupListCoordinator_;
   BabelGroupSessionStore* groupSessionStore_;
   BabelHistoryPageRenderer* historyPageRenderer_;
@@ -171,7 +173,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelStableServerURLResolver* stableServerURLResolver_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelTabDragCoordinator* tabDragCoordinator_;
-  BabelTabPlacementPolicy* tabPlacementPolicy_;
   BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
   BabelTabURLMatcher* tabURLMatcher_;
   BabelWindowStateStore* windowStateStore_;
@@ -272,6 +273,10 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     browserGroupCollection_ = [[BabelBrowserGroupCollection alloc] init];
     browserGroupFactory_ = [[BabelBrowserGroupFactory alloc] initWithActionTarget:self];
     browserTabCollection_ = [[BabelBrowserTabCollection alloc] init];
+    BabelTabPlacementPolicy* tabPlacementPolicy = [[BabelTabPlacementPolicy alloc] init];
+    browserTabInsertionCoordinator_ =
+        [[BabelBrowserTabInsertionCoordinator alloc] initWithPlacementPolicy:tabPlacementPolicy
+                                                               tabCollection:browserTabCollection_];
     groupListCoordinator_ = [[BabelGroupListCoordinator alloc] init];
     groupSessionStore_ = [[BabelGroupSessionStore alloc] init];
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
@@ -314,7 +319,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     stableServerURLResolver_ = [[BabelStableServerURLResolver alloc] init];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
-    tabPlacementPolicy_ = [[BabelTabPlacementPolicy alloc] init];
     tabStripLayoutCalculator_ =
         [[BabelTabStripLayoutCalculator alloc] initWithNormalWidth:kTabNormalWidth
                                                        activeWidth:kTabActiveWidth

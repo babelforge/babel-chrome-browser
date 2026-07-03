@@ -407,30 +407,11 @@
           inGroup:(BabelBrowserGroup*)group
         parentTab:(BabelBrowserTab*)parentTab
  respectingUserStrategy:(BOOL)respectingUserStrategy {
-  NSArray<NSString*>* tabIdentifiers = [self tabIdentifiersForGroup:group];
-  NSString* parentTabIdentifier = parentTab.identifier ?: @"";
-  if ([tabPlacementPolicy_ shouldAppendTabWithParentIdentifier:parentTabIdentifier
-                                                tabIdentifiers:tabIdentifiers
-                                                      strategy:[self tabOpeningStrategy]
-                                        respectingUserStrategy:respectingUserStrategy]) {
-    [group.tabs addObject:tab];
-    return;
-  }
-
-  NSUInteger insertionIndex =
-      [tabPlacementPolicy_ insertionIndexForNewChildOfParentIdentifier:parentTabIdentifier
-                                                        tabIdentifiers:tabIdentifiers
-                                      parentIdentifiersByTabIdentifier:[self parentIdentifiersByTabIdentifierForGroup:group]
-                                                              strategy:[self tabOpeningStrategy]];
-  [group.tabs insertObject:tab atIndex:MIN(insertionIndex, group.tabs.count)];
-}
-
-- (NSArray<NSString*>*)tabIdentifiersForGroup:(BabelBrowserGroup*)group {
-  return [browserTabCollection_ tabIdentifiersForGroup:group];
-}
-
-- (NSDictionary<NSString*, NSString*>*)parentIdentifiersByTabIdentifierForGroup:(BabelBrowserGroup*)group {
-  return [browserTabCollection_ parentIdentifiersByTabIdentifierForGroup:group];
+  [browserTabInsertionCoordinator_ insertTab:tab
+                                     inGroup:group
+                                   parentTab:parentTab
+                                    strategy:[self tabOpeningStrategy]
+                     respectingUserStrategy:respectingUserStrategy];
 }
 
 - (NSString*)tabOpeningStrategy {
