@@ -58,6 +58,8 @@ set(BABEL_CHROME_SOURCES
   Browser/RuntimeRefreshCoordinator.mm
   Browser/SettingsOptionRenderer.h
   Browser/SettingsOptionRenderer.mm
+  Browser/SidebarLayoutCalculator.h
+  Browser/SidebarLayoutCalculator.mm
   Browser/StableServerURLResolver.h
   Browser/StableServerURLResolver.mm
   Browser/StableViewerURLResolver.h

@@ -26,6 +26,7 @@
 #import "Browser/RecentlyClosedTabStore.h"
 #import "Browser/RuntimeRefreshCoordinator.h"
 #import "Browser/SettingsOptionRenderer.h"
+#import "Browser/SidebarLayoutCalculator.h"
 #import "Browser/StableServerURLResolver.h"
 #import "Browser/StableViewerURLResolver.h"
 #import "Browser/TabDragCoordinator.h"
@@ -148,6 +149,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
   BabelRuntimeRefreshCoordinator* runtimeRefreshCoordinator_;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
+  BabelSidebarLayoutCalculator* sidebarLayoutCalculator_;
   BabelStableServerURLResolver* stableServerURLResolver_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelTabDragCoordinator* tabDragCoordinator_;
@@ -246,6 +248,11 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     runtimeRefreshCoordinator_ = [[BabelRuntimeRefreshCoordinator alloc] init];
     settingsOptionRenderer_ = [[BabelSettingsOptionRenderer alloc] init];
+    sidebarLayoutCalculator_ =
+        [[BabelSidebarLayoutCalculator alloc] initWithHeaderButtonSize:kSidebarHeaderButtonSize
+                                                    headerLeadingInset:kSidebarHeaderLeadingInset
+                                                       headerButtonGap:kSidebarHeaderButtonGap
+                                                   headerTrailingInset:kSidebarHeaderTrailingInset];
     appSettingsPageRenderer_ =
         [[BabelAppSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
     moduleSettingsPageRenderer_ =

@@ -76,8 +76,7 @@
 
 - (CGFloat)minimumExpandedSidebarWidth {
   CGFloat titleWidth = sidebarTitle_ ? [self sidebarTitleWidth] : 0.0;
-  return kSidebarHeaderLeadingInset + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap +
-      titleWidth + kSidebarHeaderButtonGap + kSidebarHeaderButtonSize + kSidebarHeaderTrailingInset;
+  return [sidebarLayoutCalculator_ minimumExpandedWidthForTitleWidth:titleWidth];
 }
 
 - (CGFloat)sidebarTitleWidth {
@@ -179,57 +178,31 @@
   splitView_.frame = NSMakeRect(0, 0, rootWidth, MAX(0.0, rootHeight - kTabBarHeight));
 
   CGFloat sidebarWidth = [self sidebarWidth];
-  CGFloat totalWidth = splitView_.bounds.size.width;
   CGFloat totalHeight = splitView_.bounds.size.height;
-  CGFloat rightWidth = MAX(0.0, totalWidth - sidebarWidth);
+  BabelSidebarLayout* sidebarLayout =
+      [sidebarLayoutCalculator_ layoutForBounds:splitView_.bounds
+                                   sidebarWidth:sidebarWidth
+                                      collapsed:sidebarCollapsed_
+                                      titleWidth:[self sidebarTitleWidth]];
+  CGFloat rightWidth = sidebarLayout.rightContentFrame.size.width;
 
-  sidebarView_.frame = NSMakeRect(0, 0, sidebarWidth, totalHeight);
+  sidebarView_.frame = sidebarLayout.sidebarFrame;
   sidebarResizeHandleView_.hidden = sidebarCollapsed_;
-  sidebarResizeHandleView_.frame = NSMakeRect(MAX(0.0, sidebarWidth - 3.0),
-                                              0,
-                                              7.0,
-                                              totalHeight);
+  sidebarResizeHandleView_.frame = sidebarLayout.resizeHandleFrame;
   sidebarTitle_.hidden = sidebarCollapsed_;
   newGroupButton_.hidden = sidebarCollapsed_;
-  CGFloat headerY = MAX(0.0, totalHeight - 42);
-  CGFloat collapseButtonX = sidebarCollapsed_
-      ? MAX(0.0, (sidebarWidth - kSidebarHeaderButtonSize) / 2.0)
-      : kSidebarHeaderLeadingInset;
-  sidebarCollapseButton_.frame = NSMakeRect(collapseButtonX,
-                                            headerY,
-                                            kSidebarHeaderButtonSize,
-                                            kSidebarHeaderButtonSize);
+  sidebarCollapseButton_.frame = sidebarLayout.collapseButtonFrame;
   sidebarCollapseButton_.toolTip = sidebarCollapsed_ ? @"Expand Sidebar" : @"Collapse Sidebar";
   ConfigureIconButton(sidebarCollapseButton_,
                       sidebarCollapsed_ ? @"collapse-right" : @"collapse-left",
                       sidebarCollapsed_ ? @">>" : @"<<");
-  CGFloat titleX = collapseButtonX + kSidebarHeaderButtonSize + kSidebarHeaderButtonGap;
-  CGFloat titleIntrinsicWidth = [self sidebarTitleWidth];
-  CGFloat titleRightEdge = titleX + titleIntrinsicWidth;
-  CGFloat minimumAddButtonX = titleRightEdge + kSidebarHeaderButtonGap;
-  CGFloat addButtonX =
-      MAX(minimumAddButtonX, sidebarWidth - kSidebarHeaderButtonSize - kSidebarHeaderTrailingInset);
-  newGroupButton_.frame = NSMakeRect(addButtonX,
-                                     headerY,
-                                     kSidebarHeaderButtonSize,
-                                     kSidebarHeaderButtonSize);
-  CGFloat titleAvailableWidth = MAX(0.0, addButtonX - titleX - kSidebarHeaderButtonGap);
-  sidebarTitle_.frame = NSMakeRect(titleX,
-                                   MAX(0.0, totalHeight - 40),
-                                   MIN(titleIntrinsicWidth, titleAvailableWidth),
-                                   24);
-  CGFloat groupListX = sidebarCollapsed_ ? 5.0 : 5.0;
-  CGFloat groupListY = sidebarCollapsed_ ? 12.0 : 24.0;
-  CGFloat groupListBottomInset = sidebarCollapsed_ ? 12.0 : 24.0;
-  CGFloat groupListTopInset = sidebarCollapsed_ ? 58.0 : 72.0;
-  groupsListView_.frame = NSMakeRect(groupListX,
-                                     groupListY,
-                                     MAX(0.0, sidebarWidth - (groupListX * 2.0)),
-                                     MAX(0.0, totalHeight - groupListTopInset - groupListBottomInset));
+  newGroupButton_.frame = sidebarLayout.newGroupButtonFrame;
+  sidebarTitle_.frame = sidebarLayout.titleFrame;
+  groupsListView_.frame = sidebarLayout.groupsListFrame;
   [sidebarView_ addSubview:sidebarCollapseButton_ positioned:NSWindowAbove relativeTo:nil];
   [sidebarView_ addSubview:newGroupButton_ positioned:NSWindowAbove relativeTo:nil];
   [self layoutGroupItems];
-  rightView_.frame = NSMakeRect(sidebarWidth, 0, rightWidth, totalHeight);
+  rightView_.frame = sidebarLayout.rightContentFrame;
   addressBarPanel_.frame = NSMakeRect(0,
                                       totalHeight - kToolbarHeight,
                                       rightWidth,

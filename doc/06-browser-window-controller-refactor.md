@@ -44,6 +44,7 @@ BrowserWindowController
             |__ RuntimeRefreshCoordinator
             |__ BrowserSettingsStore
             |__ SettingsOptionRenderer
+            |__ SidebarLayoutCalculator
             |__ AppSettingsPageRenderer
             |__ ModuleSettingsPageRenderer
             |__ HistoryPageRenderer
@@ -79,7 +80,7 @@ BrowserWindowController
 | `BrowserWindowController+InternalPageLoading.inc.mm` | Loading rendered internal HTML into the selected browser tab. |
 | `BrowserWindowController+InternalPageOpeners.inc.mm` | Convenience methods that open built-in internal pages from menu items, buttons, shortcuts, or module routes. Module page methods collect snapshots/update data and delegate body rendering to `BabelModulePageRenderer`. |
 | `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, URL/path escaping, shell quoting, icon loading, restart launching, and compatibility wrappers for internal page rendering. Shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
-| `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
+| `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout application, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`; sidebar/right-panel frame calculation is delegated to `BabelSidebarLayoutCalculator`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion orchestration, Google Suggest debounce/generation, favicon lookup, and selected suggestion actions. Local suggestion matching/deduplication is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest HTTP/cache/parsing is delegated to `BabelGoogleSuggestClient`; suggestion list state and AppKit row rendering are delegated to `BabelOmniboxSuggestionsController`. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. Stable server identifier parsing is delegated to `BabelStableServerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
@@ -343,6 +344,16 @@ The controller may still apply calculated frames to concrete views and maintain 
 - supported value validation for these settings.
 
 The controller may route settings URLs and refresh affected UI, but it must not directly read/write these settings in `NSUserDefaults`.
+
+### `BabelSidebarLayoutCalculator`
+
+`BabelSidebarLayoutCalculator` owns left-panel geometry:
+
+- minimum expanded sidebar width based on header controls and rendered title width;
+- sidebar, resize-handle, and right-content frames;
+- collapse/expand button, add-group button, title, and groups-list frames.
+
+The controller may still hide/show controls, configure icons/tooltips, and place AppKit subviews, but it must not keep sidebar frame math inline.
 
 ### `BabelSettingsOptionRenderer`
 
