@@ -39,6 +39,7 @@ BrowserWindowController
             |__ BrowserSupportViews
             |__ RecentlyClosedTabStore
             |__ InternalPageRenderer
+            |__ StableViewerURLResolver
             |__ more focused collaborators as needed
 ```
 
@@ -67,7 +68,7 @@ BrowserWindowController
 | `BrowserWindowController+SettingsOptions.inc.mm` | App setting values, parsing, persistence, and option-specific action handling. |
 | `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML and module settings shell rendering. Candidate for `InternalPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
-| `BrowserWindowController+StableViewerDisplay.inc.mm` | Address bar display and badge metadata for stable viewer URLs. |
+| `BrowserWindowController+StableViewerDisplay.inc.mm` | Stable viewer URL display wrappers and stable-server same-tab navigation. Stable viewer URL parsing and display formatting are delegated to `BabelStableViewerURLResolver`. |
 | `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
 | `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tab reopening orchestration. Recently closed tab stack ownership is delegated to `BabelRecentlyClosedTabStore`. |
 | `BrowserWindowController+URLOpening.inc.mm` | External URL opening, command URL handling, new tab placement, and open requests from macOS or CEF. |
@@ -142,6 +143,19 @@ The controller may create `BabelClosedTab` snapshots and reopen tabs from them, 
 - provides shared HTML escaping.
 
 The controller may provide page body HTML for now, but it must not own the common internal-page shell, theme CSS, or escaping implementation.
+
+### `BabelStableViewerURLResolver`
+
+`BabelStableViewerURLResolver` owns stable viewer URL parsing and display formatting:
+
+- detects stable `babelchrome://<viewer>/file/...` and `babelchrome://<viewer>/url/...` URLs;
+- decodes file and remote source URLs;
+- resolves generic `babelchrome://viewer/...` URLs through enabled viewer modules;
+- extracts stable viewer fragments;
+- formats decoded source URLs for the address bar;
+- encodes stable viewer path segments.
+
+The controller may use the resolver to decide navigation and address display, but it must not manually parse stable viewer URL paths.
 
 ### `BabelModuleUpdateService`
 
