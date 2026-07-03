@@ -1,0 +1,185 @@
+# Browser Window Controller Refactor
+
+Navigation: [README](README.md) | [Previous: PHP Modules](05-php-modules.md)
+
+This page documents the current `BrowserWindowController` split, the responsibility of each included fragment, and the rules that must be followed before adding new code to the controller.
+
+## Goal
+
+`BrowserWindowController` must remain a UI orchestrator. Its long-term responsibility is limited to:
+
+- creating and owning the main window;
+- wiring AppKit views, CEF callbacks, stores, and services;
+- coordinating tabs, groups, pages, and native browser views;
+- routing user actions to focused collaborators;
+- bridging AppKit and CEF events.
+
+Business logic, persistence logic, file parsing, module update resolution, extension profile persistence, and reusable rendering logic must move into dedicated classes.
+
+## Current Shape
+
+The `.inc.mm` files are temporary refactor boundaries. They are still included into `BrowserWindowController.mm`, so they share the same private ivars and constants. This keeps behavior stable while the controller is decomposed into real collaborators step by step.
+
+The intended direction is:
+
+```text
+BrowserWindowController
+    |__ AppKit/CEF orchestration
+    |__ window, tab, group, browser-view coordination
+    |__ delegates and callbacks
+    |
+    |__ Services and stores
+            |__ FaviconStore
+            |__ WindowStateStore
+            |__ ExtensionProfileStore
+            |__ ModuleUpdateService
+            |__ InternalPageRenderer
+            |__ more focused collaborators as needed
+```
+
+## Fragment Map
+
+| Fragment | Responsibility |
+| --- | --- |
+| `BrowserWindowController+AddressFieldEditing.inc.mm` | Address field focus, submit, text editing, Escape behavior, and address entry state. |
+| `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
+| `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. |
+| `BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm` | CEF browser title, URL, loading, favicon, and status updates. Favicon persistence is delegated to `BabelFaviconStore`. |
+| `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, docking mode, resizing, closing, and keyboard/menu integration. |
+| `BrowserWindowController+ExtensionActions.inc.mm` | Extension install, remove, enable, disable, restart, and page action handlers. |
+| `BrowserWindowController+ExtensionDiscovery.inc.mm` | Extension discovery, metadata extraction, Chrome Web Store search page helpers, and extension listing data. |
+| `BrowserWindowController+ExtensionProfileState.inc.mm` | Extension profile state persistence and restart-pending state. Candidate for `ExtensionProfileStore`. |
+| `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group persistence, group selection, group list refresh, and group restore data. |
+| `BrowserWindowController+InterfaceBuilding.inc.mm` | Main AppKit interface construction and initial view hierarchy wiring. |
+| `BrowserWindowController+InternalNavigationRouter.inc.mm` | Routing for `babelchrome://settings`, `babelchrome://modules`, `babelchrome://extensions`, `babelchrome://history`, and related internal URLs. |
+| `BrowserWindowController+InternalPageLoading.inc.mm` | Loading rendered internal HTML into the selected browser tab. |
+| `BrowserWindowController+InternalPageOpeners.inc.mm` | Convenience methods that open built-in internal pages from menu items, buttons, or shortcuts. |
+| `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, escaping, formatting, and small HTML utilities. Candidate for extraction into renderer/view helpers. |
+| `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, window persistence, and view resizing. Candidate for `WindowStateStore` plus layout helpers. |
+| `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
+| `BrowserWindowController+ModuleActions.inc.mm` | Module install, remove, enable, disable, open, and settings action handlers. |
+| `BrowserWindowController+ModuleGroupRouting.inc.mm` | Module manifest group routing, especially default group placement for module-created tabs. |
+| `BrowserWindowController+ModulePages.inc.mm` | Installed modules page, module detail page, and module HTML rendering. Candidate for `InternalPageRenderer`. |
+| `BrowserWindowController+ModuleUpdateActions.inc.mm` | Module update page actions, selected update installation, and UI action dispatch. Candidate for `ModuleUpdateService` coordination. |
+| `BrowserWindowController+ModuleUpdatePreferences.inc.mm` | Update source preferences for URL and local folder. Candidate for `ModuleUpdateService` or a settings store. |
+| `BrowserWindowController+ModuleUpdateSources.inc.mm` | Remote and local module update source discovery. Candidate for `ModuleUpdateService`. |
+| `BrowserWindowController+ModuleUpdateZipParsing.inc.mm` | Zip manifest parsing and update metadata extraction. Candidate for `ModuleUpdateService`. |
+| `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
+| `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. |
+| `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
+| `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
+| `BrowserWindowController+SettingsOptions.inc.mm` | App setting values, parsing, persistence, and option-specific action handling. |
+| `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML and module settings shell rendering. Candidate for `InternalPageRenderer`. |
+| `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
+| `BrowserWindowController+StableViewerDisplay.inc.mm` | Address bar display and badge metadata for stable viewer URLs. |
+| `BrowserWindowController+SupportViews.inc.mm` | Small AppKit helper views/classes used by the window controller. Stable helpers should move into regular view classes when they grow. |
+| `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
+| `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tabs. |
+| `BrowserWindowController+URLOpening.inc.mm` | External URL opening, command URL handling, new tab placement, and open requests from macOS or CEF. |
+
+## Already Extracted Classes
+
+### `BabelFaviconStore`
+
+`BabelFaviconStore` owns favicon persistence and lookup:
+
+- loads and saves `favicons.json`;
+- computes normalized URL origin keys;
+- resolves favicons for exact URL origins;
+- resolves suggestion favicons by matching normalized host names.
+
+The controller may ask for favicon lookup, but it must not recreate origin-key or JSON persistence logic.
+
+## Extraction Candidates
+
+### `InternalPageRenderer`
+
+Move HTML generation for internal pages into a renderer layer. Good first targets:
+
+- settings page HTML;
+- modules page HTML;
+- module detail page HTML;
+- module updates page HTML;
+- extensions page HTML;
+- history page HTML.
+
+The controller should provide view models and receive rendered HTML. It should not concatenate large HTML strings directly.
+
+### `ModuleUpdateService`
+
+Move update-source and zip-resolution logic out of the controller:
+
+- stored update URL and local folder;
+- remote manifest loading;
+- local zip scanning;
+- zip mtime/size cache;
+- installed-vs-available comparison;
+- selected update installation coordination.
+
+The controller should only render update state and forward user actions.
+
+### `ExtensionProfileStore`
+
+Move extension state persistence and profile metadata into a store:
+
+- enabled/disabled extension state;
+- restart-pending extension state;
+- extension profile directories;
+- installed extension metadata files;
+- resilient loading when extension directories are missing.
+
+The controller should keep extension UI actions, not extension persistence details.
+
+### `WindowStateStore`
+
+Move persisted window and sidebar state into a store:
+
+- window screen name;
+- window frame relative to visible screen bounds;
+- zoom state;
+- sidebar collapsed state;
+- expanded sidebar width;
+- long quit preference may remain in general settings unless a broader settings store is added.
+
+The controller should apply state to AppKit objects, but should not know the serialized format.
+
+## Rules For New Code
+
+1. Do not add a new `.inc.mm` file unless it is a temporary migration boundary for a known extraction.
+2. Do not add persistence format code to the controller. Create or extend a store class.
+3. Do not add large HTML string generation to the controller. Add it to an internal page renderer or a view model helper.
+4. Do not let a fragment exceed roughly 500 lines. If it approaches that size, split it or extract a class.
+5. Do not let a fragment mix unrelated responsibilities. A file named for modules must not also handle extensions or window layout.
+6. Keep CEF/AppKit callbacks in the controller only when they coordinate UI state directly.
+7. Prefer immutable view-model dictionaries or small Objective-C model objects when passing data to renderers.
+8. Keep extracted classes independent from `BrowserWindowController` ivars. Inject explicit dependencies through initializers or method parameters.
+9. New extracted classes must have a matching `.h` and `.mm` pair and be added to `src/CMakeLists.txt`.
+10. After each extraction, run `./tools/build-app.sh` and install with `./tools/install-app.sh` before committing.
+
+## Refactor Order
+
+Recommended order from lowest risk to higher impact:
+
+1. `ExtensionProfileStore`: mostly persistence and state bookkeeping.
+2. `ModuleUpdateService`: mostly data loading, parsing, and comparison, but touches module install flow.
+3. `WindowStateStore`: isolated persistence but sensitive because startup restoration order matters.
+4. `InternalPageRenderer`: high payoff, but it touches many internal pages and should be done page family by page family.
+5. Tab/group services: defer until the current UI orchestration is stable enough to avoid regressions.
+
+## Review Checklist
+
+Before committing a controller refactor:
+
+- `BrowserWindowController.mm` still reads as orchestration only.
+- No fragment grows beyond the documented soft limit without a reason.
+- Any moved logic has the same startup/shutdown ordering as before.
+- Internal pages still work from stable `babelchrome://...` URLs, not runtime-local URLs.
+- Session restore still rebuilds window, sidebar, groups, tabs, and browsers in the intended order.
+- `./tools/build-app.sh` succeeds.
+- `/Applications/BabelChrome.app` is reinstalled when behavior changes.
+
+## Navigation
+
+Previous: [PHP Modules](05-php-modules.md)  
+Next: none  
+README: [README](README.md)

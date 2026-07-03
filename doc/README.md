@@ -21,6 +21,7 @@ open "babelchrome://open?group=Group%20n&url=http%3A%2F%2F127.0.0.1%3A8772"
 - [Manual Tests](03-manual-tests.md)
 - [Features](04-features.md)
 - [PHP Modules](05-php-modules.md)
+- [Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
 
 ## Current Scope
 
