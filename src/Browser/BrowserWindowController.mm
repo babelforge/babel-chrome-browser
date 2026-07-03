@@ -21,6 +21,7 @@
 #import "Browser/SettingsOptionRenderer.h"
 #import "Browser/StableServerURLResolver.h"
 #import "Browser/StableViewerURLResolver.h"
+#import "Browser/TabPlacementPolicy.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserSupportViews.h"
 #import "Browser/BrowserTheme.h"
@@ -134,6 +135,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
   BabelStableServerURLResolver* stableServerURLResolver_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
+  BabelTabPlacementPolicy* tabPlacementPolicy_;
   BabelWindowStateStore* windowStateStore_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
@@ -227,6 +229,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelModuleSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
     stableServerURLResolver_ = [[BabelStableServerURLResolver alloc] init];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
+    tabPlacementPolicy_ = [[BabelTabPlacementPolicy alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
     evictingBrowserTabIdentifiers_ = [NSMutableSet set];

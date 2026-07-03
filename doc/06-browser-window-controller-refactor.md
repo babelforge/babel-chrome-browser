@@ -51,6 +51,7 @@ BrowserWindowController
             |__ OmniboxLocalSuggestionBuilder
             |__ GoogleSuggestClient
             |__ OmniboxSuggestionsController
+            |__ TabPlacementPolicy
             |__ more focused collaborators as needed
 ```
 
@@ -79,7 +80,7 @@ BrowserWindowController
 | `BrowserWindowController+SettingsOptions.inc.mm` | Compatibility wrappers for app settings option HTML. Actual option rendering is delegated to `BabelSettingsOptionRenderer`, and settings value persistence/validation is delegated to `BabelBrowserSettingsStore`. |
 | `BrowserWindowController+SettingsPages.inc.mm` | Main Settings value collection, module settings value collection, and view-model collection for History and Extensions. Main Settings rendering is delegated to `BabelAppSettingsPageRenderer`; module Settings rendering is delegated to `BabelModuleSettingsPageRenderer`; History page body rendering is delegated to `BabelHistoryPageRenderer`; Extensions page body rendering is delegated to `BabelExtensionsPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. Stable server URL parsing and internal query handling are delegated to `BabelStableServerURLResolver`. |
-| `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
+| `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. New-tab insertion policy is delegated to `BabelTabPlacementPolicy`. |
 | `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tab reopening orchestration. Recently closed tab stack ownership is delegated to `BabelRecentlyClosedTabStore`. |
 | `BrowserWindowController+URLOpening.inc.mm` | External URL opening, command URL handling, new tab placement, and open requests from macOS or CEF. |
 
@@ -225,6 +226,17 @@ The controller may debounce calls and reject stale generations, but it must not 
 - show/hide panel state.
 
 The controller may add favicon-enriched suggestions and execute selected suggestion actions, but it must not own the mutable suggestions array or row rendering loop directly.
+
+### `BabelTabPlacementPolicy`
+
+`BabelTabPlacementPolicy` owns new-tab insertion rules:
+
+- append strategy;
+- after-selected strategy;
+- child-cluster strategy;
+- descendant detection through parent tab identifiers.
+
+The controller may still mutate the group tab array and build lightweight identifier maps, but it must not implement tab placement strategy logic directly.
 
 ### `BabelBrowserSettingsStore`
 

@@ -179,58 +179,42 @@
           inGroup:(BabelBrowserGroup*)group
         parentTab:(BabelBrowserTab*)parentTab
  respectingUserStrategy:(BOOL)respectingUserStrategy {
-  if (!parentTab || ![group.tabs containsObject:parentTab] ||
-      (respectingUserStrategy &&
-       [[self tabOpeningStrategy] isEqualToString:BabelTabOpeningStrategyAppend])) {
+  NSArray<NSString*>* tabIdentifiers = [self tabIdentifiersForGroup:group];
+  NSString* parentTabIdentifier = parentTab.identifier ?: @"";
+  if ([tabPlacementPolicy_ shouldAppendTabWithParentIdentifier:parentTabIdentifier
+                                                tabIdentifiers:tabIdentifiers
+                                                      strategy:[self tabOpeningStrategy]
+                                        respectingUserStrategy:respectingUserStrategy]) {
     [group.tabs addObject:tab];
     return;
   }
 
-  NSUInteger insertionIndex = [self insertionIndexForNewChildOfTab:parentTab inGroup:group];
+  NSUInteger insertionIndex =
+      [tabPlacementPolicy_ insertionIndexForNewChildOfParentIdentifier:parentTabIdentifier
+                                                        tabIdentifiers:tabIdentifiers
+                                      parentIdentifiersByTabIdentifier:[self parentIdentifiersByTabIdentifierForGroup:group]
+                                                              strategy:[self tabOpeningStrategy]];
   [group.tabs insertObject:tab atIndex:MIN(insertionIndex, group.tabs.count)];
 }
 
-- (NSUInteger)insertionIndexForNewChildOfTab:(BabelBrowserTab*)parentTab
-                                     inGroup:(BabelBrowserGroup*)group {
-  NSUInteger parentIndex = [group.tabs indexOfObject:parentTab];
-  if (parentIndex == NSNotFound) {
-    return group.tabs.count;
-  }
-
-  if ([[self tabOpeningStrategy] isEqualToString:BabelTabOpeningStrategyAfterSelected]) {
-    return parentIndex + 1;
-  }
-
-  NSUInteger insertionIndex = parentIndex + 1;
-  for (NSUInteger index = parentIndex + 1; index < group.tabs.count; index++) {
-    BabelBrowserTab* candidate = group.tabs[index];
-    if (![self tab:candidate descendsFromTabIdentifier:parentTab.identifier inGroup:group]) {
-      break;
+- (NSArray<NSString*>*)tabIdentifiersForGroup:(BabelBrowserGroup*)group {
+  NSMutableArray<NSString*>* tabIdentifiers = [NSMutableArray array];
+  for (BabelBrowserTab* tab in group.tabs) {
+    if (tab.identifier.length > 0) {
+      [tabIdentifiers addObject:tab.identifier];
     }
-    insertionIndex = index + 1;
   }
-  return insertionIndex;
+  return tabIdentifiers;
 }
 
-- (BOOL)tab:(BabelBrowserTab*)tab
-    descendsFromTabIdentifier:(NSString*)parentTabIdentifier
-      inGroup:(BabelBrowserGroup*)group {
-  NSString* currentParentIdentifier = tab.parentTabIdentifier;
-  NSMutableSet<NSString*>* seenIdentifiers = [NSMutableSet set];
-  while (currentParentIdentifier.length > 0) {
-    if ([currentParentIdentifier isEqualToString:parentTabIdentifier]) {
-      return YES;
+- (NSDictionary<NSString*, NSString*>*)parentIdentifiersByTabIdentifierForGroup:(BabelBrowserGroup*)group {
+  NSMutableDictionary<NSString*, NSString*>* parentIdentifiers = [NSMutableDictionary dictionary];
+  for (BabelBrowserTab* tab in group.tabs) {
+    if (tab.identifier.length > 0 && tab.parentTabIdentifier.length > 0) {
+      parentIdentifiers[tab.identifier] = tab.parentTabIdentifier;
     }
-
-    if ([seenIdentifiers containsObject:currentParentIdentifier]) {
-      return NO;
-    }
-    [seenIdentifiers addObject:currentParentIdentifier];
-
-    BabelBrowserTab* parentTab = [self tabWithIdentifier:currentParentIdentifier inGroup:group];
-    currentParentIdentifier = parentTab.parentTabIdentifier;
   }
-  return NO;
+  return parentIdentifiers;
 }
 
 - (NSString*)tabOpeningStrategy {
