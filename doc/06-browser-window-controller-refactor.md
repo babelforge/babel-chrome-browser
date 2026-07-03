@@ -41,6 +41,7 @@ BrowserWindowController
             |__ InternalPageRenderer
             |__ StableViewerURLResolver
             |__ StableServerURLResolver
+            |__ RuntimeRefreshCoordinator
             |__ BrowserSettingsStore
             |__ SettingsOptionRenderer
             |__ AppSettingsPageRenderer
@@ -69,7 +70,7 @@ BrowserWindowController
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
-| `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. Stable server identifier parsing is delegated to `BabelStableServerURLResolver`. |
+| `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. Stable server identifier parsing is delegated to `BabelStableServerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
 | `BrowserWindowController+SettingsOptions.inc.mm` | Compatibility wrappers for app settings option HTML. Actual option rendering is delegated to `BabelSettingsOptionRenderer`, and settings value persistence/validation is delegated to `BabelBrowserSettingsStore`. |
@@ -176,6 +177,16 @@ The controller may use the resolver to decide navigation and address display, bu
 - builds stable server reload URLs from runtime-local paths.
 
 The controller may decide when to navigate or reload actual tabs, but it must not manually parse `babelchrome://server/...` paths or internal server query parameters.
+
+### `BabelRuntimeRefreshCoordinator`
+
+`BabelRuntimeRefreshCoordinator` owns pending stable refresh URL state keyed by runtime CEF browser identifier:
+
+- enqueues stable URLs that must be refreshed after a runtime action completes;
+- consumes pending refresh URLs once the target browser reaches a non-module runtime URL;
+- keeps the mutable pending-refresh map out of `BrowserWindowController`.
+
+The controller may still decide which tabs to reload and when a runtime URL is eligible, but it must not store pending refresh arrays directly.
 
 ### `BabelBrowserSettingsStore`
 

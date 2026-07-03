@@ -14,7 +14,8 @@
   NSString* requestedURLString = [self stableURLStringByRemovingInternalQueryParameters:urlString];
   NSArray<NSString*>* refreshURLStrings = [self refreshURLStringsForStableURLString:urlString];
   if (refreshURLStrings.count > 0) {
-    pendingRefreshURLStringsByBrowserIdentifier_[@(browser->GetIdentifier())] = refreshURLStrings;
+    [runtimeRefreshCoordinator_ enqueueRefreshURLStrings:refreshURLStrings
+                                    forBrowserIdentifier:browser->GetIdentifier()];
   }
 
   tab.requestedURLString = requestedURLString;

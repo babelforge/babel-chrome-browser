@@ -42,13 +42,12 @@
                    ![self isLocalServiceRuntimeURLString:urlString]) {
           tab.requestedURLString = urlString;
         }
-        NSNumber* browserIdentifier = @([tab browser]->GetIdentifier());
-        NSArray<NSString*>* pendingRefreshURLStrings =
-            pendingRefreshURLStringsByBrowserIdentifier_[browserIdentifier];
-        if (pendingRefreshURLStrings.count > 0 &&
-            ![self isLocalServiceModuleURLString:urlString]) {
-          [pendingRefreshURLStringsByBrowserIdentifier_ removeObjectForKey:browserIdentifier];
-          [self reloadRequestedURLStrings:pendingRefreshURLStrings excludingTab:tab];
+        if (![self isLocalServiceModuleURLString:urlString]) {
+          NSArray<NSString*>* pendingRefreshURLStrings =
+              [runtimeRefreshCoordinator_ consumeRefreshURLStringsForBrowserIdentifier:[tab browser]->GetIdentifier()];
+          if (pendingRefreshURLStrings.count > 0) {
+            [self reloadRequestedURLStrings:pendingRefreshURLStrings excludingTab:tab];
+          }
         }
         NSArray<NSString*>* directRefreshURLStrings =
             [self refreshURLStringsForStableURLString:urlString];

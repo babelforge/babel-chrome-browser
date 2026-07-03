@@ -14,6 +14,7 @@
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/ModuleUIActionCoordinator.h"
 #import "Browser/RecentlyClosedTabStore.h"
+#import "Browser/RuntimeRefreshCoordinator.h"
 #import "Browser/SettingsOptionRenderer.h"
 #import "Browser/StableServerURLResolver.h"
 #import "Browser/StableViewerURLResolver.h"
@@ -125,6 +126,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleUpdateService* moduleUpdateService_;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
+  BabelRuntimeRefreshCoordinator* runtimeRefreshCoordinator_;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
   BabelStableServerURLResolver* stableServerURLResolver_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
@@ -132,7 +134,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
   NSMutableDictionary<NSNumber*, NSDate*>* pendingLocalDropBrowserIdentifiers_;
-  NSMutableDictionary<NSNumber*, NSArray<NSString*>*>* pendingRefreshURLStringsByBrowserIdentifier_;
   BabelBrowserGroup* selectedGroup_;
   NSMutableArray<BabelBrowserTab*>* tabs_;
   NSMutableArray<BabelBrowserTab*>* pendingTabs_;
@@ -215,6 +216,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
                                                         moduleUpdateService:moduleUpdateService_];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
+    runtimeRefreshCoordinator_ = [[BabelRuntimeRefreshCoordinator alloc] init];
     settingsOptionRenderer_ = [[BabelSettingsOptionRenderer alloc] init];
     appSettingsPageRenderer_ =
         [[BabelAppSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
@@ -226,7 +228,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
     evictingBrowserTabIdentifiers_ = [NSMutableSet set];
     pendingLocalDropBrowserIdentifiers_ = [NSMutableDictionary dictionary];
-    pendingRefreshURLStringsByBrowserIdentifier_ = [NSMutableDictionary dictionary];
     tabs_ = [NSMutableArray array];
     pendingTabs_ = [NSMutableArray array];
     browserClient_ = new BabelBrowserClient(self);

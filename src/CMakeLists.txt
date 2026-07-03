@@ -38,6 +38,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ModuleUIActionCoordinator.mm
   Browser/RecentlyClosedTabStore.h
   Browser/RecentlyClosedTabStore.mm
+  Browser/RuntimeRefreshCoordinator.h
+  Browser/RuntimeRefreshCoordinator.mm
   Browser/SettingsOptionRenderer.h
   Browser/SettingsOptionRenderer.mm
   Browser/StableServerURLResolver.h
