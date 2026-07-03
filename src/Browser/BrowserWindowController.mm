@@ -13,6 +13,8 @@
 #import "Browser/ExtensionsPageRenderer.h"
 #import "Browser/FaviconStore.h"
 #import "Browser/GoogleSuggestClient.h"
+#import "Browser/BrowserGroupCollection.h"
+#import "Browser/BrowserGroupFactory.h"
 #import "Browser/GroupListCoordinator.h"
 #import "Browser/GroupSessionStore.h"
 #import "Browser/HistoryPageRenderer.h"
@@ -142,6 +144,8 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
   BabelFaviconStore* faviconStore_;
   BabelGoogleSuggestClient* googleSuggestClient_;
+  BabelBrowserGroupCollection* browserGroupCollection_;
+  BabelBrowserGroupFactory* browserGroupFactory_;
   BabelGroupListCoordinator* groupListCoordinator_;
   BabelGroupSessionStore* groupSessionStore_;
   BabelHistoryPageRenderer* historyPageRenderer_;
@@ -263,6 +267,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
               [weakSelf pageContainerDidReceiveLocalDrop:container];
             }];
     googleSuggestClient_ = [[BabelGoogleSuggestClient alloc] init];
+    browserGroupCollection_ = [[BabelBrowserGroupCollection alloc] init];
+    browserGroupFactory_ = [[BabelBrowserGroupFactory alloc] initWithActionTarget:self];
     groupListCoordinator_ = [[BabelGroupListCoordinator alloc] init];
     groupSessionStore_ = [[BabelGroupSessionStore alloc] init];
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];

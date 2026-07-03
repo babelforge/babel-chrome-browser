@@ -97,20 +97,7 @@
     return existingGroup;
   }
 
-  BabelBrowserGroup* group = [[BabelBrowserGroup alloc] init];
-  group.identifier = identifier;
-  group.name = name;
-  group.groupItemView = [[BabelGroupItemView alloc] initWithIdentifier:identifier title:name];
-  group.groupItemView.target = self;
-  group.groupItemView.action = @selector(selectGroupFromItem:);
-  group.groupItemView.renameTarget = self;
-  group.groupItemView.renameAction = @selector(renameGroupFromMenu:);
-  group.groupItemView.deleteTarget = self;
-  group.groupItemView.deleteAction = @selector(deleteGroupFromMenu:);
-  group.groupItemView.dragTarget = self;
-  group.groupItemView.dragAction = @selector(dragGroupFromItem:);
-  group.groupItemView.dragEndTarget = self;
-  group.groupItemView.dragEndAction = @selector(finishDraggingGroupFromItem:);
+  BabelBrowserGroup* group = [browserGroupFactory_ makeGroupWithName:name identifier:identifier];
   [groups_ addObject:group];
   [groupsListView_ addSubview:group.groupItemView];
   [self layoutGroupItems];
@@ -118,25 +105,11 @@
 }
 
 - (BabelBrowserGroup*)groupWithIdentifier:(NSString*)identifier {
-  if (identifier.length == 0) {
-    return nil;
-  }
-
-  for (BabelBrowserGroup* group in groups_) {
-    if ([group.identifier isEqualToString:identifier]) {
-      return group;
-    }
-  }
-  return nil;
+  return [browserGroupCollection_ groupWithIdentifier:identifier groups:groups_];
 }
 
 - (BabelBrowserGroup*)groupWithName:(NSString*)name {
-  for (BabelBrowserGroup* group in groups_) {
-    if ([group.name isEqualToString:name]) {
-      return group;
-    }
-  }
-  return nil;
+  return [browserGroupCollection_ groupWithName:name groups:groups_];
 }
 
 - (BabelBrowserGroup*)ensureGroupNamed:(NSString*)name {
@@ -163,11 +136,7 @@
 }
 
 - (NSString*)nextManualGroupName {
-  NSUInteger index = 1;
-  while ([self groupWithName:[NSString stringWithFormat:@"Group %lu", (unsigned long)index]]) {
-    index++;
-  }
-  return [NSString stringWithFormat:@"Group %lu", (unsigned long)index];
+  return [browserGroupCollection_ nextManualGroupNameForGroups:groups_];
 }
 
 - (void)addGroupFromButton:(id)sender {
@@ -323,12 +292,7 @@
 }
 
 - (BabelBrowserGroup*)groupToSelectAfterDeletingGroupAtIndex:(NSUInteger)groupIndex {
-  if (groups_.count <= 1) {
-    return nil;
-  }
-
-  NSUInteger nextIndex = groupIndex > 0 ? groupIndex - 1 : 1;
-  return groups_[nextIndex];
+  return [browserGroupCollection_ groupToSelectAfterDeletingGroupAtIndex:groupIndex groups:groups_];
 }
 
 - (void)deleteGroup:(BabelBrowserGroup*)group selectingGroup:(BabelBrowserGroup*)nextGroup {

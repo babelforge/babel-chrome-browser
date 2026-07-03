@@ -16,6 +16,10 @@ set(BABEL_CHROME_SOURCES
   Browser/AppSettingsPageRenderer.mm
   Browser/BrowserClient.h
   Browser/BrowserClient.mm
+  Browser/BrowserGroupCollection.h
+  Browser/BrowserGroupCollection.mm
+  Browser/BrowserGroupFactory.h
+  Browser/BrowserGroupFactory.mm
   Browser/BrowserSettingsStore.h
   Browser/BrowserSettingsStore.mm
   Browser/BrowserTabFactory.h
