@@ -16,6 +16,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ExtensionProfileStore.mm
   Browser/FaviconStore.h
   Browser/FaviconStore.mm
+  Browser/ModuleUpdateService.h
+  Browser/ModuleUpdateService.mm
   Browser/BrowserModels.h
   Browser/BrowserModels.mm
   Browser/BrowserTheme.h

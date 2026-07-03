@@ -3,6 +3,7 @@
 #import "Browser/BrowserClient.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/FaviconStore.h"
+#import "Browser/ModuleUpdateService.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
@@ -121,6 +122,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelFaviconStore* faviconStore_;
+  BabelModuleUpdateService* moduleUpdateService_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
   NSMutableDictionary<NSNumber*, NSDate*>* pendingLocalDropBrowserIdentifiers_;
@@ -186,6 +188,13 @@ disabledProfileExtensionIdentifiersDefaultsKey:BabelChromeConfiguration.disabled
 pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pendingProfileExtensionRestartStatesDefaultsKey];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
+    moduleUpdateService_ =
+        [[BabelModuleUpdateService alloc]
+            initWithUserDefaults:NSUserDefaults.standardUserDefaults
+             updateURLDefaultsKey:kModuleUpdateURLDefaultsKey
+   updateLocalDirectoryDefaultsKey:kModuleUpdateLocalDirectoryDefaultsKey
+                localIndexFilePath:[BabelChromeConfiguration.applicationSupportDirectoryURL.path
+                                       stringByAppendingPathComponent:kModuleUpdateLocalIndexFilename]];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
     evictingBrowserTabIdentifiers_ = [NSMutableSet set];
     pendingLocalDropBrowserIdentifiers_ = [NSMutableDictionary dictionary];
@@ -246,9 +255,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
 #include "BrowserWindowController+SettingsPages.inc.mm"
 #include "BrowserWindowController+ModulePages.inc.mm"
 #include "BrowserWindowController+ModuleUpdateActions.inc.mm"
-#include "BrowserWindowController+ModuleUpdateSources.inc.mm"
-#include "BrowserWindowController+ModuleUpdateZipParsing.inc.mm"
-#include "BrowserWindowController+ModuleUpdatePreferences.inc.mm"
 #include "BrowserWindowController+ModuleActions.inc.mm"
 #include "BrowserWindowController+SettingsOptions.inc.mm"
 #include "BrowserWindowController+ExtensionActions.inc.mm"

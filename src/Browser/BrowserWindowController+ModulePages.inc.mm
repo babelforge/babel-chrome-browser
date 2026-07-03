@@ -4,8 +4,8 @@
   NSError* error = nil;
   NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&error];
   NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
-  NSString* updateURLString = [self moduleUpdateURLString];
-  NSString* updateLocalDirectory = [self moduleUpdateLocalDirectoryPath];
+  NSString* updateURLString = [moduleUpdateService_ updateURLString];
+  NSString* updateLocalDirectory = [moduleUpdateService_ localDirectoryPath];
   NSString* updateURLLabel = updateURLString.length > 0 ? updateURLString : @"Not configured";
   NSString* updateLocalLabel = updateLocalDirectory.length > 0 ? updateLocalDirectory : @"Not configured";
   NSMutableString* moduleListHTML = [NSMutableString string];
@@ -232,7 +232,7 @@
 }
 
 - (NSString*)moduleUpdatesPageHTML {
-  NSDictionary* updateResult = [self moduleUpdateReleaseManifestResult];
+  NSDictionary* updateResult = [moduleUpdateService_ releaseManifestResult];
   NSDictionary* manifest = [updateResult[@"manifest"] isKindOfClass:NSDictionary.class]
       ? updateResult[@"manifest"]
       : @{};
@@ -241,7 +241,8 @@
       : @"No source";
   NSString* errorMessage = [updateResult[@"error"] isKindOfClass:NSString.class] ? updateResult[@"error"] : @"";
   NSArray* releaseModules = [manifest[@"modules"] isKindOfClass:NSArray.class] ? manifest[@"modules"] : @[];
-  NSDictionary* releaseModulesByIdentifier = [self releaseModulesByIdentifier:releaseModules];
+  NSDictionary* releaseModulesByIdentifier =
+      [moduleUpdateService_ releaseModulesByIdentifier:releaseModules];
 
   NSError* snapshotError = nil;
   NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&snapshotError];
@@ -275,7 +276,8 @@
       NSString* status = @"Not found in update source";
       NSString* actionHTML = @"";
       if (availableVersion.length > 0) {
-        NSComparisonResult comparison = [self compareVersion:availableVersion toVersion:installedVersion];
+        NSComparisonResult comparison = [moduleUpdateService_ compareVersion:availableVersion
+                                                                    toVersion:installedVersion];
         if (comparison == NSOrderedDescending) {
           status = @"Update available";
           actionHTML = [NSString stringWithFormat:
@@ -321,8 +323,8 @@
     }
   }
 
-  NSString* updateURLString = [self moduleUpdateURLString];
-  NSString* localDirectory = [self moduleUpdateLocalDirectoryPath];
+  NSString* updateURLString = [moduleUpdateService_ updateURLString];
+  NSString* localDirectory = [moduleUpdateService_ localDirectoryPath];
   NSString* updateScriptHTML = updateCount > 0
       ? @"<script>"
          "const selectAllUpdates=document.getElementById('selectAllUpdates');"

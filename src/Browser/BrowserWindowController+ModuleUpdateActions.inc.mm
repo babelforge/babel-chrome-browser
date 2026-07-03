@@ -8,19 +8,13 @@
   [alert addButtonWithTitle:@"Save"];
   [alert addButtonWithTitle:@"Cancel"];
   NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 520, 28)];
-  textField.stringValue = [self moduleUpdateURLString];
+  textField.stringValue = [moduleUpdateService_ updateURLString];
   alert.accessoryView = textField;
   if ([alert runModal] != NSAlertFirstButtonReturn) {
     return;
   }
 
-  NSString* value = [textField.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-  if (value.length == 0) {
-    [NSUserDefaults.standardUserDefaults removeObjectForKey:kModuleUpdateURLDefaultsKey];
-  } else {
-    [NSUserDefaults.standardUserDefaults setObject:value forKey:kModuleUpdateURLDefaultsKey];
-  }
-  [NSUserDefaults.standardUserDefaults synchronize];
+  [moduleUpdateService_ setUpdateURLString:textField.stringValue];
 }
 
 - (void)configureModuleUpdateLocalDirectoryFromPanel {
@@ -29,7 +23,7 @@
   panel.canChooseDirectories = YES;
   panel.allowsMultipleSelection = NO;
   panel.title = @"Choose Module Update Folder";
-  NSString* currentPath = [self moduleUpdateLocalDirectoryPath];
+  NSString* currentPath = [moduleUpdateService_ localDirectoryPath];
   if (currentPath.length > 0) {
     panel.directoryURL = [NSURL fileURLWithPath:currentPath];
   }
@@ -42,8 +36,7 @@
     return;
   }
 
-  [NSUserDefaults.standardUserDefaults setObject:path forKey:kModuleUpdateLocalDirectoryDefaultsKey];
-  [NSUserDefaults.standardUserDefaults synchronize];
+  [moduleUpdateService_ setLocalDirectoryPath:path];
 }
 
 - (void)installPHPModuleUpdateWithIdentifier:(NSString*)moduleIdentifier {
@@ -59,7 +52,7 @@
     return;
   }
 
-  NSDictionary* updateResult = [self moduleUpdateReleaseManifestResult];
+  NSDictionary* updateResult = [moduleUpdateService_ releaseManifestResult];
   BOOL didInstallAtLeastOneModule = NO;
   NSMutableSet<NSString*>* seenModuleIdentifiers = [NSMutableSet set];
   NSMutableArray<NSString*>* errors = [NSMutableArray array];
@@ -72,16 +65,17 @@
     }
     [seenModuleIdentifiers addObject:trimmedModuleIdentifier];
 
-    NSDictionary* releaseModule = [self releaseModuleWithIdentifier:trimmedModuleIdentifier updateResult:updateResult];
+    NSDictionary* releaseModule = [moduleUpdateService_ releaseModuleWithIdentifier:trimmedModuleIdentifier
+                                                                       updateResult:updateResult];
     if (!releaseModule) {
       [errors addObject:[NSString stringWithFormat:@"%@: update was not found.", trimmedModuleIdentifier]];
       continue;
     }
 
     NSError* error = nil;
-    NSString* zipPath = [self resolvedUpdateZipPathForReleaseModule:releaseModule
-                                                       updateResult:updateResult
-                                                              error:&error];
+    NSString* zipPath = [moduleUpdateService_ resolvedUpdateZipPathForReleaseModule:releaseModule
+                                                                       updateResult:updateResult
+                                                                              error:&error];
     if (zipPath.length == 0) {
       NSString* message = error.localizedDescription ?: @"Unable to resolve the update zip.";
       [errors addObject:[NSString stringWithFormat:@"%@: %@", trimmedModuleIdentifier, message]];

@@ -58,10 +58,7 @@ BrowserWindowController
 | `BrowserWindowController+ModuleActions.inc.mm` | Module install, remove, enable, disable, open, and settings action handlers. |
 | `BrowserWindowController+ModuleGroupRouting.inc.mm` | Module manifest group routing, especially default group placement for module-created tabs. |
 | `BrowserWindowController+ModulePages.inc.mm` | Installed modules page, module detail page, and module HTML rendering. Candidate for `InternalPageRenderer`. |
-| `BrowserWindowController+ModuleUpdateActions.inc.mm` | Module update page actions, selected update installation, and UI action dispatch. Candidate for `ModuleUpdateService` coordination. |
-| `BrowserWindowController+ModuleUpdatePreferences.inc.mm` | Update source preferences for URL and local folder. Candidate for `ModuleUpdateService` or a settings store. |
-| `BrowserWindowController+ModuleUpdateSources.inc.mm` | Remote and local module update source discovery. Candidate for `ModuleUpdateService`. |
-| `BrowserWindowController+ModuleUpdateZipParsing.inc.mm` | Zip manifest parsing and update metadata extraction. Candidate for `ModuleUpdateService`. |
+| `BrowserWindowController+ModuleUpdateActions.inc.mm` | Module update prompts, selected update installation action dispatch, and LocalServiceHost install coordination. Source preferences, source discovery, zip parsing, and zip resolution are delegated to `BabelModuleUpdateService`. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
@@ -101,6 +98,22 @@ The controller may ask for favicon lookup, but it must not recreate origin-key o
 
 The controller may open panels, show alerts, render extension pages, and route user actions, but it must not manipulate Chromium extension profile paths or preferences directly.
 
+### `BabelModuleUpdateService`
+
+`BabelModuleUpdateService` owns module update source and artifact resolution:
+
+- stores and reads the remote update URL;
+- stores and reads the local update folder path;
+- resolves a remote `modules-release-manifest.json` URL;
+- scans a local folder for module zip files;
+- caches local zip metadata by path, file modification time, and size;
+- extracts module manifests from zip files;
+- compares release versions;
+- builds release-module lookup tables;
+- resolves update zip paths from local folders or remote manifests.
+
+The controller may ask the service for update data, open source configuration prompts, install selected zip paths through `LocalServiceHost`, and render the module update page. It must not parse update manifests or inspect zip files directly.
+
 ## Extraction Candidates
 
 ### `InternalPageRenderer`
@@ -115,19 +128,6 @@ Move HTML generation for internal pages into a renderer layer. Good first target
 - history page HTML.
 
 The controller should provide view models and receive rendered HTML. It should not concatenate large HTML strings directly.
-
-### `ModuleUpdateService`
-
-Move update-source and zip-resolution logic out of the controller:
-
-- stored update URL and local folder;
-- remote manifest loading;
-- local zip scanning;
-- zip mtime/size cache;
-- installed-vs-available comparison;
-- selected update installation coordination.
-
-The controller should only render update state and forward user actions.
 
 ### `WindowStateStore`
 
@@ -159,10 +159,9 @@ The controller should apply state to AppKit objects, but should not know the ser
 
 Recommended order from lowest risk to higher impact:
 
-1. `ModuleUpdateService`: mostly data loading, parsing, and comparison, but touches module install flow.
-2. `WindowStateStore`: isolated persistence but sensitive because startup restoration order matters.
-3. `InternalPageRenderer`: high payoff, but it touches many internal pages and should be done page family by page family.
-4. Tab/group services: defer until the current UI orchestration is stable enough to avoid regressions.
+1. `WindowStateStore`: isolated persistence but sensitive because startup restoration order matters.
+2. `InternalPageRenderer`: high payoff, but it touches many internal pages and should be done page family by page family.
+3. Tab/group services: defer until the current UI orchestration is stable enough to avoid regressions.
 
 ## Review Checklist
 
