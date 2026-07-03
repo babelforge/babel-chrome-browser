@@ -51,6 +51,7 @@ BrowserWindowController
             |__ ModuleSettingsPageRenderer
             |__ HistoryPageRenderer
             |__ ExtensionsPageRenderer
+            |__ NewTabURLResolver
             |__ OmniboxLocalSuggestionBuilder
             |__ GoogleSuggestClient
             |__ OmniboxSuggestionsController
@@ -86,7 +87,7 @@ BrowserWindowController
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
-| `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Native group construction is delegated to `BabelBrowserGroupFactory`; group lookup, generated names, and delete-selection fallback are delegated to `BabelBrowserGroupCollection`; group reorder mutations are delegated to `BabelBrowserGroupMoveCoordinator`; tab lookup, containing-group lookup, tab identifier lists, and parent-tab maps are delegated to `BabelBrowserTabCollection`; strategy-based tab insertion is delegated to `BabelBrowserTabInsertionCoordinator`; existing-tab move mutations are delegated to `BabelBrowserTabMoveCoordinator`; group list layout is delegated to `BabelGroupListCoordinator`; group session IO and restored state parsing are delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser eviction is delegated to `BabelLiveBrowserEvictionPolicy`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`. |
+| `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Native group construction is delegated to `BabelBrowserGroupFactory`; group lookup, generated names, and delete-selection fallback are delegated to `BabelBrowserGroupCollection`; group reorder mutations are delegated to `BabelBrowserGroupMoveCoordinator`; tab lookup, containing-group lookup, tab identifier lists, and parent-tab maps are delegated to `BabelBrowserTabCollection`; strategy-based tab insertion is delegated to `BabelBrowserTabInsertionCoordinator`; existing-tab move mutations are delegated to `BabelBrowserTabMoveCoordinator`; group list layout is delegated to `BabelGroupListCoordinator`; group session IO and restored state parsing are delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; new-tab URL pair resolution is delegated to `BabelNewTabURLResolver`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser eviction is delegated to `BabelLiveBrowserEvictionPolicy`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`. |
 | `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, action execution, and shared internal utilities. Extensions/modules/history query parsing is delegated to `BabelInternalNavigationActionParser`; settings query mutation is delegated to `BabelInternalSettingsNavigationHandler`; body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`. |
 | `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
@@ -256,6 +257,17 @@ The controller may debounce calls and reject stale generations, but it must not 
 - show/hide panel state.
 
 The controller may add favicon-enriched suggestions and execute selected suggestion actions, but it must not own the mutable suggestions array or row rendering loop directly.
+
+### `BabelNewTabURLResolver`
+
+`BabelNewTabURLResolver` owns new-tab URL pair resolution:
+
+- resolves supported source URLs into stable viewer URLs;
+- resolves stable BabelChrome URLs into runtime navigation URLs;
+- keeps the user-facing requested URL separate from the runtime navigation URL;
+- rejects new-tab opens when a stable viewer URL applies but cannot be navigated.
+
+The controller may still choose the target group, create the native tab, update the address bar, and show the window, but it must not duplicate requested/navigation URL fallback logic inline.
 
 ### `BabelTabPlacementPolicy`
 

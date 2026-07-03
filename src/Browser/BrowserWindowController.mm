@@ -33,6 +33,7 @@
 #import "Browser/ModuleSettingsPageRenderer.h"
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/ModuleUIActionCoordinator.h"
+#import "Browser/NewTabURLResolver.h"
 #import "Browser/OmniboxLocalSuggestionBuilder.h"
 #import "Browser/OmniboxSuggestionsController.h"
 #import "Browser/RecentlyClosedTabStore.h"
@@ -168,6 +169,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
   BabelModuleUpdateService* moduleUpdateService_;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
+  BabelNewTabURLResolver* newTabURLResolver_;
   BabelOmniboxLocalSuggestionBuilder* omniboxLocalSuggestionBuilder_;
   BabelOmniboxSuggestionsController* omniboxSuggestionsController_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
@@ -308,6 +310,18 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     moduleUIActionCoordinator_ =
         [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
                                                         moduleUpdateService:moduleUpdateService_];
+    newTabURLResolver_ =
+        [[BabelNewTabURLResolver alloc]
+            initWithSupportedViewerURLResolver:^NSString*(NSString* urlString) {
+              return [weakSelf stableViewerURLStringForSupportedURLString:urlString];
+            }
+            stableNavigationURLResolver:^NSString*(NSString* urlString) {
+              return [weakSelf navigationURLStringForStableBabelChromeURLString:urlString];
+            }
+            stableViewerURLPredicate:^BOOL(NSString* urlString) {
+              BabelBrowserWindowController* strongSelf = weakSelf;
+              return strongSelf ? [strongSelf->stableViewerURLResolver_ isStableViewerURLString:urlString] : NO;
+            }];
     omniboxLocalSuggestionBuilder_ = [[BabelOmniboxLocalSuggestionBuilder alloc] init];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     runtimeRefreshCoordinator_ = [[BabelRuntimeRefreshCoordinator alloc] init];

@@ -850,17 +850,12 @@
   }
 
   BabelBrowserGroup* group = selectedGroup_ ?: [self ensureGroupNamed:kDefaultGroupName];
-  NSString* requestedURLString = [self stableViewerURLStringForSupportedURLString:urlString] ?: urlString;
-  NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
-  if (navigationURLString.length == 0) {
-    if ([stableViewerURLResolver_ isStableViewerURLString:requestedURLString] ||
-        [self stableViewerURLStringForSupportedURLString:urlString]) {
-      return;
-    }
-    navigationURLString = urlString;
+  BabelNewTabURLResolution* resolution = [newTabURLResolver_ resolveURLString:urlString];
+  if (!resolution.shouldOpen) {
+    return;
   }
-  BabelBrowserTab* tab = [self createTabForURL:navigationURLString inGroup:group];
-  tab.requestedURLString = requestedURLString;
+  BabelBrowserTab* tab = [self createTabForURL:resolution.navigationURLString inGroup:group];
+  tab.requestedURLString = resolution.requestedURLString;
   if (tab == selectedTab_) {
     [self updateAddressBarForTab:tab];
   }
@@ -884,17 +879,14 @@
     }
   }
 
-  NSString* requestedURLString = [self stableViewerURLStringForSupportedURLString:urlString] ?: urlString;
-  NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
-  if (navigationURLString.length == 0) {
-    if ([stableViewerURLResolver_ isStableViewerURLString:requestedURLString] ||
-        [self stableViewerURLStringForSupportedURLString:urlString]) {
-      return;
-    }
-    navigationURLString = urlString;
+  BabelNewTabURLResolution* resolution = [newTabURLResolver_ resolveURLString:urlString];
+  if (!resolution.shouldOpen) {
+    return;
   }
-  BabelBrowserTab* tab = [self createTabForURL:navigationURLString inGroup:group parentTab:parentTab];
-  tab.requestedURLString = requestedURLString;
+  BabelBrowserTab* tab = [self createTabForURL:resolution.navigationURLString
+                                       inGroup:group
+                                     parentTab:parentTab];
+  tab.requestedURLString = resolution.requestedURLString;
   if (tab == selectedTab_) {
     [self updateAddressBarForTab:tab];
   }
