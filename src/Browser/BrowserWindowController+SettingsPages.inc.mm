@@ -97,8 +97,8 @@
 }
 
 - (NSString*)extensionsPageHTML {
-  NSArray<NSString*>* extensionPaths = [self installedExtensionPaths];
-  NSArray<NSDictionary*>* profileExtensions = [self profileInstalledExtensions];
+  NSArray<NSString*>* extensionPaths = [extensionProfileStore_ installedExtensionPaths];
+  NSArray<NSDictionary*>* profileExtensions = [extensionProfileStore_ profileInstalledExtensions];
   NSMutableString* profileListHTML = [NSMutableString string];
   if (profileExtensions.count == 0) {
     [profileListHTML appendString:@"<p class='empty'>No Chrome profile extension was found.</p>"];
@@ -111,9 +111,9 @@
       BOOL enabled = [extension[@"enabled"] boolValue];
       NSString* toggleAction = enabled ? @"disableProfile" : @"enableProfile";
       NSString* toggleLabel = enabled ? @"Disable" : @"Enable";
-      NSString* status = [self profileExtensionStatusLabelForIdentifier:extensionIdentifier
-                                                                 enabled:enabled];
-      NSString* restartHTML = [self profileExtensionRequiresRestart:extensionIdentifier]
+      NSString* status = [extensionProfileStore_ profileExtensionStatusLabelForIdentifier:extensionIdentifier
+                                                                                  enabled:enabled];
+      NSString* restartHTML = [extensionProfileStore_ profileExtensionRequiresRestart:extensionIdentifier]
           ? @"<a class='smallButton primarySmallButton' href='babelchrome://extensions?restart=1'>Restart</a>"
           : @"";
       [profileListHTML appendFormat:

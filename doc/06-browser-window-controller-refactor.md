@@ -47,8 +47,6 @@ BrowserWindowController
 | `BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm` | CEF browser title, URL, loading, favicon, and status updates. Favicon persistence is delegated to `BabelFaviconStore`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, docking mode, resizing, closing, and keyboard/menu integration. |
 | `BrowserWindowController+ExtensionActions.inc.mm` | Extension install, remove, enable, disable, restart, and page action handlers. |
-| `BrowserWindowController+ExtensionDiscovery.inc.mm` | Extension discovery, metadata extraction, Chrome Web Store search page helpers, and extension listing data. |
-| `BrowserWindowController+ExtensionProfileState.inc.mm` | Extension profile state persistence and restart-pending state. Candidate for `ExtensionProfileStore`. |
 | `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group persistence, group selection, group list refresh, and group restore data. |
 | `BrowserWindowController+InterfaceBuilding.inc.mm` | Main AppKit interface construction and initial view hierarchy wiring. |
 | `BrowserWindowController+InternalNavigationRouter.inc.mm` | Routing for `babelchrome://settings`, `babelchrome://modules`, `babelchrome://extensions`, `babelchrome://history`, and related internal URLs. |
@@ -90,6 +88,19 @@ BrowserWindowController
 
 The controller may ask for favicon lookup, but it must not recreate origin-key or JSON persistence logic.
 
+### `BabelExtensionProfileStore`
+
+`BabelExtensionProfileStore` owns Chromium profile extension state:
+
+- reads and writes configured unpacked extension paths;
+- discovers profile-installed extensions and localized extension names;
+- reads and writes Chromium profile `Preferences` and `Secure Preferences`;
+- tracks disabled profile extensions and restart-pending state in `NSUserDefaults`;
+- removes profile extension packages, backups, disabled packages, and profile references;
+- restores disabled extension packages moved by older BabelChrome versions.
+
+The controller may open panels, show alerts, render extension pages, and route user actions, but it must not manipulate Chromium extension profile paths or preferences directly.
+
 ## Extraction Candidates
 
 ### `InternalPageRenderer`
@@ -117,18 +128,6 @@ Move update-source and zip-resolution logic out of the controller:
 - selected update installation coordination.
 
 The controller should only render update state and forward user actions.
-
-### `ExtensionProfileStore`
-
-Move extension state persistence and profile metadata into a store:
-
-- enabled/disabled extension state;
-- restart-pending extension state;
-- extension profile directories;
-- installed extension metadata files;
-- resilient loading when extension directories are missing.
-
-The controller should keep extension UI actions, not extension persistence details.
 
 ### `WindowStateStore`
 
@@ -160,11 +159,10 @@ The controller should apply state to AppKit objects, but should not know the ser
 
 Recommended order from lowest risk to higher impact:
 
-1. `ExtensionProfileStore`: mostly persistence and state bookkeeping.
-2. `ModuleUpdateService`: mostly data loading, parsing, and comparison, but touches module install flow.
-3. `WindowStateStore`: isolated persistence but sensitive because startup restoration order matters.
-4. `InternalPageRenderer`: high payoff, but it touches many internal pages and should be done page family by page family.
-5. Tab/group services: defer until the current UI orchestration is stable enough to avoid regressions.
+1. `ModuleUpdateService`: mostly data loading, parsing, and comparison, but touches module install flow.
+2. `WindowStateStore`: isolated persistence but sensitive because startup restoration order matters.
+3. `InternalPageRenderer`: high payoff, but it touches many internal pages and should be done page family by page family.
+4. Tab/group services: defer until the current UI orchestration is stable enough to avoid regressions.
 
 ## Review Checklist
 

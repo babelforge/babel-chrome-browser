@@ -1,6 +1,7 @@
 #import "Browser/BrowserWindowController.h"
 
 #import "Browser/BrowserClient.h"
+#import "Browser/ExtensionProfileStore.h"
 #import "Browser/FaviconStore.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserTheme.h"
@@ -118,6 +119,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelClosedTab*>* closedTabs_;
   NSMutableArray<NSDictionary*>* omniboxSuggestions_;
   NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
+  BabelExtensionProfileStore* extensionProfileStore_;
   BabelFaviconStore* faviconStore_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
@@ -174,6 +176,14 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     closedTabs_ = [NSMutableArray array];
     omniboxSuggestions_ = [NSMutableArray array];
     googleSuggestCache_ = [NSMutableDictionary dictionary];
+    extensionProfileStore_ =
+        [[BabelExtensionProfileStore alloc]
+            initWithProfileDirectoryURL:BabelChromeConfiguration.profileDirectoryURL
+      profileExtensionBackupDirectoryURL:BabelChromeConfiguration.profileExtensionBackupDirectoryURL
+                            userDefaults:NSUserDefaults.standardUserDefaults
+               extensionPathsDefaultsKey:BabelChromeConfiguration.extensionPathsDefaultsKey
+disabledProfileExtensionIdentifiersDefaultsKey:BabelChromeConfiguration.disabledProfileExtensionIdentifiersDefaultsKey
+pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pendingProfileExtensionRestartStatesDefaultsKey];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];
@@ -201,8 +211,8 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     tabDragHoverGeneration_ = 0;
     googleSuggestGeneration_ = 0;
     selectedOmniboxSuggestionIndex_ = -1;
-    [self restoreProfileExtensionsMovedByOlderVersions];
-    [self clearPendingProfileExtensionRestartStates];
+    [extensionProfileStore_ restoreProfileExtensionsMovedByOlderVersions];
+    [extensionProfileStore_ clearPendingProfileExtensionRestartStates];
     window.delegate = self;
     [self buildInterface];
     [faviconStore_ restore];
@@ -241,8 +251,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
 #include "BrowserWindowController+ModuleUpdatePreferences.inc.mm"
 #include "BrowserWindowController+ModuleActions.inc.mm"
 #include "BrowserWindowController+SettingsOptions.inc.mm"
-#include "BrowserWindowController+ExtensionDiscovery.inc.mm"
-#include "BrowserWindowController+ExtensionProfileState.inc.mm"
 #include "BrowserWindowController+ExtensionActions.inc.mm"
 #include "BrowserWindowController+InternalUtilities.inc.mm"
 

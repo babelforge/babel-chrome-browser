@@ -1,87 +1,7 @@
 // This file is included by BrowserWindowController.mm.
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (void)removeProfileExtensionWithIdentifier:(NSString*)extensionIdentifier {
-  if (![self isValidProfileExtensionIdentifier:extensionIdentifier]) {
-    return;
-  }
-
-  NSURL* extensionDirectoryURL = [self profileExtensionDirectoryURLForIdentifier:extensionIdentifier];
-  NSURL* disabledExtensionDirectoryURL =
-      [self disabledProfileExtensionDirectoryURLForIdentifier:extensionIdentifier];
-  NSURL* backupExtensionDirectoryURL =
-      [self profileExtensionBackupDirectoryURLForIdentifier:extensionIdentifier];
-  [NSFileManager.defaultManager removeItemAtURL:extensionDirectoryURL error:nil];
-  [NSFileManager.defaultManager removeItemAtURL:disabledExtensionDirectoryURL error:nil];
-  [NSFileManager.defaultManager removeItemAtURL:backupExtensionDirectoryURL error:nil];
-  [self saveProfileExtensionWithIdentifier:extensionIdentifier disabled:NO];
-  [self removeProfileExtensionReferencesWithIdentifier:extensionIdentifier
-                                           preferences:[self profilePreferencesFileURL]];
-  [self removeProfileExtensionReferencesWithIdentifier:extensionIdentifier
-                                           preferences:[self profileSecurePreferencesFileURL]];
-}
-
-- (void)removeProfileExtensionReferencesWithIdentifier:(NSString*)extensionIdentifier
-                                           preferences:(NSURL*)preferencesURL {
-  NSMutableDictionary* preferences = [self mutableProfilePreferencesDictionaryAtURL:preferencesURL];
-  if (preferences.count == 0) {
-    return;
-  }
-
-  NSMutableDictionary* extensions = [preferences[@"extensions"] isKindOfClass:NSMutableDictionary.class]
-      ? preferences[@"extensions"]
-      : nil;
-  NSMutableDictionary* settings = [extensions[@"settings"] isKindOfClass:NSMutableDictionary.class]
-      ? extensions[@"settings"]
-      : nil;
-  [settings removeObjectForKey:extensionIdentifier];
-
-  NSMutableDictionary* commands = [extensions[@"commands"] isKindOfClass:NSMutableDictionary.class]
-      ? extensions[@"commands"]
-      : nil;
-  for (NSString* commandName in commands.allKeys.copy) {
-    NSDictionary* command = [commands[commandName] isKindOfClass:NSDictionary.class]
-        ? commands[commandName]
-        : nil;
-    if ([command[@"extension"] isEqualToString:extensionIdentifier]) {
-      [commands removeObjectForKey:commandName];
-    }
-  }
-
-  NSMutableDictionary* installSignature =
-      [extensions[@"install_signature"] isKindOfClass:NSMutableDictionary.class]
-          ? extensions[@"install_signature"]
-          : nil;
-  [self removeProfileExtensionIdentifier:extensionIdentifier
-                         fromMutableArray:installSignature[@"ids"]];
-  [self removeProfileExtensionIdentifier:extensionIdentifier
-                         fromMutableArray:installSignature[@"invalid_ids"]];
-
-  NSMutableDictionary* updateClientData =
-      [preferences[@"updateclientdata"] isKindOfClass:NSMutableDictionary.class]
-          ? preferences[@"updateclientdata"]
-          : nil;
-  NSMutableDictionary* updateClientApps =
-      [updateClientData[@"apps"] isKindOfClass:NSMutableDictionary.class]
-          ? updateClientData[@"apps"]
-          : nil;
-  [updateClientApps removeObjectForKey:extensionIdentifier];
-
-  [self saveProfilePreferencesDictionary:preferences toURL:preferencesURL];
-}
-
-- (void)removeProfileExtensionIdentifier:(NSString*)extensionIdentifier
-                        fromMutableArray:(id)mutableArray {
-  if (![mutableArray isKindOfClass:NSMutableArray.class]) {
-    return;
-  }
-
-  [mutableArray removeObject:extensionIdentifier];
-}
-
-- (void)saveInstalledExtensionPaths:(NSArray<NSString*>*)extensionPaths {
-  [NSUserDefaults.standardUserDefaults setObject:extensionPaths
-                                          forKey:BabelChromeConfiguration.extensionPathsDefaultsKey];
-  [NSUserDefaults.standardUserDefaults synchronize];
+  [extensionProfileStore_ removeProfileExtensionWithIdentifier:extensionIdentifier];
 }
 
 - (void)addUnpackedExtensionFromPanel {
@@ -103,17 +23,19 @@
     return;
   }
 
-  NSMutableArray<NSString*>* extensionPaths = [[self installedExtensionPaths] mutableCopy];
+  NSMutableArray<NSString*>* extensionPaths =
+      [[extensionProfileStore_ installedExtensionPaths] mutableCopy];
   if (![extensionPaths containsObject:extensionPath]) {
     [extensionPaths addObject:extensionPath];
   }
-  [self saveInstalledExtensionPaths:extensionPaths];
+  [extensionProfileStore_ saveInstalledExtensionPaths:extensionPaths];
 }
 
 - (void)removeUnpackedExtensionAtPath:(NSString*)extensionPath {
-  NSMutableArray<NSString*>* extensionPaths = [[self installedExtensionPaths] mutableCopy];
+  NSMutableArray<NSString*>* extensionPaths =
+      [[extensionProfileStore_ installedExtensionPaths] mutableCopy];
   [extensionPaths removeObject:extensionPath];
-  [self saveInstalledExtensionPaths:extensionPaths];
+  [extensionProfileStore_ saveInstalledExtensionPaths:extensionPaths];
 }
 
 - (void)openChromeWebStoreSearchForQuery:(NSString*)query {

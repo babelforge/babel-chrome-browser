@@ -123,13 +123,13 @@
       }
 
       if ([item.name isEqualToString:@"disableProfile"] && item.value.length > 0) {
-        [self setProfileExtensionWithIdentifier:item.value enabled:NO];
+        [extensionProfileStore_ setProfileExtensionWithIdentifier:item.value enabled:NO];
         [self openExtensionsPageForBrowser:browser];
         return YES;
       }
 
       if ([item.name isEqualToString:@"enableProfile"] && item.value.length > 0) {
-        [self setProfileExtensionWithIdentifier:item.value enabled:YES];
+        [extensionProfileStore_ setProfileExtensionWithIdentifier:item.value enabled:YES];
         [self openExtensionsPageForBrowser:browser];
         return YES;
       }
