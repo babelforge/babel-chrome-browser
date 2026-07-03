@@ -22,6 +22,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserGroupFactory.mm
   Browser/BrowserSettingsStore.h
   Browser/BrowserSettingsStore.mm
+  Browser/BrowserTabCollection.h
+  Browser/BrowserTabCollection.mm
   Browser/BrowserTabFactory.h
   Browser/BrowserTabFactory.mm
   Browser/ChromeCommandParser.h

@@ -319,16 +319,7 @@
 }
 
 - (BabelBrowserTab*)tabWithIdentifier:(NSString*)identifier inGroup:(BabelBrowserGroup*)group {
-  if (identifier.length == 0) {
-    return nil;
-  }
-
-  for (BabelBrowserTab* tab in group.tabs) {
-    if ([tab.identifier isEqualToString:identifier]) {
-      return tab;
-    }
-  }
-  return nil;
+  return [browserTabCollection_ tabWithIdentifier:identifier inGroup:group];
 }
 
 - (BabelBrowserTab*)tabWithURLString:(NSString*)urlString inGroup:(BabelBrowserGroup*)group {
@@ -435,23 +426,11 @@
 }
 
 - (NSArray<NSString*>*)tabIdentifiersForGroup:(BabelBrowserGroup*)group {
-  NSMutableArray<NSString*>* tabIdentifiers = [NSMutableArray array];
-  for (BabelBrowserTab* tab in group.tabs) {
-    if (tab.identifier.length > 0) {
-      [tabIdentifiers addObject:tab.identifier];
-    }
-  }
-  return tabIdentifiers;
+  return [browserTabCollection_ tabIdentifiersForGroup:group];
 }
 
 - (NSDictionary<NSString*, NSString*>*)parentIdentifiersByTabIdentifierForGroup:(BabelBrowserGroup*)group {
-  NSMutableDictionary<NSString*, NSString*>* parentIdentifiers = [NSMutableDictionary dictionary];
-  for (BabelBrowserTab* tab in group.tabs) {
-    if (tab.identifier.length > 0 && tab.parentTabIdentifier.length > 0) {
-      parentIdentifiers[tab.identifier] = tab.parentTabIdentifier;
-    }
-  }
-  return parentIdentifiers;
+  return [browserTabCollection_ parentIdentifiersByTabIdentifierForGroup:group];
 }
 
 - (NSString*)tabOpeningStrategy {
@@ -684,26 +663,11 @@
 }
 
 - (BabelBrowserTab*)tabWithIdentifier:(NSString*)identifier {
-  for (BabelBrowserGroup* group in groups_) {
-    BabelBrowserTab* tab = [self tabWithIdentifier:identifier inGroup:group];
-    if (tab) {
-      return tab;
-    }
-  }
-  return nil;
+  return [browserTabCollection_ tabWithIdentifier:identifier groups:groups_];
 }
 
 - (BabelBrowserGroup*)groupContainingTab:(BabelBrowserTab*)tab {
-  if (!tab) {
-    return nil;
-  }
-
-  for (BabelBrowserGroup* group in groups_) {
-    if ([group.tabs containsObject:tab]) {
-      return group;
-    }
-  }
-  return nil;
+  return [browserTabCollection_ groupContainingTab:tab groups:groups_];
 }
 
 - (BabelBrowserGroup*)groupAtWindowPoint:(NSPoint)windowPoint {
