@@ -126,18 +126,7 @@
 }
 
 - (NSString*)serverProjectIdentifierForStableURLString:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  if (![components.scheme isEqualToString:@"babelchrome"] ||
-      ![components.host isEqualToString:@"server"]) {
-    return @"";
-  }
-
-  NSArray<NSString*>* pathComponents = [components.path componentsSeparatedByString:@"/"];
-  if (pathComponents.count < 2) {
-    return @"";
-  }
-
-  return pathComponents[1].stringByRemovingPercentEncoding ?: pathComponents[1];
+  return [stableServerURLResolver_ serverProjectIdentifierForStableURLString:urlString];
 }
 
 - (void)reloadServerTabsWithProjectIdentifiers:(NSArray<NSString*>*)projectIdentifiers {

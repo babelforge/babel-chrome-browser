@@ -15,6 +15,7 @@
 #import "Browser/ModuleUIActionCoordinator.h"
 #import "Browser/RecentlyClosedTabStore.h"
 #import "Browser/SettingsOptionRenderer.h"
+#import "Browser/StableServerURLResolver.h"
 #import "Browser/StableViewerURLResolver.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserSupportViews.h"
@@ -71,8 +72,6 @@ static NSString* const kDeveloperToolsDockModeLeft = @"left";
 static NSString* const kDeveloperToolsDockModeRight = @"right";
 static NSString* const kCompactCommandOpaquePrefix = @"babelchrome:group:";
 static NSString* const kCompactCommandHierarchicalPrefix = @"babelchrome://command/group:";
-static NSString* const kInternalStartQueryParameter = @"__babelchrome_start";
-static NSString* const kInternalRefreshQueryParameter = @"__babelchrome_refresh";
 static NSString* const kHistoryPageURLString = @"babelchrome://history";
 static NSString* const kSettingsPageURLString = @"babelchrome://settings";
 static NSString* const kExtensionsPageURLString = @"babelchrome://extensions";
@@ -127,6 +126,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
+  BabelStableServerURLResolver* stableServerURLResolver_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelWindowStateStore* windowStateStore_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
@@ -220,6 +220,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelAppSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
     moduleSettingsPageRenderer_ =
         [[BabelModuleSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
+    stableServerURLResolver_ = [[BabelStableServerURLResolver alloc] init];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     recentlyUsedTabIdentifiers_ = [NSMutableArray array];

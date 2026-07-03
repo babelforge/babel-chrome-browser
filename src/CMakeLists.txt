@@ -40,6 +40,8 @@ set(BABEL_CHROME_SOURCES
   Browser/RecentlyClosedTabStore.mm
   Browser/SettingsOptionRenderer.h
   Browser/SettingsOptionRenderer.mm
+  Browser/StableServerURLResolver.h
+  Browser/StableServerURLResolver.mm
   Browser/StableViewerURLResolver.h
   Browser/StableViewerURLResolver.mm
   Browser/WindowStateStore.h

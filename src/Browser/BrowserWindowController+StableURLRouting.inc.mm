@@ -115,111 +115,32 @@
 }
 
 - (BOOL)isStableBabelChromeURLString:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  return [components.scheme isEqualToString:@"babelchrome"] && components.host.length > 0;
+  return [stableServerURLResolver_ isStableBabelChromeURLString:urlString];
 }
 
 - (BOOL)isStableServerURLString:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  return [components.scheme isEqualToString:@"babelchrome"] &&
-         [components.host isEqualToString:@"server"] &&
-         components.path.length > 1;
+  return [stableServerURLResolver_ isStableServerURLString:urlString];
 }
 
 - (BOOL)stableServerURLStringRequestsStart:(NSString*)urlString {
-  if (![self isStableServerURLString:urlString]) {
-    return NO;
-  }
-
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  for (NSURLQueryItem* item in components.queryItems ?: @[]) {
-    if ([item.name isEqualToString:kInternalStartQueryParameter] &&
-        ![item.value isEqualToString:@"0"]) {
-      return YES;
-    }
-  }
-
-  return NO;
+  return [stableServerURLResolver_ stableServerURLStringRequestsStart:urlString];
 }
 
 - (NSArray<NSString*>*)refreshURLStringsForStableURLString:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  NSMutableArray<NSString*>* refreshURLStrings = [NSMutableArray array];
-  for (NSURLQueryItem* item in components.queryItems ?: @[]) {
-    if (![item.name isEqualToString:kInternalRefreshQueryParameter] || item.value.length == 0) {
-      continue;
-    }
-
-    NSString* refreshURLString = item.value.stringByRemovingPercentEncoding ?: item.value;
-    if ([self isStableBabelChromeURLString:refreshURLString]) {
-      [refreshURLStrings addObject:refreshURLString];
-    }
-  }
-
-  return refreshURLStrings;
+  return [stableServerURLResolver_ refreshURLStringsForStableURLString:urlString];
 }
 
 - (NSString*)stableURLStringByRemovingInternalQueryParameters:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  if (!components) {
-    return urlString;
-  }
-
-  NSMutableArray<NSURLQueryItem*>* queryItems = [NSMutableArray array];
-  for (NSURLQueryItem* item in components.queryItems ?: @[]) {
-    if ([item.name isEqualToString:kInternalStartQueryParameter] ||
-        [item.name isEqualToString:kInternalRefreshQueryParameter]) {
-      continue;
-    }
-
-    [queryItems addObject:item];
-  }
-
-  components.queryItems = queryItems.count > 0 ? queryItems : nil;
-  return components.string ?: urlString;
+  return [stableServerURLResolver_ stableURLStringByRemovingInternalQueryParameters:urlString];
 }
 
 - (NSString*)stableServerProjectPathForURLComponents:(NSURLComponents*)components {
-  NSString* path = components.percentEncodedPath ?: components.path ?: @"";
-  NSArray<NSString*>* pathComponents = [path componentsSeparatedByString:@"/"];
-  if (pathComponents.count >= 2 && pathComponents[1].length > 0) {
-    return [@"/" stringByAppendingString:pathComponents[1]];
-  }
-
-  return path.length > 0 ? path : @"/";
+  return [stableServerURLResolver_ stableServerProjectPathForURLComponents:components];
 }
 
 - (NSString*)stableServerReloadURLStringForTab:(BabelBrowserTab*)tab {
-  NSString* requestedURLString = tab.requestedURLString ?: @"";
-  if (![self isStableServerURLString:requestedURLString]) {
-    return requestedURLString;
-  }
-
-  NSURLComponents* requestedComponents =
-      [NSURLComponents componentsWithString:requestedURLString];
-  NSURLComponents* actualComponents =
-      [NSURLComponents componentsWithString:tab.urlString ?: @""];
-  NSString* actualScheme = actualComponents.scheme.lowercaseString ?: @"";
-  if (![actualScheme isEqualToString:@"http"] && ![actualScheme isEqualToString:@"https"]) {
-    return requestedURLString;
-  }
-
-  NSString* actualPath = actualComponents.percentEncodedPath ?: actualComponents.path ?: @"";
-  if ([actualPath hasPrefix:@"/module/"]) {
-    return requestedURLString;
-  }
-
-  NSString* projectPath = [self stableServerProjectPathForURLComponents:requestedComponents];
-  if (actualPath.length > 0 && ![actualPath isEqualToString:@"/"]) {
-    requestedComponents.percentEncodedPath = [projectPath stringByAppendingString:actualPath];
-  } else {
-    requestedComponents.percentEncodedPath = projectPath;
-  }
-
-  requestedComponents.percentEncodedQuery = actualComponents.percentEncodedQuery;
-  requestedComponents.percentEncodedFragment = actualComponents.percentEncodedFragment;
-
-  return requestedComponents.string ?: requestedURLString;
+  return [stableServerURLResolver_ stableServerReloadURLStringForRequestedURLString:tab.requestedURLString
+                                                                    actualURLString:tab.urlString];
 }
 
 - (NSString*)moduleNavigationURLStringForStableBabelChromeURLString:(NSString*)urlString {

@@ -40,6 +40,7 @@ BrowserWindowController
             |__ RecentlyClosedTabStore
             |__ InternalPageRenderer
             |__ StableViewerURLResolver
+            |__ StableServerURLResolver
             |__ BrowserSettingsStore
             |__ SettingsOptionRenderer
             |__ AppSettingsPageRenderer
@@ -68,12 +69,12 @@ BrowserWindowController
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, and view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
-| `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. |
+| `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. Stable server identifier parsing is delegated to `BabelStableServerURLResolver`. |
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
 | `BrowserWindowController+SettingsOptions.inc.mm` | Compatibility wrappers for app settings option HTML. Actual option rendering is delegated to `BabelSettingsOptionRenderer`, and settings value persistence/validation is delegated to `BabelBrowserSettingsStore`. |
 | `BrowserWindowController+SettingsPages.inc.mm` | Main Settings value collection, module settings value collection, and view-model collection for History and Extensions. Main Settings rendering is delegated to `BabelAppSettingsPageRenderer`; module Settings rendering is delegated to `BabelModuleSettingsPageRenderer`; History page body rendering is delegated to `BabelHistoryPageRenderer`; Extensions page body rendering is delegated to `BabelExtensionsPageRenderer`. |
-| `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
+| `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. Stable server URL parsing and internal query handling are delegated to `BabelStableServerURLResolver`. |
 | `BrowserWindowController+StableViewerDisplay.inc.mm` | Stable viewer URL display wrappers and stable-server same-tab navigation. Stable viewer URL parsing and display formatting are delegated to `BabelStableViewerURLResolver`. |
 | `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
 | `BrowserWindowController+TabDragAndClosed.inc.mm` | Tab drag-and-drop, cross-group moves, close behavior, and recently closed tab reopening orchestration. Recently closed tab stack ownership is delegated to `BabelRecentlyClosedTabStore`. |
@@ -162,6 +163,19 @@ The controller may provide page body HTML for now, but it must not own the commo
 - encodes stable viewer path segments.
 
 The controller may use the resolver to decide navigation and address display, but it must not manually parse stable viewer URL paths.
+
+### `BabelStableServerURLResolver`
+
+`BabelStableServerURLResolver` owns stable Project Launcher server URL parsing:
+
+- detects stable BabelChrome URLs and stable server URLs;
+- detects internal server start requests;
+- extracts internal refresh URL requests;
+- removes internal start/refresh query parameters;
+- extracts stable server project identifiers;
+- builds stable server reload URLs from runtime-local paths.
+
+The controller may decide when to navigate or reload actual tabs, but it must not manually parse `babelchrome://server/...` paths or internal server query parameters.
 
 ### `BabelBrowserSettingsStore`
 
