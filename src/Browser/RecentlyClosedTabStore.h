@@ -4,6 +4,8 @@
 #import <Foundation/Foundation.h>
 
 @class BabelClosedTab;
+@class BabelBrowserGroup;
+@class BabelBrowserTab;
 
 /**
  * Owns the in-memory stack of recently closed tabs.
@@ -30,6 +32,17 @@
  * @param closedTab The closed tab snapshot to store.
  */
 - (void)pushClosedTab:(BabelClosedTab*)closedTab;
+
+/**
+ * Captures and stores a closed tab snapshot.
+ *
+ * @param tab The tab being closed.
+ * @param group The group that contained the tab.
+ * @param defaultGroupName The fallback group name used when the source group has no name.
+ */
+- (void)pushTab:(BabelBrowserTab*)tab
+      fromGroup:(BabelBrowserGroup*)group
+defaultGroupName:(NSString*)defaultGroupName;
 
 /**
  * Removes and returns a closed tab at the provided index.

@@ -299,7 +299,7 @@
   BOOL deletingSelectedGroup = group == selectedGroup_;
   for (BabelBrowserTab* tab in [group.tabs copy]) {
     CefRefPtr<CefBrowser> browser = [tab browser];
-    [self pushClosedTab:tab fromGroup:group];
+    [recentlyClosedTabStore_ pushTab:tab fromGroup:group defaultGroupName:kDefaultGroupName];
     [self removeTab:tab fromGroup:group allowSelection:!deletingSelectedGroup];
     if (browser) {
       browser->GetHost()->CloseBrowser(true);
@@ -830,7 +830,7 @@
       continue;
     }
 
-    [self pushClosedTab:tab fromGroup:selectedGroup_];
+    [recentlyClosedTabStore_ pushTab:tab fromGroup:selectedGroup_ defaultGroupName:kDefaultGroupName];
 
     if (selectedGroup_.tabs.count <= 1) {
       if ([tab browser]) {
@@ -852,20 +852,6 @@
     [self removeSelectedGroupTab:tab];
     return;
   }
-}
-
-- (void)pushClosedTab:(BabelBrowserTab*)tab fromGroup:(BabelBrowserGroup*)group {
-  if (!tab || tab.urlString.length == 0 || !group) {
-    return;
-  }
-
-  BabelClosedTab* closedTab = [[BabelClosedTab alloc] init];
-  closedTab.urlString = tab.urlString;
-  closedTab.requestedURLString = tab.requestedURLString ?: tab.urlString;
-  closedTab.title = tab.title ?: tab.urlString;
-  closedTab.groupIdentifier = group.identifier;
-  closedTab.groupName = group.name ?: kDefaultGroupName;
-  [recentlyClosedTabStore_ pushClosedTab:closedTab];
 }
 
 - (void)reopenLastClosedTab {

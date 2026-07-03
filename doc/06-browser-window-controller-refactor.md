@@ -143,11 +143,12 @@ The controller may instantiate these helpers, but it must not define view/helper
 
 `BabelRecentlyClosedTabStore` owns the recently closed tab stack:
 
+- captures closed tab snapshots from live tab/group models;
 - stores closed tab snapshots in insertion order;
 - exposes immutable snapshots for history and address suggestions;
 - pops a closed tab by index for history links and keyboard restoration.
 
-The controller may create `BabelClosedTab` snapshots and reopen tabs from them, but it must not own the mutable recently closed tab stack directly.
+The controller may decide when a tab should be captured and may reopen tabs from stored snapshots, but it must not create `BabelClosedTab` snapshots or own the mutable recently closed tab stack directly.
 
 ### `BabelInternalPageRenderer`
 
