@@ -43,6 +43,7 @@ BrowserWindowController
             |__ BrowserSettingsStore
             |__ SettingsOptionRenderer
             |__ HistoryPageRenderer
+            |__ ExtensionsPageRenderer
             |__ more focused collaborators as needed
 ```
 
@@ -69,7 +70,7 @@ BrowserWindowController
 | `BrowserWindowController+SelectionAddressBar.inc.mm` | Selected tab state, address bar display value, badges, and address display formatting. |
 | `BrowserWindowController+SessionLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, and module lifecycle calls. |
 | `BrowserWindowController+SettingsOptions.inc.mm` | Compatibility wrappers for app settings option HTML. Actual option rendering is delegated to `BabelSettingsOptionRenderer`, and settings value persistence/validation is delegated to `BabelBrowserSettingsStore`. |
-| `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML, module settings shell rendering, and view-model collection for History. History page body rendering is delegated to `BabelHistoryPageRenderer`. |
+| `BrowserWindowController+SettingsPages.inc.mm` | App settings HTML, module settings shell rendering, and view-model collection for History and Extensions. History page body rendering is delegated to `BabelHistoryPageRenderer`; Extensions page body rendering is delegated to `BabelExtensionsPageRenderer`. |
 | `BrowserWindowController+StableURLRouting.inc.mm` | Stable `babelchrome://...` URL conversion to runtime service URLs. |
 | `BrowserWindowController+StableViewerDisplay.inc.mm` | Stable viewer URL display wrappers and stable-server same-tab navigation. Stable viewer URL parsing and display formatting are delegated to `BabelStableViewerURLResolver`. |
 | `BrowserWindowController+TabBrowserCore.inc.mm` | Tab creation, browser creation, selected tab browser lifecycle, tab model lookup, and live browser limits. |
@@ -194,6 +195,17 @@ The controller may choose which settings blocks appear on a page, but it must no
 - History-specific escaping.
 
 The controller may collect tab and recently closed tab view models, but it must not concatenate the History page HTML directly.
+
+### `BabelExtensionsPageRenderer`
+
+`BabelExtensionsPageRenderer` owns Extensions page body rendering:
+
+- Chrome profile extension rows;
+- unpacked extension rows;
+- enable, disable, restart, and remove action links;
+- extension page navigation back to Settings.
+
+The controller may collect extension view models and ask `BabelExtensionProfileStore` for status values, but it must not concatenate the Extensions page HTML directly.
 
 ### `BabelModuleUpdateService`
 

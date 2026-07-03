@@ -3,6 +3,7 @@
 #import "Browser/BrowserClient.h"
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/ExtensionProfileStore.h"
+#import "Browser/ExtensionsPageRenderer.h"
 #import "Browser/FaviconStore.h"
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/InternalPageRenderer.h"
@@ -112,6 +113,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelExtensionProfileStore* extensionProfileStore_;
+  BabelExtensionsPageRenderer* extensionsPageRenderer_;
   BabelFaviconStore* faviconStore_;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelInternalPageRenderer* internalPageRenderer_;
@@ -187,6 +189,8 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
                extensionPathsDefaultsKey:BabelChromeConfiguration.extensionPathsDefaultsKey
 disabledProfileExtensionIdentifiersDefaultsKey:BabelChromeConfiguration.disabledProfileExtensionIdentifiersDefaultsKey
 pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pendingProfileExtensionRestartStatesDefaultsKey];
+    extensionsPageRenderer_ =
+        [[BabelExtensionsPageRenderer alloc] initWithTrashIconHTML:[self trashIconHTML]];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];

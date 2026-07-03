@@ -93,85 +93,41 @@
 - (NSString*)extensionsPageHTML {
   NSArray<NSString*>* extensionPaths = [extensionProfileStore_ installedExtensionPaths];
   NSArray<NSDictionary*>* profileExtensions = [extensionProfileStore_ profileInstalledExtensions];
-  NSMutableString* profileListHTML = [NSMutableString string];
-  if (profileExtensions.count == 0) {
-    [profileListHTML appendString:@"<p class='empty'>No Chrome profile extension was found.</p>"];
-  } else {
-    [profileListHTML appendString:@"<ul>"];
-    for (NSDictionary* extension in profileExtensions) {
-      NSString* extensionIdentifier = [extension[@"id"] isKindOfClass:NSString.class]
-          ? extension[@"id"]
-          : @"";
-      BOOL enabled = [extension[@"enabled"] boolValue];
-      NSString* toggleAction = enabled ? @"disableProfile" : @"enableProfile";
-      NSString* toggleLabel = enabled ? @"Disable" : @"Enable";
-      NSString* status = [extensionProfileStore_ profileExtensionStatusLabelForIdentifier:extensionIdentifier
-                                                                                  enabled:enabled];
-      NSString* restartHTML = [extensionProfileStore_ profileExtensionRequiresRestart:extensionIdentifier]
-          ? @"<a class='smallButton primarySmallButton' href='babelchrome://extensions?restart=1'>Restart</a>"
-          : @"";
-      [profileListHTML appendFormat:
-          @"<li><span>%@</span><small>%@ - ID: %@ - Version: %@ - %@</small>"
-           "<div class='actions'>%@<a class='smallButton' href='babelchrome://extensions?%@=%@'>%@</a>"
-           "<a class='smallButton dangerButton iconTextButton' href='babelchrome://extensions?removeProfile=%@' title='Remove'>%@<span>Remove</span></a></div></li>",
-          [self htmlEscapedString:extension[@"name"]],
-          [self htmlEscapedString:status],
-          [self htmlEscapedString:extensionIdentifier],
-          [self htmlEscapedString:extension[@"version"]],
-          [self htmlEscapedString:extension[@"path"]],
-          restartHTML,
-          toggleAction,
-          [self queryEscapedString:extensionIdentifier],
-          toggleLabel,
-          [self queryEscapedString:extensionIdentifier],
-          [self trashIconHTML]];
-    }
-    [profileListHTML appendString:@"</ul>"];
+  NSMutableArray<NSDictionary*>* profileExtensionRows = [NSMutableArray array];
+  for (NSDictionary* extension in profileExtensions ?: @[]) {
+    NSString* extensionIdentifier = [extension[@"id"] isKindOfClass:NSString.class]
+        ? extension[@"id"]
+        : @"";
+    BOOL enabled = [extension[@"enabled"] boolValue];
+    NSString* toggleAction = enabled ? @"disableProfile" : @"enableProfile";
+    NSString* toggleLabel = enabled ? @"Disable" : @"Enable";
+    NSString* status = [extensionProfileStore_ profileExtensionStatusLabelForIdentifier:extensionIdentifier
+                                                                                enabled:enabled];
+    [profileExtensionRows addObject:@{
+      BabelExtensionProfileNameKey : [extension[@"name"] isKindOfClass:NSString.class] ? extension[@"name"] : @"",
+      BabelExtensionProfileIdentifierKey : extensionIdentifier ?: @"",
+      BabelExtensionProfileVersionKey : [extension[@"version"] isKindOfClass:NSString.class] ? extension[@"version"] : @"",
+      BabelExtensionProfilePathKey : [extension[@"path"] isKindOfClass:NSString.class] ? extension[@"path"] : @"",
+      BabelExtensionProfileStatusKey : status ?: @"",
+      BabelExtensionProfileToggleActionKey : toggleAction,
+      BabelExtensionProfileToggleLabelKey : toggleLabel,
+      BabelExtensionProfileRequiresRestartKey : @([extensionProfileStore_ profileExtensionRequiresRestart:extensionIdentifier]),
+    }];
   }
 
-  NSMutableString* unpackedListHTML = [NSMutableString string];
-  if (extensionPaths.count == 0) {
-    [unpackedListHTML appendString:@"<p class='empty'>No unpacked extension is configured.</p>"];
-  } else {
-    [unpackedListHTML appendString:@"<ul>"];
-    for (NSString* extensionPath in extensionPaths) {
-      NSString* manifestPath = [extensionPath stringByAppendingPathComponent:@"manifest.json"];
-      BOOL manifestExists = [NSFileManager.defaultManager fileExistsAtPath:manifestPath];
-      NSString* status = manifestExists ? @"Ready after restart" : @"Missing manifest.json";
-      [unpackedListHTML appendFormat:
-          @"<li><span>%@</span><small>%@</small><div class='actions'>"
-           "<a class='smallButton dangerButton iconTextButton' href='babelchrome://extensions?remove=%@' title='Remove'>%@<span>Remove</span></a>"
-           "</div></li>",
-          [self htmlEscapedString:extensionPath.lastPathComponent],
-          [self htmlEscapedString:[NSString stringWithFormat:@"%@ - %@", status, extensionPath]],
-          [self queryEscapedString:extensionPath],
-          [self trashIconHTML]];
-    }
-    [unpackedListHTML appendString:@"</ul>"];
+  NSMutableArray<NSDictionary*>* unpackedExtensionRows = [NSMutableArray array];
+  for (NSString* extensionPath in extensionPaths ?: @[]) {
+    NSString* manifestPath = [extensionPath stringByAppendingPathComponent:@"manifest.json"];
+    BOOL manifestExists = [NSFileManager.defaultManager fileExistsAtPath:manifestPath];
+    NSString* status = manifestExists ? @"Ready after restart" : @"Missing manifest.json";
+    [unpackedExtensionRows addObject:@{
+      BabelUnpackedExtensionNameKey : extensionPath.lastPathComponent ?: @"",
+      BabelUnpackedExtensionPathKey : extensionPath ?: @"",
+      BabelUnpackedExtensionStatusKey : [NSString stringWithFormat:@"%@ - %@", status, extensionPath ?: @""],
+    }];
   }
 
-  NSString* body = [NSString stringWithFormat:
-      @"<h1>Extensions</h1>"
-       "<section>"
-       "<h2>Chrome Web Store</h2>"
-       "<form method='get' action='babelchrome://extensions' class='searchForm'>"
-       "<input type='search' name='search' placeholder='Search extensions' autofocus>"
-       "<button type='submit'>Search</button>"
-       "</form>"
-       "</section>"
-       "<section>"
-       "<h2>Chrome Profile Extensions</h2>"
-       "<p class='note'>Extensions installed by Chromium in the BabelChrome profile are listed here. Disable and Enable changes are applied on the next BabelChrome restart.</p>"
-       "%@"
-       "</section>"
-       "<section>"
-       "<h2>Unpacked Extensions</h2>"
-       "<p class='note'>BabelChrome loads configured unpacked extension folders at startup. Changes require restarting BabelChrome.</p>"
-       "<p><a class='primaryButton' href='babelchrome://extensions?addUnpacked=1'>Add unpacked extension folder</a></p>"
-       "%@"
-       "</section>"
-       "<div class='bottomButtonRow'><a class='smallButton' data-can-open-menu='true' href='babelchrome://settings'>Back to Settings</a></div>",
-      profileListHTML,
-      unpackedListHTML];
+  NSString* body = [extensionsPageRenderer_ extensionsPageBodyWithProfileExtensionRows:profileExtensionRows
+                                                                 unpackedExtensionRows:unpackedExtensionRows];
   return [self internalPageHTMLWithTitle:@"Extensions" body:body];
 }
