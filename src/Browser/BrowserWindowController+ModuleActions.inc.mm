@@ -2,40 +2,7 @@
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (NSDictionary*)moduleRouteForBabelChromeComponents:(NSURLComponents*)components
                                                error:(NSError**)error {
-  NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:error];
-  if (!snapshot) {
-    return nil;
-  }
-
-  NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
-  NSString* scheme = components.scheme ?: @"";
-  NSString* host = components.host ?: @"";
-  for (NSDictionary* module in modules) {
-    if (![module isKindOfClass:NSDictionary.class] || ![module[@"enabled"] boolValue]) {
-      continue;
-    }
-
-    NSString* moduleIdentifier = [module[@"id"] isKindOfClass:NSString.class] ? module[@"id"] : @"";
-    NSArray* routes = [module[@"routes"] isKindOfClass:NSArray.class] ? module[@"routes"] : @[];
-    for (NSDictionary* route in routes) {
-      if (![route isKindOfClass:NSDictionary.class]) {
-        continue;
-      }
-
-      NSString* routeScheme = [route[@"scheme"] isKindOfClass:NSString.class] ? route[@"scheme"] : @"";
-      NSString* routeHost = [route[@"host"] isKindOfClass:NSString.class] ? route[@"host"] : @"";
-      NSString* routeHandler = [route[@"handler"] isKindOfClass:NSString.class] ? route[@"handler"] : @"";
-      if ([routeScheme isEqualToString:scheme] && [routeHost isEqualToString:host] &&
-          moduleIdentifier.length > 0 && routeHandler.length > 0) {
-        return @{
-          @"moduleIdentifier" : moduleIdentifier,
-          @"route" : routeHandler
-        };
-      }
-    }
-  }
-
-  return nil;
+  return [moduleActionService_ moduleRouteForBabelChromeComponents:components error:error];
 }
 
 - (void)refreshBabelChromeFileTypeCapabilities {
@@ -64,9 +31,7 @@
     }
 
     NSError* error = nil;
-    NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:url.path
-                                                                                error:&error];
-    if (!response) {
+    if (![moduleActionService_ installModuleZipAtPath:url.path error:&error]) {
       NSString* message = error.localizedDescription ?: @"The module operation failed.";
       [errors addObject:[NSString stringWithFormat:@"%@: %@",
                                                    url.lastPathComponent ?: url.path ?: @"Unknown file",
@@ -94,10 +59,7 @@
 
 - (void)setPHPModuleWithIdentifier:(NSString*)moduleIdentifier enabled:(BOOL)enabled {
   NSError* error = nil;
-  NSDictionary* response = [BabelLocalServiceHost.sharedHost setModuleWithIdentifier:moduleIdentifier
-                                                                             enabled:enabled
-                                                                               error:&error];
-  if (!response) {
+  if (![moduleActionService_ setModuleWithIdentifier:moduleIdentifier enabled:enabled error:&error]) {
     [self showModuleActionAlertWithError:error];
     return;
   }
@@ -118,9 +80,7 @@
   }
 
   NSError* error = nil;
-  NSDictionary* response = [BabelLocalServiceHost.sharedHost removeModuleWithIdentifier:moduleIdentifier
-                                                                                  error:&error];
-  if (!response) {
+  if (![moduleActionService_ removeModuleWithIdentifier:moduleIdentifier error:&error]) {
     [self showModuleActionAlertWithError:error];
     return;
   }

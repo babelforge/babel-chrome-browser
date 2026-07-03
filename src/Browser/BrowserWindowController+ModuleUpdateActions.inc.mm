@@ -82,8 +82,7 @@
       continue;
     }
 
-    NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:zipPath error:&error];
-    if (!response) {
+    if (![moduleActionService_ installModuleZipAtPath:zipPath error:&error]) {
       NSString* message = error.localizedDescription ?: @"The module operation failed.";
       [errors addObject:[NSString stringWithFormat:@"%@: %@", trimmedModuleIdentifier, message]];
       continue;

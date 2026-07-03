@@ -3,6 +3,8 @@
 #import "Browser/BrowserClient.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/FaviconStore.h"
+#import "Browser/ModuleActionService.h"
+#import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserTheme.h"
@@ -122,6 +124,8 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableDictionary<NSString*, NSArray<NSString*>*>* googleSuggestCache_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelFaviconStore* faviconStore_;
+  BabelModuleActionService* moduleActionService_;
+  BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleUpdateService* moduleUpdateService_;
   NSMutableArray<NSString*>* recentlyUsedTabIdentifiers_;
   NSMutableSet<NSString*>* evictingBrowserTabIdentifiers_;
@@ -188,6 +192,11 @@ disabledProfileExtensionIdentifiersDefaultsKey:BabelChromeConfiguration.disabled
 pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pendingProfileExtensionRestartStatesDefaultsKey];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
+    moduleActionService_ = [[BabelModuleActionService alloc] init];
+    modulePageRenderer_ =
+        [[BabelModulePageRenderer alloc]
+            initWithGearIconHTML:[self resourceSVGIconHTMLNamed:@"settings-gear" fallback:@"&#9881;"]
+                    trashIconHTML:[self trashIconHTML]];
     moduleUpdateService_ =
         [[BabelModuleUpdateService alloc]
             initWithUserDefaults:NSUserDefaults.standardUserDefaults

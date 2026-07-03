@@ -33,6 +33,8 @@ BrowserWindowController
             |__ WindowStateStore
             |__ ExtensionProfileStore
             |__ ModuleUpdateService
+            |__ ModulePageRenderer
+            |__ ModuleActionService
             |__ InternalPageRenderer
             |__ more focused collaborators as needed
 ```
@@ -55,9 +57,9 @@ BrowserWindowController
 | `BrowserWindowController+InternalUtilities.inc.mm` | Shared internal-page helpers, escaping, formatting, and small HTML utilities. Candidate for extraction into renderer/view helpers. |
 | `BrowserWindowController+LayoutWindowLifecycle.inc.mm` | Window lifecycle, main layout frames, sidebar layout, window persistence, and view resizing. Candidate for `WindowStateStore` plus layout helpers. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. |
-| `BrowserWindowController+ModuleActions.inc.mm` | Module install, remove, enable, disable, open, and settings action handlers. |
+| `BrowserWindowController+ModuleActions.inc.mm` | Module install panel, remove confirmation, action alerts, file-type refresh, and UI action coordination. Registry calls and route matching are delegated to `BabelModuleActionService`. |
 | `BrowserWindowController+ModuleGroupRouting.inc.mm` | Module manifest group routing, especially default group placement for module-created tabs. |
-| `BrowserWindowController+ModulePages.inc.mm` | Installed modules page, module detail page, and module HTML rendering. Candidate for `InternalPageRenderer`. |
+| `BrowserWindowController+ModulePages.inc.mm` | Collects module snapshots and update data, then delegates module page body rendering to `BabelModulePageRenderer`. |
 | `BrowserWindowController+ModuleUpdateActions.inc.mm` | Module update prompts, selected update installation action dispatch, and LocalServiceHost install coordination. Source preferences, source discovery, zip parsing, and zip resolution are delegated to `BabelModuleUpdateService`. |
 | `BrowserWindowController+OmniboxSuggestions.inc.mm` | Address suggestion state, Google Suggest integration, local suggestion rendering, keyboard navigation, and favicon lookup. |
 | `BrowserWindowController+RuntimeRefreshRouting.inc.mm` | Refresh handling for stable URLs that map to runtime-local service URLs. |
@@ -113,6 +115,29 @@ The controller may open panels, show alerts, render extension pages, and route u
 - resolves update zip paths from local folders or remote manifests.
 
 The controller may ask the service for update data, open source configuration prompts, install selected zip paths through `LocalServiceHost`, and render the module update page. It must not parse update manifests or inspect zip files directly.
+
+### `BabelModulePageRenderer`
+
+`BabelModulePageRenderer` owns module-specific internal page body rendering:
+
+- installed modules list;
+- module details page;
+- module updates page;
+- module action links and capability badges;
+- module update checkbox form markup.
+
+The controller still wraps these bodies with the shared internal page shell until the broader `InternalPageRenderer` extraction is done.
+
+### `BabelModuleActionService`
+
+`BabelModuleActionService` owns module registry actions that go through `LocalServiceHost`:
+
+- route matching for enabled module routes;
+- install or update module zip;
+- enable or disable module;
+- remove module.
+
+The controller remains responsible for native panels, confirmation dialogs, alerts, and browser capability refresh after successful actions.
 
 ## Extraction Candidates
 
