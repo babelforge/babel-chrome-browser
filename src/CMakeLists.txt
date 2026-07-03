@@ -68,6 +68,8 @@ set(BABEL_CHROME_SOURCES
   Browser/TabDragCoordinator.mm
   Browser/TabPlacementPolicy.h
   Browser/TabPlacementPolicy.mm
+  Browser/TabStripLayoutCalculator.h
+  Browser/TabStripLayoutCalculator.mm
   Browser/WindowStateStore.h
   Browser/WindowStateStore.mm
   Browser/BrowserModels.h

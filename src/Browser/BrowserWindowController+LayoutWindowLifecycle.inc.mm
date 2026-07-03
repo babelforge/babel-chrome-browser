@@ -2,32 +2,17 @@
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (void)layoutTabItemsSelectingLastTab:(BOOL)selectLastTab {
   CGFloat availableWidth = tabsItemsPanel_.bounds.size.width;
-  NSUInteger tabCount = tabs_.count;
+  NSUInteger selectedIndex = selectedTab_ ? [tabs_ indexOfObject:selectedTab_] : NSNotFound;
   NSColor* accentColor = [self accentColorForGroup:selectedGroup_];
-  CGFloat activeWidth = tabCount > 1 ? MIN(kTabActiveWidth, availableWidth) :
-                                       MIN(kTabNormalWidth, availableWidth);
-  CGFloat inactiveWidth = kTabNormalWidth;
 
-  if (tabCount > 1) {
-    CGFloat spacingWidth = kTabSpacing * (CGFloat)(tabCount - 1);
-    CGFloat activeMaximumWidth = availableWidth - spacingWidth -
-                                 (kTabMinimumWidth * (CGFloat)(tabCount - 1));
-    activeWidth = MIN(availableWidth, MAX(kTabNormalWidth, MIN(kTabActiveWidth, activeMaximumWidth)));
-
-    CGFloat inactiveAvailableWidth = MAX(0.0, availableWidth - activeWidth - spacingWidth);
-    inactiveWidth = inactiveAvailableWidth / (CGFloat)(tabCount - 1);
-    inactiveWidth = MIN(kTabNormalWidth, inactiveWidth);
-    if (inactiveWidth < kTabMinimumWidth) {
-      inactiveWidth = MAX(18.0, inactiveWidth);
-    }
-  }
-
-  CGFloat x = 0.0;
-  for (BabelBrowserTab* tab in tabs_) {
-    CGFloat tabWidth = tab == selectedTab_ ? activeWidth : inactiveWidth;
+  NSArray<NSValue*>* tabFrames =
+      [tabStripLayoutCalculator_ tabFramesForAvailableWidth:availableWidth
+                                                   tabCount:tabs_.count
+                                              selectedIndex:selectedIndex];
+  for (NSUInteger index = 0; index < tabs_.count; index++) {
+    BabelBrowserTab* tab = tabs_[index];
     tab.tabItemView.accentColor = accentColor;
-    tab.tabItemView.frame = NSMakeRect(x, 1.0, tabWidth, kTabHeight);
-    x += tabWidth + kTabSpacing;
+    tab.tabItemView.frame = tabFrames[index].rectValue;
   }
 }
 

@@ -31,6 +31,7 @@
 #import "Browser/StableViewerURLResolver.h"
 #import "Browser/TabDragCoordinator.h"
 #import "Browser/TabPlacementPolicy.h"
+#import "Browser/TabStripLayoutCalculator.h"
 #import "Browser/BrowserModels.h"
 #import "Browser/BrowserSupportViews.h"
 #import "Browser/BrowserTheme.h"
@@ -154,6 +155,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelTabDragCoordinator* tabDragCoordinator_;
   BabelTabPlacementPolicy* tabPlacementPolicy_;
+  BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
   BabelWindowStateStore* windowStateStore_;
   BabelBrowserGroup* selectedGroup_;
   NSMutableArray<BabelBrowserTab*>* tabs_;
@@ -261,6 +263,12 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
     tabPlacementPolicy_ = [[BabelTabPlacementPolicy alloc] init];
+    tabStripLayoutCalculator_ =
+        [[BabelTabStripLayoutCalculator alloc] initWithNormalWidth:kTabNormalWidth
+                                                       activeWidth:kTabActiveWidth
+                                                      minimumWidth:kTabMinimumWidth
+                                                          tabHeight:kTabHeight
+                                                            spacing:kTabSpacing];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     tabs_ = [NSMutableArray array];
     pendingTabs_ = [NSMutableArray array];
