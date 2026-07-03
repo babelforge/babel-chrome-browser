@@ -4,6 +4,7 @@
 #import "Browser/AppSettingsPageRenderer.h"
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/DeveloperToolsDockingStore.h"
+#import "Browser/DeveloperToolsLayoutCalculator.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/ExtensionsPageRenderer.h"
 #import "Browser/FaviconStore.h"
@@ -125,6 +126,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelDeveloperToolsDockingStore* developerToolsDockingStore_;
+  BabelDeveloperToolsLayoutCalculator* developerToolsLayoutCalculator_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
   BabelFaviconStore* faviconStore_;
@@ -204,6 +206,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
         [[BabelDeveloperToolsDockingStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults
                                                   dockModeDefaultsKey:kDeveloperToolsDockModeDefaultsKey
                                                  sizeRatioDefaultsKey:kDeveloperToolsSizeRatioDefaultsKey];
+    developerToolsLayoutCalculator_ = [[BabelDeveloperToolsLayoutCalculator alloc] init];
     extensionProfileStore_ =
         [[BabelExtensionProfileStore alloc]
             initWithProfileDirectoryURL:BabelChromeConfiguration.profileDirectoryURL

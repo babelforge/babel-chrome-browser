@@ -218,93 +218,29 @@
     return;
   }
 
-  CGFloat developerToolsHeight = [self developerToolsHeightForBounds:bounds];
-  CGFloat developerToolsWidth = [self developerToolsWidthForBounds:bounds];
-
-  if ([developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeTop]) {
-    tab.hostView.frame = NSMakeRect(0,
-                                    0,
-                                    bounds.size.width,
-                                    MAX(0.0, bounds.size.height - developerToolsHeight));
-    tab.developerToolsPanelView.frame = NSMakeRect(0,
-                                                   bounds.size.height - developerToolsHeight,
-                                                   bounds.size.width,
-                                                   developerToolsHeight);
-  } else if ([developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeLeft]) {
-    tab.developerToolsPanelView.frame = NSMakeRect(0,
-                                                   0,
-                                                   developerToolsWidth,
-                                                   bounds.size.height);
-    tab.hostView.frame = NSMakeRect(developerToolsWidth,
-                                    0,
-                                    MAX(0.0, bounds.size.width - developerToolsWidth),
-                                    bounds.size.height);
-  } else if ([developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeRight]) {
-    tab.hostView.frame = NSMakeRect(0,
-                                    0,
-                                    MAX(0.0, bounds.size.width - developerToolsWidth),
-                                    bounds.size.height);
-    tab.developerToolsPanelView.frame = NSMakeRect(bounds.size.width - developerToolsWidth,
-                                                   0,
-                                                   developerToolsWidth,
-                                                   bounds.size.height);
-  } else {
-    tab.developerToolsPanelView.frame = NSMakeRect(0,
-                                                   0,
-                                                   bounds.size.width,
-                                                   developerToolsHeight);
-    tab.hostView.frame = NSMakeRect(0,
-                                    developerToolsHeight,
-                                    bounds.size.width,
-                                    MAX(0.0, bounds.size.height - developerToolsHeight));
-  }
+  BabelDeveloperToolsPageLayout* layout =
+      [developerToolsLayoutCalculator_ pageLayoutForBounds:bounds
+                                                  dockMode:developerToolsDockMode_
+                                                 sizeRatio:developerToolsSizeRatio_];
+  tab.hostView.frame = layout.browserFrame;
+  tab.developerToolsPanelView.frame = layout.panelFrame;
 
   [self layoutDeveloperToolsPanelForTab:tab];
   [tab.hostView layoutSubtreeIfNeeded];
   [tab.developerToolsPanelView layoutSubtreeIfNeeded];
 }
 
-- (CGFloat)developerToolsHeightForBounds:(NSRect)bounds {
-  CGFloat maximumHeight = MAX(160.0, bounds.size.height - 180.0);
-  return MIN(MAX(180.0, bounds.size.height * developerToolsSizeRatio_), maximumHeight);
-}
-
-- (CGFloat)developerToolsWidthForBounds:(NSRect)bounds {
-  CGFloat maximumWidth = MAX(260.0, bounds.size.width - 360.0);
-  return MIN(MAX(320.0, bounds.size.width * developerToolsSizeRatio_), maximumWidth);
-}
-
 - (void)layoutDeveloperToolsPanelForTab:(BabelBrowserTab*)tab {
   NSRect panelBounds = tab.developerToolsPanelView.bounds;
-  CGFloat toolbarHeight = MIN(kDeveloperToolsToolbarHeight, panelBounds.size.height);
-  tab.developerToolsToolbarView.frame = NSMakeRect(0,
-                                                   MAX(0.0, panelBounds.size.height - toolbarHeight),
-                                                   panelBounds.size.width,
-                                                   toolbarHeight);
-  if ([developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeTop]) {
-    tab.developerToolsResizeHandleView.frame =
-        NSMakeRect(0, 0, panelBounds.size.width, kDeveloperToolsResizeHandleThickness);
-  } else if ([developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeLeft]) {
-    tab.developerToolsResizeHandleView.frame =
-        NSMakeRect(MAX(0.0, panelBounds.size.width - kDeveloperToolsResizeHandleThickness),
-                   0,
-                   kDeveloperToolsResizeHandleThickness,
-                   panelBounds.size.height);
-  } else if ([developerToolsDockMode_ isEqualToString:kDeveloperToolsDockModeRight]) {
-    tab.developerToolsResizeHandleView.frame =
-        NSMakeRect(0, 0, kDeveloperToolsResizeHandleThickness, panelBounds.size.height);
-  } else {
-    tab.developerToolsResizeHandleView.frame =
-        NSMakeRect(0,
-                   MAX(0.0, panelBounds.size.height - kDeveloperToolsResizeHandleThickness),
-                   panelBounds.size.width,
-                   kDeveloperToolsResizeHandleThickness);
-  }
+  BabelDeveloperToolsPanelLayout* layout =
+      [developerToolsLayoutCalculator_ panelLayoutForBounds:panelBounds
+                                                   dockMode:developerToolsDockMode_
+                                              toolbarHeight:kDeveloperToolsToolbarHeight
+                                      resizeHandleThickness:kDeveloperToolsResizeHandleThickness];
+  tab.developerToolsToolbarView.frame = layout.toolbarFrame;
+  tab.developerToolsResizeHandleView.frame = layout.resizeHandleFrame;
   [tab.developerToolsResizeHandleView.window invalidateCursorRectsForView:tab.developerToolsResizeHandleView];
-  tab.developerToolsHostView.frame = NSMakeRect(0,
-                                                0,
-                                                panelBounds.size.width,
-                                                MAX(0.0, panelBounds.size.height - toolbarHeight));
+  tab.developerToolsHostView.frame = layout.hostFrame;
   [tab.developerToolsPanelView addSubview:tab.developerToolsHostView
                                positioned:NSWindowBelow
                                relativeTo:tab.developerToolsToolbarView];
