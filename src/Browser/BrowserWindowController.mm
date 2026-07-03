@@ -313,39 +313,20 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
   return self;
 }
 
-#include "BrowserWindowController+SessionLifecycle.inc.mm"
+#include "BrowserWindowController+WindowLifecycle.inc.mm"
 
-#include "BrowserWindowController+InterfaceBuilding.inc.mm"
+#include "BrowserWindowController+GroupsAndTabs.inc.mm"
 
-#include "BrowserWindowController+GroupsSession.inc.mm"
-
-#include "BrowserWindowController+URLOpening.inc.mm"
-#include "BrowserWindowController+StableURLRouting.inc.mm"
-#include "BrowserWindowController+RuntimeRefreshRouting.inc.mm"
-
-#include "BrowserWindowController+TabBrowserCore.inc.mm"
-
-#include "BrowserWindowController+TabDragAndClosed.inc.mm"
+#include "BrowserWindowController+URLRouting.inc.mm"
 
 #include "BrowserWindowController+LocalDrop.inc.mm"
 
-#include "BrowserWindowController+InternalPageOpeners.inc.mm"
-#include "BrowserWindowController+InternalNavigationRouter.inc.mm"
-#include "BrowserWindowController+InternalPageLoading.inc.mm"
-#include "BrowserWindowController+SettingsPages.inc.mm"
-#include "BrowserWindowController+SettingsOptions.inc.mm"
-#include "BrowserWindowController+ExtensionActions.inc.mm"
-#include "BrowserWindowController+InternalUtilities.inc.mm"
+#include "BrowserWindowController+InternalPages.inc.mm"
 
 #include "BrowserWindowController+BrowserControls.inc.mm"
 
-#include "BrowserWindowController+SelectionAddressBar.inc.mm"
 #include "BrowserWindowController+BrowserAttachment.inc.mm"
 #include "BrowserWindowController+DeveloperToolsEmbedding.inc.mm"
-#include "BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm"
-#include "BrowserWindowController+AddressFieldEditing.inc.mm"
-#include "BrowserWindowController+OmniboxSuggestions.inc.mm"
-
-#include "BrowserWindowController+LayoutWindowLifecycle.inc.mm"
+#include "BrowserWindowController+AddressAndSuggestions.inc.mm"
 
 @end
