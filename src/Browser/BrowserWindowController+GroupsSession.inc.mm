@@ -215,16 +215,7 @@
 }
 
 - (NSUInteger)groupInsertionIndexForListY:(CGFloat)y {
-  if (groups_.count == 0) {
-    return 0;
-  }
-
-  CGFloat rowPitch = 34.0;
-  NSInteger targetIndex = (NSInteger)floor((y + (rowPitch / 2.0)) / rowPitch);
-  if (targetIndex < 0) {
-    return 0;
-  }
-  return MIN((NSUInteger)targetIndex, groups_.count);
+  return [groupListCoordinator_ insertionIndexForListY:y groupCount:groups_.count];
 }
 
 - (void)finishDraggingGroupFromItem:(BabelGroupItemView*)groupItemView {

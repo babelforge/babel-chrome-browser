@@ -32,28 +32,16 @@
 }
 
 - (NSColor*)accentColorForGroup:(BabelBrowserGroup*)group {
-  NSArray<NSColor*>* palette = [BabelTheme.sharedTheme colorListForToken:@"group.accentPalette"
-                                                                    view:rootView_ ?: self.window.contentView];
-  if (palette.count == 0) {
-    palette = @[NSColor.controlAccentColor];
-  }
-
-  NSUInteger groupIndex = [groups_ indexOfObject:group];
-  if (groupIndex == NSNotFound) {
-    return palette.firstObject;
-  }
-  return palette[groupIndex % palette.count];
+  return [groupListCoordinator_ accentColorForGroup:group
+                                             groups:groups_
+                                               view:rootView_ ?: self.window.contentView];
 }
 
 - (void)layoutGroupItems {
-  CGFloat y = 0.0;
-  CGFloat width = MAX(0.0, groupsListView_.bounds.size.width);
-  for (BabelBrowserGroup* group in groups_) {
-    group.groupItemView.accentColor = [self accentColorForGroup:group];
-    group.groupItemView.collapsed = sidebarCollapsed_;
-    group.groupItemView.frame = NSMakeRect(0, y, width, 30);
-    y += 34.0;
-  }
+  [groupListCoordinator_ layoutGroups:groups_
+                     inGroupsListView:groupsListView_
+                            collapsed:sidebarCollapsed_
+                                 view:rootView_ ?: self.window.contentView];
 }
 
 - (NSUInteger)totalTabCount {

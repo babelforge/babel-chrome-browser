@@ -7,6 +7,7 @@
 #import "Browser/ExtensionsPageRenderer.h"
 #import "Browser/FaviconStore.h"
 #import "Browser/GoogleSuggestClient.h"
+#import "Browser/GroupListCoordinator.h"
 #import "Browser/GroupSessionStore.h"
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/InternalPageRenderer.h"
@@ -123,6 +124,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
   BabelFaviconStore* faviconStore_;
   BabelGoogleSuggestClient* googleSuggestClient_;
+  BabelGroupListCoordinator* groupListCoordinator_;
   BabelGroupSessionStore* groupSessionStore_;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelInternalPageRenderer* internalPageRenderer_;
@@ -204,6 +206,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
     googleSuggestClient_ = [[BabelGoogleSuggestClient alloc] init];
+    groupListCoordinator_ = [[BabelGroupListCoordinator alloc] init];
     groupSessionStore_ = [[BabelGroupSessionStore alloc] init];
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];

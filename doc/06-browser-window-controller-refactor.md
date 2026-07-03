@@ -53,6 +53,7 @@ BrowserWindowController
             |__ OmniboxSuggestionsController
             |__ TabPlacementPolicy
             |__ LiveBrowserEvictionPolicy
+            |__ GroupListCoordinator
             |__ GroupSessionStore
             |__ more focused collaborators as needed
 ```
@@ -67,7 +68,7 @@ BrowserWindowController
 | `BrowserWindowController+BrowserUpdatesAndFavicons.inc.mm` | CEF browser title, URL, loading, favicon, status updates, and browser-client capability refresh. Favicon persistence is delegated to `BabelFaviconStore`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, docking mode, resizing, closing, and keyboard/menu integration. |
 | `BrowserWindowController+ExtensionActions.inc.mm` | Extension install, remove, enable, disable, restart, and page action handlers. |
-| `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group selection, group list refresh, group restore orchestration, and default group placement for module-created tabs. Group session file IO and JSON serialization are delegated to `BabelGroupSessionStore`. |
+| `BrowserWindowController+GroupsSession.inc.mm` | Group model mutations, group selection, group restore orchestration, and default group placement for module-created tabs. Group list layout/drop-index calculations are delegated to `BabelGroupListCoordinator`; group session file IO and JSON serialization are delegated to `BabelGroupSessionStore`. |
 | `BrowserWindowController+InterfaceBuilding.inc.mm` | Main AppKit interface construction and initial view hierarchy wiring. |
 | `BrowserWindowController+InternalNavigationRouter.inc.mm` | Routing for `babelchrome://settings`, `babelchrome://modules`, `babelchrome://extensions`, `babelchrome://history`, related internal URLs, and stable-server same-tab navigation requests. |
 | `BrowserWindowController+InternalPageLoading.inc.mm` | Loading rendered internal HTML into the selected browser tab. |
@@ -262,6 +263,17 @@ The controller may still decide which tabs are protected by current UI state and
 - writing the state file under the configured application support path.
 
 The controller may still create native groups, tabs, host views, and CEF browser views during restore, but it must not manually build or write the persisted JSON session file.
+
+### `BabelGroupListCoordinator`
+
+`BabelGroupListCoordinator` owns simple group-list presentation rules:
+
+- resolving the accent color assigned to a group from its order;
+- applying group selector row frames;
+- applying collapsed/expanded group row state;
+- computing drag insertion index from a group-list Y coordinate.
+
+The controller may still create group item views, wire their target/actions, mutate group order, and save state, but it must not duplicate group-list row geometry or palette indexing logic.
 
 ### `BabelBrowserSettingsStore`
 
