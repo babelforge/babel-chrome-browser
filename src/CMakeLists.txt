@@ -20,6 +20,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserGroupCollection.mm
   Browser/BrowserGroupFactory.h
   Browser/BrowserGroupFactory.mm
+  Browser/BrowserGroupMoveCoordinator.h
+  Browser/BrowserGroupMoveCoordinator.mm
   Browser/BrowserSettingsStore.h
   Browser/BrowserSettingsStore.mm
   Browser/BrowserTabCollection.h

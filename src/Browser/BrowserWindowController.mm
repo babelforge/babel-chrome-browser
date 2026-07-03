@@ -15,6 +15,7 @@
 #import "Browser/GoogleSuggestClient.h"
 #import "Browser/BrowserGroupCollection.h"
 #import "Browser/BrowserGroupFactory.h"
+#import "Browser/BrowserGroupMoveCoordinator.h"
 #import "Browser/BrowserTabCollection.h"
 #import "Browser/BrowserTabInsertionCoordinator.h"
 #import "Browser/BrowserTabMoveCoordinator.h"
@@ -149,6 +150,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelGoogleSuggestClient* googleSuggestClient_;
   BabelBrowserGroupCollection* browserGroupCollection_;
   BabelBrowserGroupFactory* browserGroupFactory_;
+  BabelBrowserGroupMoveCoordinator* browserGroupMoveCoordinator_;
   BabelBrowserTabCollection* browserTabCollection_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
   BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
@@ -274,6 +276,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     googleSuggestClient_ = [[BabelGoogleSuggestClient alloc] init];
     browserGroupCollection_ = [[BabelBrowserGroupCollection alloc] init];
     browserGroupFactory_ = [[BabelBrowserGroupFactory alloc] initWithActionTarget:self];
+    browserGroupMoveCoordinator_ = [[BabelBrowserGroupMoveCoordinator alloc] init];
     browserTabCollection_ = [[BabelBrowserTabCollection alloc] init];
     BabelTabPlacementPolicy* tabPlacementPolicy = [[BabelTabPlacementPolicy alloc] init];
     browserTabInsertionCoordinator_ =

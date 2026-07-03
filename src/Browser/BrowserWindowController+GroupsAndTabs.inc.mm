@@ -131,25 +131,17 @@
     return;
   }
 
-  NSUInteger currentIndex = [groups_ indexOfObject:group];
-  if (currentIndex == NSNotFound) {
-    return;
-  }
-
   NSEvent* currentEvent = NSApp.currentEvent;
   NSPoint listPoint = [groupsListView_ convertPoint:currentEvent.locationInWindow fromView:nil];
   NSUInteger targetIndex = [self groupInsertionIndexForListY:listPoint.y];
-  if (targetIndex > currentIndex) {
-    targetIndex--;
-  }
-  targetIndex = MIN(targetIndex, groups_.count - 1);
-  if (targetIndex == currentIndex) {
+  BOOL didMove = [browserGroupMoveCoordinator_ moveGroup:group
+                                                inGroups:groups_
+                                          insertionIndex:targetIndex];
+  if (!didMove) {
     return;
   }
 
   isReorderingGroups_ = YES;
-  [groups_ removeObjectAtIndex:currentIndex];
-  [groups_ insertObject:group atIndex:targetIndex];
   [self layoutGroupItems];
 }
 
