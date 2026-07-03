@@ -36,6 +36,8 @@ set(BABEL_CHROME_SOURCES
   Browser/GroupSessionStore.mm
   Browser/HistoryPageRenderer.h
   Browser/HistoryPageRenderer.mm
+  Browser/InternalNavigationActionParser.h
+  Browser/InternalNavigationActionParser.mm
   Browser/InternalPageRenderer.h
   Browser/InternalPageRenderer.mm
   Browser/LiveBrowserEvictionPolicy.h

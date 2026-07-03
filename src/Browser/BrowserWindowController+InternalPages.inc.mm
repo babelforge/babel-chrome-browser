@@ -325,47 +325,47 @@
   }
 
   if ([commandName isEqualToString:@"extensions"]) {
-    for (NSURLQueryItem* item in components.queryItems) {
-      if ([item.name isEqualToString:@"search"] && item.value.length > 0) {
-        [self openChromeWebStoreSearchForQuery:item.value];
-        [self openExtensionsPageForBrowser:browser];
-        return YES;
-      }
+    BabelInternalNavigationAction* action =
+        [internalNavigationActionParser_ extensionsActionFromComponents:components];
+    if ([action.name isEqualToString:BabelInternalNavigationActionSearch]) {
+      [self openChromeWebStoreSearchForQuery:action.value];
+      [self openExtensionsPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"addUnpacked"] && item.value.length > 0) {
-        [self addUnpackedExtensionFromPanel];
-        [self openExtensionsPageForBrowser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionAddUnpacked]) {
+      [self addUnpackedExtensionFromPanel];
+      [self openExtensionsPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"remove"] && item.value.length > 0) {
-        [self removeUnpackedExtensionAtPath:item.value];
-        [self openExtensionsPageForBrowser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionRemove]) {
+      [self removeUnpackedExtensionAtPath:action.value];
+      [self openExtensionsPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"disableProfile"] && item.value.length > 0) {
-        [extensionProfileStore_ setProfileExtensionWithIdentifier:item.value enabled:NO];
-        [self openExtensionsPageForBrowser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionDisableProfile]) {
+      [extensionProfileStore_ setProfileExtensionWithIdentifier:action.value enabled:NO];
+      [self openExtensionsPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"enableProfile"] && item.value.length > 0) {
-        [extensionProfileStore_ setProfileExtensionWithIdentifier:item.value enabled:YES];
-        [self openExtensionsPageForBrowser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionEnableProfile]) {
+      [extensionProfileStore_ setProfileExtensionWithIdentifier:action.value enabled:YES];
+      [self openExtensionsPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"removeProfile"] && item.value.length > 0) {
-        [self removeProfileExtensionWithIdentifier:item.value];
-        [self openExtensionsPageForBrowser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionRemoveProfile]) {
+      [self removeProfileExtensionWithIdentifier:action.value];
+      [self openExtensionsPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"restart"] && item.value.length > 0) {
-        [self restartApplication];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionRestart]) {
+      [self restartApplication];
+      return YES;
     }
 
     [self openExtensionsPageForBrowser:browser];
@@ -373,19 +373,10 @@
   }
 
   if ([commandName isEqualToString:@"modules"]) {
-    BOOL didRequestUpdateInstall = NO;
-    NSMutableArray<NSString*>* updateIdentifiers = [NSMutableArray array];
-    for (NSURLQueryItem* item in components.queryItems) {
-      if ([item.name isEqualToString:@"installSelectedUpdates"] && item.value.length > 0) {
-        didRequestUpdateInstall = YES;
-      }
-      if ([item.name isEqualToString:@"installUpdates"] && item.value.length > 0) {
-        didRequestUpdateInstall = YES;
-        [updateIdentifiers addObject:item.value];
-      }
-    }
-    if (didRequestUpdateInstall) {
-      if ([moduleUIActionCoordinator_ installPHPModuleUpdatesWithIdentifiers:updateIdentifiers]) {
+    BabelInternalNavigationAction* action =
+        [internalNavigationActionParser_ modulesActionFromComponents:components];
+    if ([action.name isEqualToString:BabelInternalNavigationActionInstallSelectedUpdates]) {
+      if ([moduleUIActionCoordinator_ installPHPModuleUpdatesWithIdentifiers:action.values]) {
         [self refreshBabelChromeFileTypeCapabilities];
       }
       [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
@@ -395,91 +386,82 @@
       return YES;
     }
 
-    for (NSURLQueryItem* item in components.queryItems) {
-      if ([item.name isEqualToString:@"installZip"] && item.value.length > 0) {
-        if ([moduleUIActionCoordinator_ installPHPModuleZipFromPanel]) {
-          [self refreshBabelChromeFileTypeCapabilities];
-        }
-        [self openModulesPageForBrowser:browser];
-        return YES;
+    if ([action.name isEqualToString:BabelInternalNavigationActionInstallZip]) {
+      if ([moduleUIActionCoordinator_ installPHPModuleZipFromPanel]) {
+        [self refreshBabelChromeFileTypeCapabilities];
       }
+      [self openModulesPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"configureUpdateURL"] && item.value.length > 0) {
-        [moduleUIActionCoordinator_ configureModuleUpdateURLFromPrompt];
-        [self openModulesPageForBrowser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionConfigureUpdateURL]) {
+      [moduleUIActionCoordinator_ configureModuleUpdateURLFromPrompt];
+      [self openModulesPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"configureUpdateLocal"] && item.value.length > 0) {
-        [moduleUIActionCoordinator_ configureModuleUpdateLocalDirectoryFromPanel];
-        [self openModulesPageForBrowser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionConfigureUpdateLocal]) {
+      [moduleUIActionCoordinator_ configureModuleUpdateLocalDirectoryFromPanel];
+      [self openModulesPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"checkUpdates"] && item.value.length > 0) {
-        [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
-                                      title:@"Module Updates"
-                                       html:[self moduleUpdatesPageHTML]
-                                    browser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionCheckUpdates]) {
+      [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
+                                    title:@"Module Updates"
+                                     html:[self moduleUpdatesPageHTML]
+                                  browser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"installUpdate"] && item.value.length > 0) {
-        if ([moduleUIActionCoordinator_ installPHPModuleUpdateWithIdentifier:item.value]) {
-          [self refreshBabelChromeFileTypeCapabilities];
-        }
-        [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
-                                      title:@"Module Updates"
-                                       html:[self moduleUpdatesPageHTML]
-                                    browser:browser];
-        return YES;
+    if ([action.name isEqualToString:BabelInternalNavigationActionInstallUpdate]) {
+      if ([moduleUIActionCoordinator_ installPHPModuleUpdateWithIdentifier:action.value]) {
+        [self refreshBabelChromeFileTypeCapabilities];
       }
+      [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
+                                    title:@"Module Updates"
+                                     html:[self moduleUpdatesPageHTML]
+                                  browser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"enable"] && item.value.length > 0) {
-        if ([moduleUIActionCoordinator_ setPHPModuleWithIdentifier:item.value enabled:YES]) {
-          [self refreshBabelChromeFileTypeCapabilities];
-        }
-        [self openModulesPageForBrowser:browser];
-        return YES;
+    if ([action.name isEqualToString:BabelInternalNavigationActionEnable]) {
+      if ([moduleUIActionCoordinator_ setPHPModuleWithIdentifier:action.value enabled:YES]) {
+        [self refreshBabelChromeFileTypeCapabilities];
       }
+      [self openModulesPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"disable"] && item.value.length > 0) {
-        if ([moduleUIActionCoordinator_ setPHPModuleWithIdentifier:item.value enabled:NO]) {
-          [self refreshBabelChromeFileTypeCapabilities];
-        }
-        [self openModulesPageForBrowser:browser];
-        return YES;
+    if ([action.name isEqualToString:BabelInternalNavigationActionDisable]) {
+      if ([moduleUIActionCoordinator_ setPHPModuleWithIdentifier:action.value enabled:NO]) {
+        [self refreshBabelChromeFileTypeCapabilities];
       }
+      [self openModulesPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"remove"] && item.value.length > 0) {
-        if ([moduleUIActionCoordinator_ removePHPModuleWithIdentifier:item.value]) {
-          [self refreshBabelChromeFileTypeCapabilities];
-        }
-        [self openModulesPageForBrowser:browser];
-        return YES;
+    if ([action.name isEqualToString:BabelInternalNavigationActionRemove]) {
+      if ([moduleUIActionCoordinator_ removePHPModuleWithIdentifier:action.value]) {
+        [self refreshBabelChromeFileTypeCapabilities];
       }
+      [self openModulesPageForBrowser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"module"] && item.value.length > 0) {
-        NSString* urlString = [NSString stringWithFormat:@"babelchrome://modules?module=%@",
-                                                         [self queryEscapedString:item.value]];
-        [self openInternalPageWithURLString:urlString
-                                      title:@"Module"
-                                       html:[self moduleDetailsPageHTMLForIdentifier:item.value]
-                                    browser:browser];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionModuleDetails]) {
+      NSString* urlString = [NSString stringWithFormat:@"babelchrome://modules?module=%@",
+                                                       [self queryEscapedString:action.value]];
+      [self openInternalPageWithURLString:urlString
+                                    title:@"Module"
+                                     html:[self moduleDetailsPageHTMLForIdentifier:action.value]
+                                  browser:browser];
+      return YES;
+    }
 
-      if ([item.name isEqualToString:@"open"] && item.value.length > 0) {
-        NSString* route = @"index";
-        for (NSURLQueryItem* routeItem in components.queryItems) {
-          if ([routeItem.name isEqualToString:@"route"] && routeItem.value.length > 0) {
-            route = routeItem.value;
-            break;
-          }
-        }
-        [self openPHPModuleWithIdentifier:item.value route:route];
-        return YES;
-      }
+    if ([action.name isEqualToString:BabelInternalNavigationActionOpen]) {
+      [self openPHPModuleWithIdentifier:action.value route:action.secondaryValue];
+      return YES;
     }
 
     [self openModulesPageForBrowser:browser];
@@ -494,12 +476,10 @@
   }
 
   if ([commandName isEqualToString:@"history"]) {
-    for (NSURLQueryItem* item in components.queryItems) {
-      if (![item.name isEqualToString:@"reopen"] || item.value.length == 0) {
-        continue;
-      }
-
-      NSInteger closedTabIndex = item.value.integerValue;
+    BabelInternalNavigationAction* action =
+        [internalNavigationActionParser_ historyActionFromComponents:components];
+    if ([action.name isEqualToString:BabelInternalNavigationActionReopen]) {
+      NSInteger closedTabIndex = action.value.integerValue;
       if (closedTabIndex >= 0) {
         [self reopenClosedTabAtIndex:(NSUInteger)closedTabIndex];
       }
