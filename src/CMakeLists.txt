@@ -16,6 +16,8 @@ set(BABEL_CHROME_SOURCES
   Browser/AdjacentTabPreloadPlanner.mm
   Browser/AppSettingsPageRenderer.h
   Browser/AppSettingsPageRenderer.mm
+  Browser/AddressNavigationNormalizer.h
+  Browser/AddressNavigationNormalizer.mm
   Browser/BrowserClient.h
   Browser/BrowserClient.mm
   Browser/BrowserGroupCollection.h

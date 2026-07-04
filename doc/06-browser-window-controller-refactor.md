@@ -51,6 +51,7 @@ BrowserWindowController
             |__ SettingsOptionRenderer
             |__ BrowserStringFormatter
             |__ BrowserPresentationFormatter
+            |__ AddressNavigationNormalizer
             |__ InternalPageAssetProvider
             |__ InternalPageTabClassifier
             |__ ViewerSourceResolver
@@ -96,7 +97,7 @@ BrowserWindowController
 
 | Fragment | Responsibility |
 | --- | --- |
-| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Window title, compact tab title, and badge color formatting are delegated to `BabelBrowserPresentationFormatter`; address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
+| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address input normalization is delegated to `BabelAddressNavigationNormalizer`; window title, compact tab title, and badge color formatting are delegated to `BabelBrowserPresentationFormatter`; address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`; internal-page tab classification is delegated to `BabelInternalPageTabClassifier`; stable viewer source-file resolution is delegated to `BabelViewerSourceResolver`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
@@ -287,6 +288,17 @@ The controller may call these helpers while building internal pages or command s
 - hex color parsing for address badges.
 
 The controller may decide when titles or badges need refreshing, but it must not duplicate these formatting rules inline.
+
+### `BabelAddressNavigationNormalizer`
+
+`BabelAddressNavigationNormalizer` owns conversion from user-entered address text into a navigable URL string:
+
+- empty input resolves to the configured default URL;
+- text with an explicit scheme is preserved;
+- host-like input is upgraded to `https://`;
+- free text becomes a Google search URL.
+
+The controller may decide when to normalize address input, but it must not duplicate address interpretation rules inline.
 
 ### `BabelInternalPageAssetProvider`
 

@@ -1,6 +1,7 @@
 #import "Browser/BrowserWindowController.h"
 
 #import "Browser/AddressBarDisplayResolver.h"
+#import "Browser/AddressNavigationNormalizer.h"
 #import "Browser/AdjacentTabPreloadPlanner.h"
 #import "Browser/AppSettingsPageRenderer.h"
 #import "Browser/BrowserClient.h"
@@ -150,6 +151,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSView* linkStatusBarView_;
   NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
+  BabelAddressNavigationNormalizer* addressNavigationNormalizer_;
   BabelAddressBarDisplayResolver* addressBarDisplayResolver_;
   BabelAdjacentTabPreloadPlanner* adjacentTabPreloadPlanner_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
@@ -262,6 +264,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
         [[BabelChromeCommandParser alloc] initWithDefaultGroupName:kDefaultGroupName
                                                   defaultURLString:BabelChromeConfiguration.defaultURLString];
     __weak BabelBrowserWindowController* weakSelf = self;
+    addressNavigationNormalizer_ = [[BabelAddressNavigationNormalizer alloc] init];
     closedTabRestorationPlanner_ =
         [[BabelClosedTabRestorationPlanner alloc]
             initWithDefaultGroupName:kDefaultGroupName

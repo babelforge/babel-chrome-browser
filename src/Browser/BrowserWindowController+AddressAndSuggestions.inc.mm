@@ -452,25 +452,8 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (NSString*)normalizedURLStringFromAddress:(NSString*)address {
-  NSString* trimmedAddress = [address stringByTrimmingCharactersInSet:
-      NSCharacterSet.whitespaceAndNewlineCharacterSet];
-  if (trimmedAddress.length == 0) {
-    return BabelChromeConfiguration.defaultURLString;
-  }
-
-  NSURLComponents* components = [NSURLComponents componentsWithString:trimmedAddress];
-  if (components.scheme.length > 0) {
-    return trimmedAddress;
-  }
-
-  if ([trimmedAddress containsString:@"."] || [trimmedAddress hasPrefix:@"localhost"]) {
-    return [@"https://" stringByAppendingString:trimmedAddress];
-  }
-
-  NSString* encodedQuery =
-      [trimmedAddress stringByAddingPercentEncodingWithAllowedCharacters:
-                          NSCharacterSet.URLQueryAllowedCharacterSet];
-  return [@"https://www.google.com/search?q=" stringByAppendingString:(encodedQuery ?: @"")];
+  return [addressNavigationNormalizer_ navigationStringFromAddress:address
+                                                 defaultURLString:BabelChromeConfiguration.defaultURLString];
 }
 
 - (NSString*)compactTitleForString:(NSString*)value {
