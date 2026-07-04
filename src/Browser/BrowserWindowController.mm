@@ -8,6 +8,7 @@
 #import "Browser/AppSettingsPageRenderer.h"
 #import "Browser/ApplicationRelauncher.h"
 #import "Browser/BrowserClient.h"
+#import "Browser/BrowserCreationScheduler.h"
 #import "Browser/BrowserGroupCollection.h"
 #import "Browser/BrowserGroupFactory.h"
 #import "Browser/BrowserGroupMoveCoordinator.h"
@@ -175,6 +176,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelAdjacentTabPreloadPlanner* adjacentTabPreloadPlanner_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelApplicationRelauncher* applicationRelauncher_;
+  BabelBrowserCreationScheduler* browserCreationScheduler_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelBrowserTabFactory* browserTabFactory_;
   BabelChromeCommandParser* chromeCommandParser_;
@@ -264,8 +266,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BOOL isBuildingInterface_;
   BOOL didApplyInitialSidebarRestore_;
   BOOL needsInitialRestoredBrowserCreation_;
-  NSUInteger deferredBrowserCreationGeneration_;
-  NSUInteger adjacentTabPreloadGeneration_;
   NSUInteger tabDragHoverGeneration_;
   NSUInteger googleSuggestGeneration_;
 }
@@ -294,6 +294,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
     addressFieldNavigationResolver_ = [[BabelAddressFieldNavigationResolver alloc] init];
     adjacentTabPreloadPlanner_ = [[BabelAdjacentTabPreloadPlanner alloc] init];
     applicationRelauncher_ = [[BabelApplicationRelauncher alloc] init];
+    browserCreationScheduler_ = [[BabelBrowserCreationScheduler alloc] init];
     browserSettingsStore_ =
         [[BabelBrowserSettingsStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     chromeCommandParser_ =
@@ -502,8 +503,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     isBuildingInterface_ = NO;
     didApplyInitialSidebarRestore_ = NO;
     needsInitialRestoredBrowserCreation_ = NO;
-    deferredBrowserCreationGeneration_ = 0;
-    adjacentTabPreloadGeneration_ = 0;
     tabDragHoverGeneration_ = 0;
     googleSuggestGeneration_ = 0;
     [extensionProfileStore_ restoreProfileExtensionsMovedByOlderVersions];

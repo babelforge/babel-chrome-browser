@@ -402,19 +402,25 @@
     return;
   }
 
-  NSUInteger generation = ++deferredBrowserCreationGeneration_;
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
-                               kKeyboardTabSelectionBrowserCreationDelayNanoseconds),
-                 dispatch_get_main_queue(), ^{
-    if (generation != deferredBrowserCreationGeneration_ ||
-        self->selectedTab_ != tab ||
-        self->isTerminating_) {
-      return;
-    }
-
-    [self createBrowserForTabIfNeeded:tab];
-    [self scheduleAdjacentTabPreloadForSelectedTab];
-  });
+  __weak BabelBrowserWindowController* weakSelf = self;
+  [browserCreationScheduler_ scheduleKeyboardBrowserCreationForTab:tab
+                                                 delayNanoseconds:kKeyboardTabSelectionBrowserCreationDelayNanoseconds
+                                              selectedTabProvider:^BabelBrowserTab* {
+                                                BabelBrowserWindowController* strongSelf = weakSelf;
+                                                return strongSelf ? strongSelf->selectedTab_ : nil;
+                                              }
+                                              terminationProvider:^BOOL {
+                                                BabelBrowserWindowController* strongSelf = weakSelf;
+                                                return strongSelf ? strongSelf->isTerminating_ : YES;
+                                              }
+                                                    createHandler:^(BabelBrowserTab* tabToCreate) {
+                                                      BabelBrowserWindowController* strongSelf = weakSelf;
+                                                      [strongSelf createBrowserForTabIfNeeded:tabToCreate];
+                                                    }
+                                                   preloadHandler:^{
+                                                     BabelBrowserWindowController* strongSelf = weakSelf;
+                                                     [strongSelf scheduleAdjacentTabPreloadForSelectedTab];
+                                                   }];
 }
 
 - (void)createInitialRestoredBrowserIfNeeded {
@@ -423,7 +429,7 @@
   }
 
   needsInitialRestoredBrowserCreation_ = NO;
-  ++deferredBrowserCreationGeneration_;
+  [browserCreationScheduler_ cancelKeyboardBrowserCreation];
   [self createBrowserForTabIfNeeded:selectedTab_];
   [self scheduleAdjacentTabPreloadForSelectedTab];
 }
@@ -433,44 +439,29 @@
     return;
   }
 
-  NSUInteger generation = ++adjacentTabPreloadGeneration_;
   BabelBrowserTab* anchorTab = selectedTab_;
   NSArray<BabelBrowserTab*>* tabsToPreload = [self adjacentTabsToPreloadAroundTab:anchorTab];
-  [self scheduleAdjacentTabPreloadForTabs:tabsToPreload
-                                anchorTab:anchorTab
-                               generation:generation
-                                    index:0];
+  __weak BabelBrowserWindowController* weakSelf = self;
+  [browserCreationScheduler_ scheduleAdjacentPreloadForTabs:tabsToPreload
+                                                  anchorTab:anchorTab
+                                    initialDelayNanoseconds:kAdjacentTabPreloadInitialDelayNanoseconds
+                                       stepDelayNanoseconds:kAdjacentTabPreloadStepDelayNanoseconds
+                                        selectedTabProvider:^BabelBrowserTab* {
+                                          BabelBrowserWindowController* strongSelf = weakSelf;
+                                          return strongSelf ? strongSelf->selectedTab_ : nil;
+                                        }
+                                        terminationProvider:^BOOL {
+                                          BabelBrowserWindowController* strongSelf = weakSelf;
+                                          return strongSelf ? strongSelf->isTerminating_ : YES;
+                                        }
+                                              createHandler:^(BabelBrowserTab* tabToPreload) {
+                                                BabelBrowserWindowController* strongSelf = weakSelf;
+                                                [strongSelf createBrowserForTabIfNeeded:tabToPreload];
+                                              }];
 }
 
 - (NSArray<BabelBrowserTab*>*)adjacentTabsToPreloadAroundTab:(BabelBrowserTab*)tab {
   return [adjacentTabPreloadPlanner_ adjacentTabsToPreloadAroundTab:tab tabs:tabs_];
-}
-
-- (void)scheduleAdjacentTabPreloadForTabs:(NSArray<BabelBrowserTab*>*)tabsToPreload
-                                anchorTab:(BabelBrowserTab*)anchorTab
-                               generation:(NSUInteger)generation
-                                    index:(NSUInteger)index {
-  if (index >= tabsToPreload.count) {
-    return;
-  }
-
-  int64_t delay = index == 0
-      ? kAdjacentTabPreloadInitialDelayNanoseconds
-      : kAdjacentTabPreloadStepDelayNanoseconds;
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, delay), dispatch_get_main_queue(), ^{
-    if (generation != self->adjacentTabPreloadGeneration_ ||
-        self->selectedTab_ != anchorTab ||
-        self->isTerminating_) {
-      return;
-    }
-
-    BabelBrowserTab* tabToPreload = tabsToPreload[index];
-    [self createBrowserForTabIfNeeded:tabToPreload];
-    [self scheduleAdjacentTabPreloadForTabs:tabsToPreload
-                                  anchorTab:anchorTab
-                                 generation:generation
-                                      index:index + 1];
-  });
 }
 
 - (void)touchRecentlyUsedTab:(BabelBrowserTab*)tab {

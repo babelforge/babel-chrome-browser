@@ -26,6 +26,8 @@ set(BABEL_CHROME_SOURCES
   Browser/AddressNavigationNormalizer.mm
   Browser/BrowserClient.h
   Browser/BrowserClient.mm
+  Browser/BrowserCreationScheduler.h
+  Browser/BrowserCreationScheduler.mm
   Browser/BrowserGroupCollection.h
   Browser/BrowserGroupCollection.mm
   Browser/BrowserGroupFactory.h

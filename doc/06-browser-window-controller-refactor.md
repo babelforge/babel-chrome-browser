@@ -102,6 +102,7 @@ BrowserWindowController
             |__ BrowserTabFactory
             |__ TabURLMatcher
             |__ AdjacentTabPreloadPlanner
+            |__ BrowserCreationScheduler
             |__ ChromeCommandParser
             |__ DeveloperToolsDockingPolicy
             |__ DeveloperToolsDockingStore
@@ -117,7 +118,7 @@ BrowserWindowController
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`; internal-page tab classification is delegated to `BabelInternalPageTabClassifier`; stable viewer source-file resolution is delegated to `BabelViewerSourceResolver`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
-| `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Native group construction is delegated to `BabelBrowserGroupFactory`; group lookup, generated names, and delete-selection fallback are delegated to `BabelBrowserGroupCollection`; group rename prompts and duplicate-name alerts are delegated to `BabelGroupRenameController`; group reorder mutations are delegated to `BabelBrowserGroupMoveCoordinator`; tab lookup, containing-group lookup, tab identifier lists, and parent-tab maps are delegated to `BabelBrowserTabCollection`; strategy-based tab insertion is delegated to `BabelBrowserTabInsertionCoordinator`; existing-tab move mutations are delegated to `BabelBrowserTabMoveCoordinator`; group list layout is delegated to `BabelGroupListCoordinator`; group session IO and restored state parsing are delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; tab content view attachment is delegated to `BabelTabContentViewAttacher`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; new-tab URL pair resolution is delegated to `BabelNewTabURLResolver`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser usage tracking is delegated to `BabelLiveBrowserEvictionPolicy`; live browser limit enforcement is delegated to `BabelLiveBrowserLimitEnforcer`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`; closed-tab restoration fallback decisions are delegated to `BabelClosedTabRestorationPlanner`. |
+| `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Native group construction is delegated to `BabelBrowserGroupFactory`; group lookup, generated names, and delete-selection fallback are delegated to `BabelBrowserGroupCollection`; group rename prompts and duplicate-name alerts are delegated to `BabelGroupRenameController`; group reorder mutations are delegated to `BabelBrowserGroupMoveCoordinator`; tab lookup, containing-group lookup, tab identifier lists, and parent-tab maps are delegated to `BabelBrowserTabCollection`; strategy-based tab insertion is delegated to `BabelBrowserTabInsertionCoordinator`; existing-tab move mutations are delegated to `BabelBrowserTabMoveCoordinator`; group list layout is delegated to `BabelGroupListCoordinator`; group session IO and restored state parsing are delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; tab content view attachment is delegated to `BabelTabContentViewAttacher`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; delayed browser creation and adjacent preload scheduling are delegated to `BabelBrowserCreationScheduler`; new-tab URL pair resolution is delegated to `BabelNewTabURLResolver`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser usage tracking is delegated to `BabelLiveBrowserEvictionPolicy`; live browser limit enforcement is delegated to `BabelLiveBrowserLimitEnforcer`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`; closed-tab restoration fallback decisions are delegated to `BabelClosedTabRestorationPlanner`. |
 | `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, action execution, and shared internal utilities. Extensions/modules/history query parsing is delegated to `BabelInternalNavigationActionParser`; module action execution and post-action destination selection are delegated to `BabelInternalModuleNavigationHandler`; settings query mutation is delegated to `BabelInternalSettingsNavigationHandler`; body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`; history row collection is delegated to `BabelHistoryPageDataSource`; extension row collection is delegated to `BabelExtensionsPageDataSource`; unpacked extension folder selection is delegated to `BabelExtensionFolderController`; Project Launcher JSON panel import is delegated to `BabelProjectLauncherJSONImporter`; HTML data URL encoding is delegated to `BabelHTMLDataURLBuilder`; query/path/shell string formatting is delegated to `BabelBrowserStringFormatter`; reusable internal-page icon HTML is delegated to `BabelInternalPageAssetProvider`; application restart relaunch scheduling is delegated to `BabelApplicationRelauncher`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`; local-drop diagnostic file writes are delegated to `BabelLocalDropLogWriter`; native drop payload validation and JSON construction are delegated to `BabelLocalDropPayloadBuilder`; module manifest/route local-drop support resolution is delegated to `BabelLocalDropSupportResolver`. |
 | `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; stable module route URL conversion is delegated to `BabelModuleNavigationURLResolver`; missing viewer error page rendering is delegated to `BabelNoViewerPageRenderer`; LocalServiceHost runtime URL classification is delegated to `BabelLocalServiceURLClassifier`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`; tab refresh matching rules are delegated to `BabelRuntimeRefreshTabMatcher`. |
@@ -545,7 +546,18 @@ The controller may use the matcher to find an existing tab, but it must not dupl
 - previous/next visible tab selection around the active tab;
 - protected live browser identifier calculation for the selected tab, adjacent tabs, and tabs with visible Developer Tools.
 
-The controller may schedule delayed browser creation and perform CEF browser eviction, but it must not keep adjacent-tab selection or protection loops inline.
+The controller may request adjacent preloads and perform CEF browser eviction, but it must not keep adjacent-tab selection or protection loops inline.
+
+### `BabelBrowserCreationScheduler`
+
+`BabelBrowserCreationScheduler` owns delayed browser creation scheduling:
+
+- cancels pending keyboard-navigation browser creation when selection changes directly;
+- waits for rapid keyboard tab navigation to settle before creating a CEF browser;
+- schedules adjacent tab preload creation with generation-based cancellation;
+- guards delayed work through explicit selected-tab and termination providers.
+
+The controller may provide the selected tab, termination state, and the concrete browser creation callback, but it must not own dispatch timers or generation counters for browser creation/preload scheduling.
 
 ### `BabelChromeCommandParser`
 
@@ -850,12 +862,12 @@ The controller should keep AppKit panels and CEF navigation execution, but it sh
 
 ### Group And Tab Session Orchestration
 
-`BrowserWindowController+GroupsAndTabs.inc.mm` still mixes group mutations, tab mutations, session restore, and browser lifecycle scheduling. Further extraction should happen by behavior:
+`BrowserWindowController+GroupsAndTabs.inc.mm` still mixes group mutations, tab mutations, session restore, and browser lifecycle coordination. Further extraction should happen by behavior:
 
 - group CRUD and rename validation;
 - tab close/reopen orchestration;
 - session restore sequencing;
-- browser creation/preload scheduling;
+- browser lifecycle command coordination;
 - live browser limit enforcement.
 
 The controller should remain the owner of visible selection and AppKit/CEF side effects, but it should stop owning pure ordering and lifecycle decisions.

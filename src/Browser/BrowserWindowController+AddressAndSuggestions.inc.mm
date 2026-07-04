@@ -44,7 +44,7 @@
     if (deferringBrowserCreation) {
       [self scheduleBrowserCreationAfterKeyboardNavigationForTab:tab];
     } else {
-      ++deferredBrowserCreationGeneration_;
+      [browserCreationScheduler_ cancelKeyboardBrowserCreation];
       [self createBrowserForTabIfNeeded:tab];
       [self scheduleAdjacentTabPreloadForSelectedTab];
     }
