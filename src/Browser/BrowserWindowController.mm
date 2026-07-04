@@ -8,6 +8,7 @@
 #import "Browser/BrowserGroupFactory.h"
 #import "Browser/BrowserGroupMoveCoordinator.h"
 #import "Browser/BrowserSettingsStore.h"
+#import "Browser/BrowserStringFormatter.h"
 #import "Browser/BrowserTabCollection.h"
 #import "Browser/BrowserTabFactory.h"
 #import "Browser/BrowserTabInsertionCoordinator.h"
@@ -25,7 +26,9 @@
 #import "Browser/GroupSessionStore.h"
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/InternalNavigationActionParser.h"
+#import "Browser/InternalPageAssetProvider.h"
 #import "Browser/InternalPageRenderer.h"
+#import "Browser/InternalPageTabClassifier.h"
 #import "Browser/InternalSettingsNavigationHandler.h"
 #import "Browser/LiveBrowserEvictionPolicy.h"
 #import "Browser/LocalDropBridgeScriptBuilder.h"
@@ -56,6 +59,7 @@
 #import "Browser/BrowserSupportViews.h"
 #import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
+#import "Browser/ViewerSourceResolver.h"
 #import "Browser/WindowStateStore.h"
 #import "Configuration/Configuration.h"
 #import "LocalServices/LocalServiceHost.h"
@@ -162,12 +166,15 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserTabCollection* browserTabCollection_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
   BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
+  BabelBrowserStringFormatter* browserStringFormatter_;
   BabelClosedTabRestorationPlanner* closedTabRestorationPlanner_;
   BabelGroupListCoordinator* groupListCoordinator_;
   BabelGroupSessionStore* groupSessionStore_;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelInternalNavigationActionParser* internalNavigationActionParser_;
+  BabelInternalPageAssetProvider* internalPageAssetProvider_;
   BabelInternalPageRenderer* internalPageRenderer_;
+  BabelInternalPageTabClassifier* internalPageTabClassifier_;
   BabelInternalSettingsNavigationHandler* internalSettingsNavigationHandler_;
   BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
   BabelLocalDropBridgeScriptBuilder* localDropBridgeScriptBuilder_;
@@ -193,6 +200,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelTabDragCoordinator* tabDragCoordinator_;
   BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
   BabelTabURLMatcher* tabURLMatcher_;
+  BabelViewerSourceResolver* viewerSourceResolver_;
   BabelWindowStateStore* windowStateStore_;
   BabelBrowserGroup* selectedGroup_;
   NSMutableArray<BabelBrowserTab*>* tabs_;
@@ -298,6 +306,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     browserGroupFactory_ = [[BabelBrowserGroupFactory alloc] initWithActionTarget:self];
     browserGroupMoveCoordinator_ = [[BabelBrowserGroupMoveCoordinator alloc] init];
     browserTabCollection_ = [[BabelBrowserTabCollection alloc] init];
+    browserStringFormatter_ = [[BabelBrowserStringFormatter alloc] init];
     BabelTabPlacementPolicy* tabPlacementPolicy = [[BabelTabPlacementPolicy alloc] init];
     browserTabInsertionCoordinator_ =
         [[BabelBrowserTabInsertionCoordinator alloc] initWithPlacementPolicy:tabPlacementPolicy
@@ -306,7 +315,16 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     groupSessionStore_ = [[BabelGroupSessionStore alloc] init];
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
     internalNavigationActionParser_ = [[BabelInternalNavigationActionParser alloc] init];
+    internalPageAssetProvider_ = [[BabelInternalPageAssetProvider alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
+    internalPageTabClassifier_ =
+        [[BabelInternalPageTabClassifier alloc]
+            initWithInternalPageURLStrings:@[
+              kHistoryPageURLString,
+              kSettingsPageURLString,
+              kExtensionsPageURLString,
+              kModulesPageURLString
+            ]];
     internalSettingsNavigationHandler_ =
         [[BabelInternalSettingsNavigationHandler alloc] initWithSettingsStore:browserSettingsStore_
                                                                  userDefaults:NSUserDefaults.standardUserDefaults];
@@ -379,6 +397,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
                                                           tabHeight:kTabHeight
                                                             spacing:kTabSpacing];
     tabURLMatcher_ = [[BabelTabURLMatcher alloc] init];
+    viewerSourceResolver_ =
+        [[BabelViewerSourceResolver alloc] initWithStableViewerURLResolver:stableViewerURLResolver_];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     tabs_ = [NSMutableArray array];
     pendingTabs_ = [NSMutableArray array];

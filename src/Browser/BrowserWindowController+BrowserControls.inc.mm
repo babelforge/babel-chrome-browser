@@ -1,10 +1,7 @@
 // This file is included by BrowserWindowController.mm.
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (BOOL)isInternalPageTab:(BabelBrowserTab*)tab {
-  return [tab.requestedURLString isEqualToString:kHistoryPageURLString] ||
-         [tab.requestedURLString isEqualToString:kSettingsPageURLString] ||
-         [tab.requestedURLString isEqualToString:kExtensionsPageURLString] ||
-         [tab.requestedURLString isEqualToString:kModulesPageURLString];
+  return [internalPageTabClassifier_ isInternalPageTab:tab];
 }
 
 - (void)openDeveloperToolsForSelectedTab {
@@ -69,14 +66,7 @@
 
 - (NSURL*)viewerSourceFileURLForBrowser:(CefRefPtr<CefBrowser>)browser {
   BabelBrowserTab* tab = [self tabForBrowser:browser];
-  NSString* requestedURLString = tab.requestedURLString ?: @"";
-  if (![stableViewerURLResolver_ isStableViewerURLString:requestedURLString] ||
-      ![[stableViewerURLResolver_ sourceKindForStableViewerURLString:requestedURLString] isEqualToString:@"file"]) {
-    return nil;
-  }
-
-  NSURL* sourceURL = [stableViewerURLResolver_ sourceURLForViewerURLString:requestedURLString];
-  return sourceURL.isFileURL ? sourceURL : nil;
+  return [viewerSourceResolver_ viewerSourceFileURLForTab:tab];
 }
 
 - (void)closeDeveloperToolsFromButton:(NSButton*)sender {

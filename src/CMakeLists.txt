@@ -26,6 +26,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserGroupMoveCoordinator.mm
   Browser/BrowserSettingsStore.h
   Browser/BrowserSettingsStore.mm
+  Browser/BrowserStringFormatter.h
+  Browser/BrowserStringFormatter.mm
   Browser/BrowserTabCollection.h
   Browser/BrowserTabCollection.mm
   Browser/BrowserTabFactory.h
@@ -54,8 +56,12 @@ set(BABEL_CHROME_SOURCES
   Browser/HistoryPageRenderer.mm
   Browser/InternalNavigationActionParser.h
   Browser/InternalNavigationActionParser.mm
+  Browser/InternalPageAssetProvider.h
+  Browser/InternalPageAssetProvider.mm
   Browser/InternalPageRenderer.h
   Browser/InternalPageRenderer.mm
+  Browser/InternalPageTabClassifier.h
+  Browser/InternalPageTabClassifier.mm
   Browser/InternalSettingsNavigationHandler.h
   Browser/InternalSettingsNavigationHandler.mm
   Browser/LiveBrowserEvictionPolicy.h
@@ -108,6 +114,8 @@ set(BABEL_CHROME_SOURCES
   Browser/TabStripLayoutCalculator.mm
   Browser/TabURLMatcher.h
   Browser/TabURLMatcher.mm
+  Browser/ViewerSourceResolver.h
+  Browser/ViewerSourceResolver.mm
   Browser/WindowStateStore.h
   Browser/WindowStateStore.mm
   Browser/BrowserModels.h
