@@ -62,6 +62,8 @@ set(BABEL_CHROME_SOURCES
   Browser/FaviconStore.mm
   Browser/GoogleSuggestClient.h
   Browser/GoogleSuggestClient.mm
+  Browser/GoogleSuggestionScheduler.h
+  Browser/GoogleSuggestionScheduler.mm
   Browser/GroupListCoordinator.h
   Browser/GroupListCoordinator.mm
   Browser/GroupRenameController.h

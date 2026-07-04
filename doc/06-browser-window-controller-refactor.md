@@ -78,6 +78,7 @@ BrowserWindowController
             |__ OmniboxLocalSuggestionBuilder
             |__ OmniboxSuggestionContextBuilder
             |__ GoogleSuggestClient
+            |__ GoogleSuggestionScheduler
             |__ OmniboxSuggestionsController
             |__ BrowserGroupFactory
             |__ BrowserGroupCollection
@@ -117,7 +118,7 @@ BrowserWindowController
 
 | Fragment | Responsibility |
 | --- | --- |
-| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address input normalization is delegated to `BabelAddressNavigationNormalizer`; displayed-vs-actual address navigation resolution is delegated to `BabelAddressFieldNavigationResolver`; address badge/text-field frame calculation is delegated to `BabelAddressFieldLayoutCalculator`; link-hover status-bar presentation is delegated to `BabelLinkStatusBarController`; window title, compact tab title, and badge color formatting are delegated to `BabelBrowserPresentationFormatter`; address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
+| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address input normalization is delegated to `BabelAddressNavigationNormalizer`; displayed-vs-actual address navigation resolution is delegated to `BabelAddressFieldNavigationResolver`; address badge/text-field frame calculation is delegated to `BabelAddressFieldLayoutCalculator`; link-hover status-bar presentation is delegated to `BabelLinkStatusBarController`; window title, compact tab title, and badge color formatting are delegated to `BabelBrowserPresentationFormatter`; address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest HTTP/cache/search URL work is delegated to `BabelGoogleSuggestClient`; Google Suggest debounce and stale-response rejection are delegated to `BabelGoogleSuggestionScheduler`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`; internal-page tab classification is delegated to `BabelInternalPageTabClassifier`; stable viewer source-file resolution is delegated to `BabelViewerSourceResolver`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
@@ -375,6 +376,17 @@ The controller may collect tab row view models, add favicons, and render AppKit 
 - Google Search URL construction.
 
 The controller may debounce calls and reject stale generations, but it must not own Google Suggest HTTP, cache, or parsing logic.
+
+### `BabelGoogleSuggestionScheduler`
+
+`BabelGoogleSuggestionScheduler` owns Google Suggest debounce and stale-response rejection:
+
+- increments a generation when new query work starts or is cancelled;
+- returns cached suggestions immediately;
+- waits for the debounce delay before remote suggestions;
+- rejects stale scheduled work and stale asynchronous responses.
+
+The controller may still append accepted suggestions into the omnibox UI. It must not own Google Suggest dispatch timers or generation counters inline.
 
 ### `BabelOmniboxSuggestionsController`
 

@@ -223,7 +223,7 @@ doCommandBySelector:(SEL)commandSelector {
   NSString* trimmedQuery = [query stringByTrimmingCharactersInSet:
       NSCharacterSet.whitespaceAndNewlineCharacterSet];
   [omniboxSuggestionsController_ removeAllSuggestions];
-  ++googleSuggestGeneration_;
+  [googleSuggestionScheduler_ cancelPendingSuggestions];
 
   if (trimmedQuery.length == 0) {
     [self hideOmniboxSuggestions];
@@ -257,41 +257,32 @@ doCommandBySelector:(SEL)commandSelector {
   }
 
   [self showOmniboxSuggestions];
-  [self scheduleGoogleSuggestionsForQuery:trimmedQuery generation:googleSuggestGeneration_];
+  [self scheduleGoogleSuggestionsForQuery:trimmedQuery];
 }
 
-- (void)scheduleGoogleSuggestionsForQuery:(NSString*)query generation:(NSUInteger)generation {
-  if (![self googleSuggestEnabled] || query.length < 2) {
-    return;
-  }
-
-  NSArray<NSString*>* cachedSuggestions = [googleSuggestClient_ cachedSuggestionsForQuery:query];
-  if (cachedSuggestions) {
-    [self appendGoogleSuggestions:cachedSuggestions forQuery:query generation:generation];
-    return;
-  }
-
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, kGoogleSuggestDebounceDelayNanoseconds),
-                 dispatch_get_main_queue(), ^{
-    if (generation != self->googleSuggestGeneration_ ||
-        ![query isEqualToString:self->urlTextField_.stringValue]) {
-      return;
-    }
-
-    [googleSuggestClient_ fetchSuggestionsForQuery:query
-                                        completion:^(NSArray<NSString*>* suggestions) {
-      [self appendGoogleSuggestions:suggestions ?: @[]
-                            forQuery:query
-                         generation:generation];
-    }];
-  });
+- (void)scheduleGoogleSuggestionsForQuery:(NSString*)query {
+  __weak BabelBrowserWindowController* weakSelf = self;
+  [googleSuggestionScheduler_ scheduleSuggestionsForQuery:query
+                                         delayNanoseconds:kGoogleSuggestDebounceDelayNanoseconds
+                                     currentQueryProvider:^NSString* {
+                                       BabelBrowserWindowController* strongSelf = weakSelf;
+                                       return strongSelf ? strongSelf->urlTextField_.stringValue : @"";
+                                     }
+                                           enabledProvider:^BOOL {
+                                             BabelBrowserWindowController* strongSelf = weakSelf;
+                                             return strongSelf ? [strongSelf googleSuggestEnabled] : NO;
+                                           }
+                                             resultHandler:^(NSString* suggestedQuery,
+                                                             NSArray<NSString*>* suggestions) {
+                                               BabelBrowserWindowController* strongSelf = weakSelf;
+                                               [strongSelf appendGoogleSuggestions:suggestions
+                                                                          forQuery:suggestedQuery];
+                                             }];
 }
 
 - (void)appendGoogleSuggestions:(NSArray<NSString*>*)suggestions
-                       forQuery:(NSString*)query
-                    generation:(NSUInteger)generation {
-  if (generation != googleSuggestGeneration_ ||
-      ![query isEqualToString:urlTextField_.stringValue] ||
+                       forQuery:(NSString*)query {
+  if (![query isEqualToString:urlTextField_.stringValue] ||
       ![self googleSuggestEnabled]) {
     return;
   }

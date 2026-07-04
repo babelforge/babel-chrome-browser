@@ -35,6 +35,7 @@
 #import "Browser/HistoryPageDataSource.h"
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/HTMLDataURLBuilder.h"
+#import "Browser/GoogleSuggestionScheduler.h"
 #import "Browser/InternalNavigationActionParser.h"
 #import "Browser/InternalModuleNavigationHandler.h"
 #import "Browser/InternalPageAssetProvider.h"
@@ -192,6 +193,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
   BabelFaviconStore* faviconStore_;
   BabelGoogleSuggestClient* googleSuggestClient_;
+  BabelGoogleSuggestionScheduler* googleSuggestionScheduler_;
   BabelBrowserGroupCollection* browserGroupCollection_;
   BabelBrowserGroupFactory* browserGroupFactory_;
   BabelBrowserGroupMoveCoordinator* browserGroupMoveCoordinator_;
@@ -271,7 +273,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BOOL isBuildingInterface_;
   BOOL didApplyInitialSidebarRestore_;
   BOOL needsInitialRestoredBrowserCreation_;
-  NSUInteger googleSuggestGeneration_;
 }
 
 - (instancetype)init {
@@ -357,6 +358,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
               [weakSelf pageContainerDidReceiveLocalDrop:container];
             }];
     googleSuggestClient_ = [[BabelGoogleSuggestClient alloc] init];
+    googleSuggestionScheduler_ =
+        [[BabelGoogleSuggestionScheduler alloc] initWithGoogleSuggestClient:googleSuggestClient_];
     browserGroupCollection_ = [[BabelBrowserGroupCollection alloc] init];
     browserGroupFactory_ = [[BabelBrowserGroupFactory alloc] initWithActionTarget:self];
     browserGroupMoveCoordinator_ = [[BabelBrowserGroupMoveCoordinator alloc] init];
@@ -514,7 +517,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     isBuildingInterface_ = NO;
     didApplyInitialSidebarRestore_ = NO;
     needsInitialRestoredBrowserCreation_ = NO;
-    googleSuggestGeneration_ = 0;
     [extensionProfileStore_ restoreProfileExtensionsMovedByOlderVersions];
     [extensionProfileStore_ clearPendingProfileExtensionRestartStates];
     window.delegate = self;
