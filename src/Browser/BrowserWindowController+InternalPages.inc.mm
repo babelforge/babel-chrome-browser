@@ -476,31 +476,6 @@
                                unpackedExtensionRows:[extensionsPageDataSource_ unpackedExtensionRows]];
   return [self internalPageHTMLWithTitle:@"Extensions" body:body];
 }
-- (NSString*)settingsTabOpeningStrategyHTML:(NSString*)selectedStrategy {
-  return [settingsOptionRenderer_ tabOpeningStrategyHTMLWithSelectedStrategy:selectedStrategy];
-}
-
-- (NSString*)settingsAddressSuggestionsHTML:(NSString*)selectedMode {
-  return [settingsOptionRenderer_ addressSuggestionsHTMLWithSelectedMode:selectedMode];
-}
-
-- (NSString*)settingsAppearanceThemeHTML:(NSString*)selectedTheme {
-  return [settingsOptionRenderer_ appearanceThemeHTMLWithSelectedTheme:selectedTheme];
-}
-
-- (NSString*)settingsLongQuitShortcutHTML:(BOOL)enabled {
-  return [settingsOptionRenderer_ longQuitShortcutHTMLWithEnabledState:enabled];
-}
-
-- (NSString*)settingsMarkdownThemeHTML:(NSString*)selectedTheme {
-  return [self settingsMarkdownThemeHTML:selectedTheme settingsURLString:@"babelchrome://settings"];
-}
-
-- (NSString*)settingsMarkdownThemeHTML:(NSString*)selectedTheme settingsURLString:(NSString*)settingsURLString {
-  return [settingsOptionRenderer_ markdownThemeHTMLWithSelectedTheme:selectedTheme
-                                                   settingsURLString:settingsURLString];
-}
-
 - (NSString*)moduleSettingsIdentifierFromSettingsComponents:(NSURLComponents*)components {
   NSString* path = components.path ?: @"";
   if ([path hasPrefix:@"/"]) {
@@ -597,31 +572,12 @@
   return [browserStringFormatter_ pathEscapedString:value];
 }
 
-- (NSString*)shellQuotedString:(NSString*)value {
-  return [browserStringFormatter_ shellQuotedString:value];
-}
-
 - (NSString*)trashIconHTML {
   return [internalPageAssetProvider_ trashIconHTML];
 }
 
 - (NSString*)resourceSVGIconHTMLNamed:(NSString*)resourceName fallback:(NSString*)fallbackHTML {
   return [internalPageAssetProvider_ resourceSVGIconHTMLNamed:resourceName fallback:fallbackHTML];
-}
-
-- (BOOL)isInternalModuleCapability:(NSString*)capability {
-  static NSSet<NSString*>* internalCapabilities = nil;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    internalCapabilities = [NSSet setWithArray:@[
-      @"app.did-start",
-      @"app.will-quit",
-      @"drop.local-paths",
-      @"settings.section.register"
-    ]];
-  });
-
-  return [internalCapabilities containsObject:capability ?: @""];
 }
 
 - (void)restartApplication {
@@ -633,8 +589,4 @@
 
 - (NSString*)internalPageHTMLWithTitle:(NSString*)title body:(NSString*)body {
   return [internalPageRenderer_ internalPageHTMLWithTitle:title body:body];
-}
-
-- (NSString*)htmlEscapedString:(NSString*)value {
-  return [internalPageRenderer_ htmlEscapedString:value];
 }
