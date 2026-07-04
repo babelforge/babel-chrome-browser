@@ -44,6 +44,7 @@
 #import "Browser/ModuleUpdateService.h"
 #import "Browser/ModuleUIActionCoordinator.h"
 #import "Browser/NewTabURLResolver.h"
+#import "Browser/NoViewerPageRenderer.h"
 #import "Browser/OmniboxLocalSuggestionBuilder.h"
 #import "Browser/OmniboxSuggestionContextBuilder.h"
 #import "Browser/OmniboxSuggestionsController.h"
@@ -195,6 +196,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleUpdateService* moduleUpdateService_;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
   BabelNewTabURLResolver* newTabURLResolver_;
+  BabelNoViewerPageRenderer* noViewerPageRenderer_;
   BabelOmniboxLocalSuggestionBuilder* omniboxLocalSuggestionBuilder_;
   BabelOmniboxSuggestionContextBuilder* omniboxSuggestionContextBuilder_;
   BabelOmniboxSuggestionsController* omniboxSuggestionsController_;
@@ -376,7 +378,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
             stableViewerURLPredicate:^BOOL(NSString* urlString) {
               BabelBrowserWindowController* strongSelf = weakSelf;
               return strongSelf ? [strongSelf->stableViewerURLResolver_ isStableViewerURLString:urlString] : NO;
-    }];
+            }];
+    noViewerPageRenderer_ = [[BabelNoViewerPageRenderer alloc] init];
     omniboxLocalSuggestionBuilder_ = [[BabelOmniboxLocalSuggestionBuilder alloc] init];
     omniboxSuggestionContextBuilder_ = [[BabelOmniboxSuggestionContextBuilder alloc] init];
     projectLifecycleResponseParser_ = [[BabelProjectLifecycleResponseParser alloc] init];

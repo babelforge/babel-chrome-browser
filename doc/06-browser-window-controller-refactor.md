@@ -41,6 +41,7 @@ BrowserWindowController
             |__ RecentlyClosedTabStore
             |__ InternalPageRenderer
             |__ StableViewerURLResolver
+            |__ NoViewerPageRenderer
             |__ StableServerURLResolver
             |__ LocalServiceURLClassifier
             |__ ProjectLifecycleResponseParser
@@ -104,7 +105,7 @@ BrowserWindowController
 | `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Native group construction is delegated to `BabelBrowserGroupFactory`; group lookup, generated names, and delete-selection fallback are delegated to `BabelBrowserGroupCollection`; group reorder mutations are delegated to `BabelBrowserGroupMoveCoordinator`; tab lookup, containing-group lookup, tab identifier lists, and parent-tab maps are delegated to `BabelBrowserTabCollection`; strategy-based tab insertion is delegated to `BabelBrowserTabInsertionCoordinator`; existing-tab move mutations are delegated to `BabelBrowserTabMoveCoordinator`; group list layout is delegated to `BabelGroupListCoordinator`; group session IO and restored state parsing are delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; new-tab URL pair resolution is delegated to `BabelNewTabURLResolver`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser eviction is delegated to `BabelLiveBrowserEvictionPolicy`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`; closed-tab restoration fallback decisions are delegated to `BabelClosedTabRestorationPlanner`. |
 | `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, action execution, and shared internal utilities. Extensions/modules/history query parsing is delegated to `BabelInternalNavigationActionParser`; settings query mutation is delegated to `BabelInternalSettingsNavigationHandler`; body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`; query/path/shell string formatting is delegated to `BabelBrowserStringFormatter`; reusable internal-page icon HTML is delegated to `BabelInternalPageAssetProvider`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`; local-drop diagnostic file writes are delegated to `BabelLocalDropLogWriter`; native drop payload validation and JSON construction are delegated to `BabelLocalDropPayloadBuilder`. |
-| `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; LocalServiceHost runtime URL classification is delegated to `BabelLocalServiceURLClassifier`; Project Launcher lifecycle response parsing is delegated to `BabelProjectLifecycleResponseParser`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
+| `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; missing viewer error page rendering is delegated to `BabelNoViewerPageRenderer`; LocalServiceHost runtime URL classification is delegated to `BabelLocalServiceURLClassifier`; Project Launcher lifecycle response parsing is delegated to `BabelProjectLifecycleResponseParser`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
 | `BrowserWindowController+WindowLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, module lifecycle calls, main layout application, and window/sidebar view resizing. Main AppKit view construction is delegated to `BabelMainWindowViewFactory`; window/sidebar persistence is delegated to `BabelWindowStateStore`; sidebar/right-panel frame calculation is delegated to `BabelSidebarLayoutCalculator`; tab item frame calculation is delegated to `BabelTabStripLayoutCalculator`. |
 
 ## Already Extracted Classes
@@ -224,6 +225,12 @@ The controller may decide when suggestions are displayed and which suggestion is
 - encodes stable viewer path segments.
 
 The controller may use the resolver to decide navigation and address display, but it must not manually parse stable viewer URL paths.
+
+### `BabelNoViewerPageRenderer`
+
+`BabelNoViewerPageRenderer` owns the HTML rendered when no enabled viewer module can handle a stable viewer source.
+
+The controller may convert the rendered HTML into a data URL for CEF navigation, but it must not keep missing-viewer HTML templates inline.
 
 ### `BabelStableServerURLResolver`
 

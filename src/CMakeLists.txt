@@ -90,6 +90,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ModuleUIActionCoordinator.mm
   Browser/NewTabURLResolver.h
   Browser/NewTabURLResolver.mm
+  Browser/NoViewerPageRenderer.h
+  Browser/NoViewerPageRenderer.mm
   Browser/OmniboxLocalSuggestionBuilder.h
   Browser/OmniboxLocalSuggestionBuilder.mm
   Browser/OmniboxSuggestionContextBuilder.h
