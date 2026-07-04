@@ -12,10 +12,14 @@ set(BABEL_CHROME_SOURCES
   App/MainMenuBuilder.mm
   Browser/AddressBarDisplayResolver.h
   Browser/AddressBarDisplayResolver.mm
+  Browser/AddressFieldLayoutCalculator.h
+  Browser/AddressFieldLayoutCalculator.mm
   Browser/AdjacentTabPreloadPlanner.h
   Browser/AdjacentTabPreloadPlanner.mm
   Browser/AppSettingsPageRenderer.h
   Browser/AppSettingsPageRenderer.mm
+  Browser/ApplicationRelauncher.h
+  Browser/ApplicationRelauncher.mm
   Browser/AddressNavigationNormalizer.h
   Browser/AddressNavigationNormalizer.mm
   Browser/BrowserClient.h
@@ -44,6 +48,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ClosedTabRestorationPlanner.mm
   Browser/ExtensionProfileStore.h
   Browser/ExtensionProfileStore.mm
+  Browser/ExtensionsPageDataSource.h
+  Browser/ExtensionsPageDataSource.mm
   Browser/ExtensionsPageRenderer.h
   Browser/ExtensionsPageRenderer.mm
   Browser/FaviconStore.h
@@ -52,10 +58,16 @@ set(BABEL_CHROME_SOURCES
   Browser/GoogleSuggestClient.mm
   Browser/GroupListCoordinator.h
   Browser/GroupListCoordinator.mm
+  Browser/GroupRenameController.h
+  Browser/GroupRenameController.mm
   Browser/GroupSessionStore.h
   Browser/GroupSessionStore.mm
+  Browser/HistoryPageDataSource.h
+  Browser/HistoryPageDataSource.mm
   Browser/HistoryPageRenderer.h
   Browser/HistoryPageRenderer.mm
+  Browser/HTMLDataURLBuilder.h
+  Browser/HTMLDataURLBuilder.mm
   Browser/InternalNavigationActionParser.h
   Browser/InternalNavigationActionParser.mm
   Browser/InternalPageAssetProvider.h

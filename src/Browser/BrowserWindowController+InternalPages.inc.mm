@@ -555,41 +555,12 @@
 }
 
 - (NSString*)dataURLStringForHTML:(NSString*)html {
-  NSData* data = [html dataUsingEncoding:NSUTF8StringEncoding];
-  NSString* encodedHTML = [data base64EncodedStringWithOptions:0];
-  return [NSString stringWithFormat:@"data:text/html;charset=utf-8;base64,%@", encodedHTML];
+  return [htmlDataURLBuilder_ dataURLStringForHTML:html];
 }
 - (NSString*)historyPageHTML {
-  NSMutableArray<NSDictionary*>* openTabRows = [NSMutableArray array];
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if ([self isInternalPageTab:tab]) {
-        continue;
-      }
-      NSString* title = tab.title.length > 0 ? tab.title : tab.requestedURLString;
-      [openTabRows addObject:@{
-        BabelHistoryRowTitleKey : title ?: @"",
-        BabelHistoryRowURLStringKey : tab.requestedURLString ?: tab.urlString ?: @"",
-        BabelHistoryRowGroupNameKey : group.name ?: kDefaultGroupName,
-      }];
-    }
-  }
-
-  NSMutableArray<NSDictionary*>* recentlyClosedTabRows = [NSMutableArray array];
-  NSArray<BabelClosedTab*>* closedTabs = [recentlyClosedTabStore_ allClosedTabs];
-  for (NSInteger index = (NSInteger)closedTabs.count - 1; index >= 0; index--) {
-    BabelClosedTab* closedTab = closedTabs[(NSUInteger)index];
-    NSString* title = closedTab.title.length > 0 ? closedTab.title : closedTab.requestedURLString;
-    [recentlyClosedTabRows addObject:@{
-      BabelHistoryRowTitleKey : title ?: @"",
-      BabelHistoryRowURLStringKey : closedTab.requestedURLString ?: closedTab.urlString ?: @"",
-      BabelHistoryRowGroupNameKey : closedTab.groupName ?: kDefaultGroupName,
-      BabelHistoryRowReopenIndexKey : @((NSUInteger)index),
-    }];
-  }
-
-  NSString* body = [historyPageRenderer_ historyPageBodyWithOpenTabRows:openTabRows
-                                                   recentlyClosedTabRows:recentlyClosedTabRows];
+  NSString* body =
+      [historyPageRenderer_ historyPageBodyWithOpenTabRows:[historyPageDataSource_ openTabRowsForGroups:groups_]
+                                      recentlyClosedTabRows:[historyPageDataSource_ recentlyClosedTabRows]];
   return [self internalPageHTMLWithTitle:@"History" body:body];
 }
 
@@ -619,44 +590,10 @@
 }
 
 - (NSString*)extensionsPageHTML {
-  NSArray<NSString*>* extensionPaths = [extensionProfileStore_ installedExtensionPaths];
-  NSArray<NSDictionary*>* profileExtensions = [extensionProfileStore_ profileInstalledExtensions];
-  NSMutableArray<NSDictionary*>* profileExtensionRows = [NSMutableArray array];
-  for (NSDictionary* extension in profileExtensions ?: @[]) {
-    NSString* extensionIdentifier = [extension[@"id"] isKindOfClass:NSString.class]
-        ? extension[@"id"]
-        : @"";
-    BOOL enabled = [extension[@"enabled"] boolValue];
-    NSString* toggleAction = enabled ? @"disableProfile" : @"enableProfile";
-    NSString* toggleLabel = enabled ? @"Disable" : @"Enable";
-    NSString* status = [extensionProfileStore_ profileExtensionStatusLabelForIdentifier:extensionIdentifier
-                                                                                enabled:enabled];
-    [profileExtensionRows addObject:@{
-      BabelExtensionProfileNameKey : [extension[@"name"] isKindOfClass:NSString.class] ? extension[@"name"] : @"",
-      BabelExtensionProfileIdentifierKey : extensionIdentifier ?: @"",
-      BabelExtensionProfileVersionKey : [extension[@"version"] isKindOfClass:NSString.class] ? extension[@"version"] : @"",
-      BabelExtensionProfilePathKey : [extension[@"path"] isKindOfClass:NSString.class] ? extension[@"path"] : @"",
-      BabelExtensionProfileStatusKey : status ?: @"",
-      BabelExtensionProfileToggleActionKey : toggleAction,
-      BabelExtensionProfileToggleLabelKey : toggleLabel,
-      BabelExtensionProfileRequiresRestartKey : @([extensionProfileStore_ profileExtensionRequiresRestart:extensionIdentifier]),
-    }];
-  }
-
-  NSMutableArray<NSDictionary*>* unpackedExtensionRows = [NSMutableArray array];
-  for (NSString* extensionPath in extensionPaths ?: @[]) {
-    NSString* manifestPath = [extensionPath stringByAppendingPathComponent:@"manifest.json"];
-    BOOL manifestExists = [NSFileManager.defaultManager fileExistsAtPath:manifestPath];
-    NSString* status = manifestExists ? @"Ready after restart" : @"Missing manifest.json";
-    [unpackedExtensionRows addObject:@{
-      BabelUnpackedExtensionNameKey : extensionPath.lastPathComponent ?: @"",
-      BabelUnpackedExtensionPathKey : extensionPath ?: @"",
-      BabelUnpackedExtensionStatusKey : [NSString stringWithFormat:@"%@ - %@", status, extensionPath ?: @""],
-    }];
-  }
-
-  NSString* body = [extensionsPageRenderer_ extensionsPageBodyWithProfileExtensionRows:profileExtensionRows
-                                                                 unpackedExtensionRows:unpackedExtensionRows];
+  NSString* body =
+      [extensionsPageRenderer_
+          extensionsPageBodyWithProfileExtensionRows:[extensionsPageDataSource_ profileExtensionRows]
+                               unpackedExtensionRows:[extensionsPageDataSource_ unpackedExtensionRows]];
   return [self internalPageHTMLWithTitle:@"Extensions" body:body];
 }
 - (NSString*)settingsTabOpeningStrategyHTML:(NSString*)selectedStrategy {
@@ -841,26 +778,8 @@
 
 - (void)restartApplication {
   NSString* bundlePath = NSBundle.mainBundle.bundlePath;
-  if (bundlePath.length == 0) {
-    [self requestApplicationTermination];
-    return;
-  }
-
-  int processIdentifier = NSProcessInfo.processInfo.processIdentifier;
-  NSString* script = [NSString stringWithFormat:
-      @"while /bin/kill -0 %d 2>/dev/null; do /bin/sleep 0.2; done; /usr/bin/open %@",
-      processIdentifier,
-      [self shellQuotedString:bundlePath]];
-
-  NSTask* task = [[NSTask alloc] init];
-  task.executableURL = [NSURL fileURLWithPath:@"/usr/bin/nohup"];
-  task.arguments = @[@"/bin/sh", @"-c", script];
-  NSFileHandle* nullHandle = [NSFileHandle fileHandleForWritingAtPath:@"/dev/null"];
-  if (nullHandle) {
-    task.standardOutput = nullHandle;
-    task.standardError = nullHandle;
-  }
-  [task launchAndReturnError:nil];
+  [applicationRelauncher_ scheduleRelaunchForBundlePath:bundlePath
+                                      processIdentifier:NSProcessInfo.processInfo.processIdentifier];
   [self requestApplicationTermination];
 }
 

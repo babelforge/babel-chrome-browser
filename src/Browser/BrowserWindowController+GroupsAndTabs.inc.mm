@@ -212,45 +212,20 @@
     return;
   }
 
-  NSAlert* alert = [[NSAlert alloc] init];
-  alert.messageText = @"Rename Group";
-  alert.informativeText = @"Enter the new group name.";
-  [alert addButtonWithTitle:@"Rename"];
-  [alert addButtonWithTitle:@"Cancel"];
-
-  NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 260, 28)];
-  textField.stringValue = group.name ?: @"";
-  alert.accessoryView = textField;
-
-  NSModalResponse response = [alert runModal];
-  if (response != NSAlertFirstButtonReturn) {
-    return;
-  }
-
-  NSString* newName = [textField.stringValue stringByTrimmingCharactersInSet:
-      NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  NSString* newName = [groupRenameController_ promptForGroupNameWithCurrentName:group.name];
   if (newName.length == 0 || [newName isEqualToString:group.name]) {
     return;
   }
 
   BabelBrowserGroup* existingGroup = [self groupWithName:newName];
   if (existingGroup && existingGroup != group) {
-    [self showGroupRenameDuplicateNameAlert:newName];
+    [groupRenameController_ showDuplicateNameAlertForGroupName:newName];
     return;
   }
 
   group.name = newName;
   group.groupItemView.title = newName;
   [self saveGroupsState];
-}
-
-- (void)showGroupRenameDuplicateNameAlert:(NSString*)groupName {
-  NSAlert* alert = [[NSAlert alloc] init];
-  alert.messageText = @"Group Name Already Exists";
-  alert.informativeText = [NSString stringWithFormat:@"A group named \"%@\" already exists.",
-                                                     groupName];
-  [alert addButtonWithTitle:@"OK"];
-  [alert runModal];
 }
 
 - (BabelBrowserGroup*)groupToSelectAfterDeletingGroupAtIndex:(NSUInteger)groupIndex {

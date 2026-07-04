@@ -72,21 +72,11 @@
 }
 
 - (void)layoutAddressTextFieldContent {
-  NSRect bounds = addressTextFieldContainer_.bounds;
-  BOOL hasBadge = !viewerBadgeLabel_.hidden;
-  CGFloat badgeWidth = hasBadge ? 30.0 : 0.0;
-  CGFloat leftInset = 8.0;
-  CGFloat horizontalGap = hasBadge ? 8.0 : 0.0;
-  CGFloat textX = leftInset + badgeWidth + horizontalGap;
-
-  viewerBadgeLabel_.frame = NSMakeRect(leftInset,
-                                       6.0,
-                                       badgeWidth,
-                                       MAX(0.0, bounds.size.height - 12.0));
-  urlTextField_.frame = NSMakeRect(textX,
-                                   4.0,
-                                   MAX(0.0, bounds.size.width - textX - 8.0),
-                                   MAX(0.0, bounds.size.height - 8.0));
+  BabelAddressFieldLayout* layout =
+      [addressFieldLayoutCalculator_ layoutForBounds:addressTextFieldContainer_.bounds
+                                            hasBadge:!viewerBadgeLabel_.hidden];
+  viewerBadgeLabel_.frame = layout.badgeFrame;
+  urlTextField_.frame = layout.textFieldFrame;
 }
 
 - (void)setAddressBadge:(NSDictionary*)badge {

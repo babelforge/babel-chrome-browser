@@ -1,9 +1,11 @@
 #import "Browser/BrowserWindowController.h"
 
 #import "Browser/AddressBarDisplayResolver.h"
+#import "Browser/AddressFieldLayoutCalculator.h"
 #import "Browser/AddressNavigationNormalizer.h"
 #import "Browser/AdjacentTabPreloadPlanner.h"
 #import "Browser/AppSettingsPageRenderer.h"
+#import "Browser/ApplicationRelauncher.h"
 #import "Browser/BrowserClient.h"
 #import "Browser/BrowserGroupCollection.h"
 #import "Browser/BrowserGroupFactory.h"
@@ -20,12 +22,16 @@
 #import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/DeveloperToolsLayoutCalculator.h"
 #import "Browser/ExtensionProfileStore.h"
+#import "Browser/ExtensionsPageDataSource.h"
 #import "Browser/ExtensionsPageRenderer.h"
 #import "Browser/FaviconStore.h"
 #import "Browser/GoogleSuggestClient.h"
 #import "Browser/GroupListCoordinator.h"
+#import "Browser/GroupRenameController.h"
 #import "Browser/GroupSessionStore.h"
+#import "Browser/HistoryPageDataSource.h"
 #import "Browser/HistoryPageRenderer.h"
+#import "Browser/HTMLDataURLBuilder.h"
 #import "Browser/InternalNavigationActionParser.h"
 #import "Browser/InternalPageAssetProvider.h"
 #import "Browser/InternalPageRenderer.h"
@@ -152,10 +158,12 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSView* linkStatusBarView_;
   NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
+  BabelAddressFieldLayoutCalculator* addressFieldLayoutCalculator_;
   BabelAddressNavigationNormalizer* addressNavigationNormalizer_;
   BabelAddressBarDisplayResolver* addressBarDisplayResolver_;
   BabelAdjacentTabPreloadPlanner* adjacentTabPreloadPlanner_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
+  BabelApplicationRelauncher* applicationRelauncher_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelBrowserTabFactory* browserTabFactory_;
   BabelChromeCommandParser* chromeCommandParser_;
@@ -163,6 +171,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelDeveloperToolsDockingStore* developerToolsDockingStore_;
   BabelDeveloperToolsLayoutCalculator* developerToolsLayoutCalculator_;
   BabelExtensionProfileStore* extensionProfileStore_;
+  BabelExtensionsPageDataSource* extensionsPageDataSource_;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
   BabelFaviconStore* faviconStore_;
   BabelGoogleSuggestClient* googleSuggestClient_;
@@ -176,8 +185,11 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserStringFormatter* browserStringFormatter_;
   BabelClosedTabRestorationPlanner* closedTabRestorationPlanner_;
   BabelGroupListCoordinator* groupListCoordinator_;
+  BabelGroupRenameController* groupRenameController_;
   BabelGroupSessionStore* groupSessionStore_;
+  BabelHistoryPageDataSource* historyPageDataSource_;
   BabelHistoryPageRenderer* historyPageRenderer_;
+  BabelHTMLDataURLBuilder* htmlDataURLBuilder_;
   BabelInternalNavigationActionParser* internalNavigationActionParser_;
   BabelInternalPageAssetProvider* internalPageAssetProvider_;
   BabelInternalPageRenderer* internalPageRenderer_;
@@ -259,7 +271,9 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   self = [super initWithWindow:window];
   if (self) {
     groups_ = [NSMutableArray array];
+    addressFieldLayoutCalculator_ = [[BabelAddressFieldLayoutCalculator alloc] init];
     adjacentTabPreloadPlanner_ = [[BabelAdjacentTabPreloadPlanner alloc] init];
+    applicationRelauncher_ = [[BabelApplicationRelauncher alloc] init];
     browserSettingsStore_ =
         [[BabelBrowserSettingsStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     chromeCommandParser_ =
@@ -297,6 +311,8 @@ disabledProfileExtensionIdentifiersDefaultsKey:BabelChromeConfiguration.disabled
 pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pendingProfileExtensionRestartStatesDefaultsKey];
     extensionsPageRenderer_ =
         [[BabelExtensionsPageRenderer alloc] initWithTrashIconHTML:[self trashIconHTML]];
+    extensionsPageDataSource_ =
+        [[BabelExtensionsPageDataSource alloc] initWithExtensionProfileStore:extensionProfileStore_];
     faviconStore_ =
         [[BabelFaviconStore alloc] initWithStoreFileURL:BabelChromeConfiguration.faviconStoreFileURL];
     browserTabFactory_ =
@@ -325,8 +341,10 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelBrowserTabInsertionCoordinator alloc] initWithPlacementPolicy:tabPlacementPolicy
                                                                tabCollection:browserTabCollection_];
     groupListCoordinator_ = [[BabelGroupListCoordinator alloc] init];
+    groupRenameController_ = [[BabelGroupRenameController alloc] init];
     groupSessionStore_ = [[BabelGroupSessionStore alloc] init];
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
+    htmlDataURLBuilder_ = [[BabelHTMLDataURLBuilder alloc] init];
     internalNavigationActionParser_ = [[BabelInternalNavigationActionParser alloc] init];
     internalPageAssetProvider_ = [[BabelInternalPageAssetProvider alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
@@ -384,6 +402,11 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     omniboxSuggestionContextBuilder_ = [[BabelOmniboxSuggestionContextBuilder alloc] init];
     projectLifecycleResponseParser_ = [[BabelProjectLifecycleResponseParser alloc] init];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
+    historyPageDataSource_ =
+        [[BabelHistoryPageDataSource alloc]
+            initWithInternalPageTabClassifier:internalPageTabClassifier_
+                       recentlyClosedTabStore:recentlyClosedTabStore_
+                             defaultGroupName:kDefaultGroupName];
     runtimeRefreshCoordinator_ = [[BabelRuntimeRefreshCoordinator alloc] init];
     settingsOptionRenderer_ = [[BabelSettingsOptionRenderer alloc] init];
     sidebarLayoutCalculator_ =
