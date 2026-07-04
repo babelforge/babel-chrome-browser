@@ -55,8 +55,7 @@
       tab.requestedURLString = requestedURLString;
       tab.parentTabIdentifier = tabState.parentTabIdentifier;
       [group.tabs addObject:tab];
-      [pagesPanel_ addSubview:tab.hostView];
-      [pagesPanel_ addSubview:tab.developerToolsPanelView];
+      [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
     }
   }
 }
@@ -296,8 +295,7 @@
 - (BabelBrowserTab*)createTabForURL:(NSString*)urlString inGroup:(BabelBrowserGroup*)group {
   BabelBrowserTab* tab = [self makeTabForURL:urlString identifier:nil title:urlString];
   [group.tabs addObject:tab];
-  [pagesPanel_ addSubview:tab.hostView];
-  [pagesPanel_ addSubview:tab.developerToolsPanelView];
+  [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
   [self selectGroup:group];
   [self selectTab:tab];
   [self saveGroupsState];
@@ -323,8 +321,7 @@
           inGroup:group
         parentTab:parentTab
  respectingUserStrategy:respectingUserStrategy];
-  [pagesPanel_ addSubview:tab.hostView];
-  [pagesPanel_ addSubview:tab.developerToolsPanelView];
+  [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
   [self selectGroup:group];
   [self selectTab:tab];
   [self saveGroupsState];
@@ -480,23 +477,6 @@
   [liveBrowserEvictionPolicy_ touchTab:tab];
 }
 
-- (NSMutableSet<NSString*>*)protectedLiveBrowserTabIdentifiers {
-  return [adjacentTabPreloadPlanner_
-      protectedLiveBrowserTabIdentifiersForSelectedTab:selectedTab_
-                                          adjacentTabs:[self adjacentTabsToPreloadAroundTab:selectedTab_]
-                                                groups:groups_];
-}
-
-- (NSArray<BabelBrowserTab*>*)livePageBrowserTabsExcludingEvictions {
-  return [liveBrowserEvictionPolicy_ liveBrowserTabsInGroupsExcludingEvictions:groups_];
-}
-
-- (BabelBrowserTab*)leastRecentlyUsedEvictableTabFromTabs:(NSArray<BabelBrowserTab*>*)liveTabs
-                                     protectedIdentifiers:(NSSet<NSString*>*)protectedIdentifiers {
-  return [liveBrowserEvictionPolicy_ leastRecentlyUsedEvictableTabFromTabs:liveTabs
-                                                       protectedIdentifiers:protectedIdentifiers];
-}
-
 - (void)closeBrowserForTabKeepingNativeTab:(BabelBrowserTab*)tab {
   CefRefPtr<CefBrowser> browser = [tab browser];
   if (!browser || tab.identifier.length == 0) {
@@ -513,22 +493,13 @@
     return;
   }
 
-  NSMutableSet<NSString*>* protectedIdentifiers = [self protectedLiveBrowserTabIdentifiers];
-  while (YES) {
-    NSArray<BabelBrowserTab*>* liveTabs = [self livePageBrowserTabsExcludingEvictions];
-    if (liveTabs.count <= kMaximumLivePageBrowsers) {
-      return;
-    }
-
-    BabelBrowserTab* tabToEvict =
-        [self leastRecentlyUsedEvictableTabFromTabs:liveTabs
-                               protectedIdentifiers:protectedIdentifiers];
-    if (!tabToEvict) {
-      return;
-    }
-
-    [self closeBrowserForTabKeepingNativeTab:tabToEvict];
-  }
+  __weak BabelBrowserWindowController* weakSelf = self;
+  [liveBrowserLimitEnforcer_ enforceLiveBrowserLimitForGroups:groups_
+                                                  selectedTab:selectedTab_
+                                                  visibleTabs:tabs_
+                                                 closeHandler:^(BabelBrowserTab* tab) {
+                                                   [weakSelf closeBrowserForTabKeepingNativeTab:tab];
+                                                 }];
 }
 - (void)selectTabFromItem:(BabelTabItemView*)tabItemView {
   for (BabelBrowserTab* tab in tabs_) {
@@ -787,8 +758,7 @@
                                        title:plan.title];
   tab.requestedURLString = plan.requestedURLString;
   [group.tabs addObject:tab];
-  [pagesPanel_ addSubview:tab.hostView];
-  [pagesPanel_ addSubview:tab.developerToolsPanelView];
+  [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
   [self selectGroup:group];
   [self selectTab:tab];
   [self showMainWindow];

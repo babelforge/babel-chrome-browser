@@ -161,47 +161,15 @@
 }
 
 - (void)importProjectLauncherJSONFromPanel {
-  NSOpenPanel* panel = [NSOpenPanel openPanel];
-  panel.canChooseFiles = YES;
-  panel.canChooseDirectories = NO;
-  panel.allowsMultipleSelection = NO;
-  panel.title = @"Load Project Launcher JSON";
-  if ([panel runModal] != NSModalResponseOK) {
-    [self appendLocalDropLogLine:@"Project Launcher JSON panel cancelled."];
+  NSURL* importURL = [projectLauncherJSONImporter_ projectLauncherImportURLFromPanel];
+  if (!importURL) {
     return;
   }
-
-  NSString* path = panel.URL.path ?: @"";
-  if (![path.pathExtension.lowercaseString isEqualToString:@"json"]) {
-    [self appendLocalDropLogLine:[NSString stringWithFormat:@"Project Launcher JSON panel rejected path=%@", path]];
-    NSAlert* alert = [[NSAlert alloc] init];
-    alert.alertStyle = NSAlertStyleWarning;
-    alert.messageText = @"Invalid Project Configuration";
-    alert.informativeText = @"Please select a JSON project configuration file.";
-    [alert runModal];
-    return;
-  }
-
-  [self appendLocalDropLogLine:[NSString stringWithFormat:@"Project Launcher JSON panel selected path=%@", path]];
-  NSURL* moduleURL = [BabelLocalServiceHost.sharedHost moduleURLForIdentifier:@"babelforge.project-launcher"
-                                                                       route:@"index"
-                                                             sourceURLString:nil
-                                                                       error:nil];
-  if (!moduleURL || path.length == 0) {
-    [self appendLocalDropLogLine:@"Project Launcher JSON panel could not build module URL."];
-    return;
-  }
-
-  NSURLComponents* components = [NSURLComponents componentsWithURL:moduleURL resolvingAgainstBaseURL:NO];
-  NSMutableArray<NSURLQueryItem*>* queryItems = [components.queryItems mutableCopy] ?: [NSMutableArray array];
-  [queryItems addObject:[NSURLQueryItem queryItemWithName:@"action" value:@"importPath"]];
-  [queryItems addObject:[NSURLQueryItem queryItemWithName:@"path" value:path]];
-  components.queryItems = queryItems;
 
   BabelBrowserGroup* group = [self targetGroupForModuleIdentifier:@"babelforge.project-launcher"
                                                     fallbackGroup:selectedGroup_];
   [self selectGroup:group];
-  BabelBrowserTab* tab = [self createTabForURL:components.URL.absoluteString
+  BabelBrowserTab* tab = [self createTabForURL:importURL.absoluteString
                                        inGroup:group
                                      parentTab:selectedTab_];
   tab.requestedURLString = @"babelchrome://project-launcher";
@@ -546,8 +514,7 @@
   BabelBrowserTab* tab = [self makeTabForURL:dataURLString identifier:nil title:title];
   tab.requestedURLString = internalURLString;
   [group.tabs addObject:tab];
-  [pagesPanel_ addSubview:tab.hostView];
-  [pagesPanel_ addSubview:tab.developerToolsPanelView];
+  [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
   [self selectGroup:group];
   [self selectTab:tab];
   [self showMainWindow];
@@ -680,30 +647,7 @@
 }
 
 - (void)addUnpackedExtensionFromPanel {
-  NSOpenPanel* panel = [NSOpenPanel openPanel];
-  panel.canChooseFiles = NO;
-  panel.canChooseDirectories = YES;
-  panel.allowsMultipleSelection = NO;
-  panel.prompt = @"Add";
-  panel.message = @"Choose an unpacked Chrome extension folder containing manifest.json.";
-
-  if ([panel runModal] != NSModalResponseOK) {
-    return;
-  }
-
-  NSString* extensionPath = panel.URL.path;
-  NSString* manifestPath = [extensionPath stringByAppendingPathComponent:@"manifest.json"];
-  if (![NSFileManager.defaultManager fileExistsAtPath:manifestPath]) {
-    [self showExtensionFolderMissingManifestAlert:extensionPath];
-    return;
-  }
-
-  NSMutableArray<NSString*>* extensionPaths =
-      [[extensionProfileStore_ installedExtensionPaths] mutableCopy];
-  if (![extensionPaths containsObject:extensionPath]) {
-    [extensionPaths addObject:extensionPath];
-  }
-  [extensionProfileStore_ saveInstalledExtensionPaths:extensionPaths];
+  [extensionFolderController_ addUnpackedExtensionFromPanel];
 }
 
 - (void)removeUnpackedExtensionAtPath:(NSString*)extensionPath {
@@ -723,15 +667,6 @@
   NSString* urlString = [NSString stringWithFormat:@"https://chromewebstore.google.com/search/%@",
                                                    [self pathEscapedString:trimmedQuery]];
   [self openURLStringInNewTab:urlString];
-}
-
-- (void)showExtensionFolderMissingManifestAlert:(NSString*)extensionPath {
-  NSAlert* alert = [[NSAlert alloc] init];
-  alert.messageText = @"Invalid Extension Folder";
-  alert.informativeText = [NSString stringWithFormat:@"The selected folder does not contain manifest.json:\n%@",
-                                                     extensionPath ?: @""];
-  alert.alertStyle = NSAlertStyleWarning;
-  [alert runModal];
 }
 
 - (void)showLocalServiceStartupAlert:(NSError*)error {

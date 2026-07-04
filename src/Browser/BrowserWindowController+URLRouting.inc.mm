@@ -242,43 +242,7 @@
 }
 
 - (NSString*)moduleNavigationURLStringForStableBabelChromeURLString:(NSString*)urlString {
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  if (![components.scheme isEqualToString:@"babelchrome"] || components.host.length == 0) {
-    return nil;
-  }
-
-  NSString* moduleIdentifier = nil;
-  NSString* route = nil;
-  NSString* sourceURLString = nil;
-  if ([components.host isEqualToString:@"modules"]) {
-    NSArray<NSString*>* pathComponents = [components.path pathComponents];
-    if (pathComponents.count >= 3) {
-      moduleIdentifier = pathComponents[1];
-      route = pathComponents[2];
-    }
-  } else {
-    NSError* error = nil;
-    NSDictionary* moduleRoute = [moduleActionService_ moduleRouteForBabelChromeComponents:components error:&error];
-    if (!moduleRoute) {
-      return nil;
-    }
-
-    moduleIdentifier =
-        [moduleRoute[@"moduleIdentifier"] isKindOfClass:NSString.class] ? moduleRoute[@"moduleIdentifier"] : @"";
-    route = [moduleRoute[@"route"] isKindOfClass:NSString.class] ? moduleRoute[@"route"] : @"";
-    sourceURLString = urlString;
-  }
-
-  if (moduleIdentifier.length == 0 || route.length == 0) {
-    return nil;
-  }
-
-  NSError* error = nil;
-  NSURL* moduleURL = [BabelLocalServiceHost.sharedHost moduleURLForIdentifier:moduleIdentifier
-                                                                       route:route
-                                                             sourceURLString:sourceURLString
-                                                                       error:&error];
-  return moduleURL.absoluteString;
+  return [moduleNavigationURLResolver_ navigationURLStringForStableBabelChromeURLString:urlString];
 }
 - (BabelBrowserTab*)tabForBrowser:(CefRefPtr<CefBrowser>)browser {
   if (!browser) {
@@ -346,10 +310,6 @@
   for (NSString* requestedURLString in requestedURLStrings) {
     [self reloadTabsWithRequestedURLString:requestedURLString excludingTab:excludedTab];
   }
-}
-
-- (NSArray<NSString*>*)restoredProjectIdentifiersFromLifecycleResponse:(NSDictionary*)response {
-  return [projectLifecycleResponseParser_ restoredProjectIdentifiersFromLifecycleResponse:response];
 }
 
 - (NSString*)serverProjectIdentifierForStableURLString:(NSString*)urlString {

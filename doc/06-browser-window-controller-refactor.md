@@ -47,6 +47,9 @@ BrowserWindowController
             |__ StableServerURLResolver
             |__ LocalServiceURLClassifier
             |__ ProjectLifecycleResponseParser
+            |__ ProjectLauncherJSONImporter
+            |__ ModuleLifecycleDispatcher
+            |__ ModuleNavigationURLResolver
             |__ RuntimeRefreshCoordinator
             |__ RuntimeRefreshTabMatcher
             |__ InternalNavigationActionParser
@@ -57,6 +60,7 @@ BrowserWindowController
             |__ BrowserPresentationFormatter
             |__ AddressNavigationNormalizer
             |__ AddressFieldLayoutCalculator
+            |__ AddressFieldNavigationResolver
             |__ InternalPageAssetProvider
             |__ InternalPageTabClassifier
             |__ ViewerSourceResolver
@@ -80,6 +84,7 @@ BrowserWindowController
             |__ BrowserTabMoveCoordinator
             |__ TabPlacementPolicy
             |__ LiveBrowserEvictionPolicy
+            |__ LiveBrowserLimitEnforcer
             |__ ClosedTabRestorationPlanner
             |__ GroupListCoordinator
             |__ GroupRenameController
@@ -90,7 +95,9 @@ BrowserWindowController
             |__ LocalDropLogWriter
             |__ LocalDropPayloadBuilder
             |__ LocalDropSupportResolver
+            |__ ExtensionFolderController
             |__ TabStripLayoutCalculator
+            |__ TabContentViewAttacher
             |__ BrowserTabFactory
             |__ TabURLMatcher
             |__ AdjacentTabPreloadPlanner
@@ -105,15 +112,15 @@ BrowserWindowController
 
 | Fragment | Responsibility |
 | --- | --- |
-| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address input normalization is delegated to `BabelAddressNavigationNormalizer`; address badge/text-field frame calculation is delegated to `BabelAddressFieldLayoutCalculator`; window title, compact tab title, and badge color formatting are delegated to `BabelBrowserPresentationFormatter`; address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
+| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address input normalization is delegated to `BabelAddressNavigationNormalizer`; displayed-vs-actual address navigation resolution is delegated to `BabelAddressFieldNavigationResolver`; address badge/text-field frame calculation is delegated to `BabelAddressFieldLayoutCalculator`; window title, compact tab title, and badge color formatting are delegated to `BabelBrowserPresentationFormatter`; address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`; internal-page tab classification is delegated to `BabelInternalPageTabClassifier`; stable viewer source-file resolution is delegated to `BabelViewerSourceResolver`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
-| `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Native group construction is delegated to `BabelBrowserGroupFactory`; group lookup, generated names, and delete-selection fallback are delegated to `BabelBrowserGroupCollection`; group rename prompts and duplicate-name alerts are delegated to `BabelGroupRenameController`; group reorder mutations are delegated to `BabelBrowserGroupMoveCoordinator`; tab lookup, containing-group lookup, tab identifier lists, and parent-tab maps are delegated to `BabelBrowserTabCollection`; strategy-based tab insertion is delegated to `BabelBrowserTabInsertionCoordinator`; existing-tab move mutations are delegated to `BabelBrowserTabMoveCoordinator`; group list layout is delegated to `BabelGroupListCoordinator`; group session IO and restored state parsing are delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; new-tab URL pair resolution is delegated to `BabelNewTabURLResolver`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser eviction is delegated to `BabelLiveBrowserEvictionPolicy`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`; closed-tab restoration fallback decisions are delegated to `BabelClosedTabRestorationPlanner`. |
-| `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, action execution, and shared internal utilities. Extensions/modules/history query parsing is delegated to `BabelInternalNavigationActionParser`; settings query mutation is delegated to `BabelInternalSettingsNavigationHandler`; body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`; history row collection is delegated to `BabelHistoryPageDataSource`; extension row collection is delegated to `BabelExtensionsPageDataSource`; HTML data URL encoding is delegated to `BabelHTMLDataURLBuilder`; query/path/shell string formatting is delegated to `BabelBrowserStringFormatter`; reusable internal-page icon HTML is delegated to `BabelInternalPageAssetProvider`; application restart relaunch scheduling is delegated to `BabelApplicationRelauncher`. |
+| `BrowserWindowController+GroupsAndTabs.inc.mm` | Group model mutations, group selection, group session restore/persistence, tab insertion/browser lifecycle, tab drag-and-drop, close/reopen behavior, and live browser limit orchestration. Native group construction is delegated to `BabelBrowserGroupFactory`; group lookup, generated names, and delete-selection fallback are delegated to `BabelBrowserGroupCollection`; group rename prompts and duplicate-name alerts are delegated to `BabelGroupRenameController`; group reorder mutations are delegated to `BabelBrowserGroupMoveCoordinator`; tab lookup, containing-group lookup, tab identifier lists, and parent-tab maps are delegated to `BabelBrowserTabCollection`; strategy-based tab insertion is delegated to `BabelBrowserTabInsertionCoordinator`; existing-tab move mutations are delegated to `BabelBrowserTabMoveCoordinator`; group list layout is delegated to `BabelGroupListCoordinator`; group session IO and restored state parsing are delegated to `BabelGroupSessionStore`; native tab construction is delegated to `BabelBrowserTabFactory`; tab content view attachment is delegated to `BabelTabContentViewAttacher`; URL matching is delegated to `BabelTabURLMatcher`; adjacent preloading/protection planning is delegated to `BabelAdjacentTabPreloadPlanner`; new-tab URL pair resolution is delegated to `BabelNewTabURLResolver`; new-tab placement is delegated to `BabelTabPlacementPolicy`; tab drag geometry is delegated to `BabelTabDragCoordinator`; live browser usage tracking is delegated to `BabelLiveBrowserEvictionPolicy`; live browser limit enforcement is delegated to `BabelLiveBrowserLimitEnforcer`; recently closed tabs are delegated to `BabelRecentlyClosedTabStore`; closed-tab restoration fallback decisions are delegated to `BabelClosedTabRestorationPlanner`. |
+| `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, action execution, and shared internal utilities. Extensions/modules/history query parsing is delegated to `BabelInternalNavigationActionParser`; settings query mutation is delegated to `BabelInternalSettingsNavigationHandler`; body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`; history row collection is delegated to `BabelHistoryPageDataSource`; extension row collection is delegated to `BabelExtensionsPageDataSource`; unpacked extension folder selection is delegated to `BabelExtensionFolderController`; Project Launcher JSON panel import is delegated to `BabelProjectLauncherJSONImporter`; HTML data URL encoding is delegated to `BabelHTMLDataURLBuilder`; query/path/shell string formatting is delegated to `BabelBrowserStringFormatter`; reusable internal-page icon HTML is delegated to `BabelInternalPageAssetProvider`; application restart relaunch scheduling is delegated to `BabelApplicationRelauncher`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`; local-drop diagnostic file writes are delegated to `BabelLocalDropLogWriter`; native drop payload validation and JSON construction are delegated to `BabelLocalDropPayloadBuilder`; module manifest/route local-drop support resolution is delegated to `BabelLocalDropSupportResolver`. |
-| `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; missing viewer error page rendering is delegated to `BabelNoViewerPageRenderer`; LocalServiceHost runtime URL classification is delegated to `BabelLocalServiceURLClassifier`; Project Launcher lifecycle response parsing is delegated to `BabelProjectLifecycleResponseParser`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`; tab refresh matching rules are delegated to `BabelRuntimeRefreshTabMatcher`. |
-| `BrowserWindowController+WindowLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, module lifecycle calls, main layout application, and window/sidebar view resizing. Main AppKit view construction is delegated to `BabelMainWindowViewFactory`; window/sidebar persistence is delegated to `BabelWindowStateStore`; sidebar/right-panel frame calculation is delegated to `BabelSidebarLayoutCalculator`; tab item frame calculation is delegated to `BabelTabStripLayoutCalculator`. |
+| `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; stable module route URL conversion is delegated to `BabelModuleNavigationURLResolver`; missing viewer error page rendering is delegated to `BabelNoViewerPageRenderer`; LocalServiceHost runtime URL classification is delegated to `BabelLocalServiceURLClassifier`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`; tab refresh matching rules are delegated to `BabelRuntimeRefreshTabMatcher`. |
+| `BrowserWindowController+WindowLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, module lifecycle calls, main layout application, and window/sidebar view resizing. Main AppKit view construction is delegated to `BabelMainWindowViewFactory`; module lifecycle dispatch and Project Launcher restore parsing are delegated to `BabelModuleLifecycleDispatcher`; window/sidebar persistence is delegated to `BabelWindowStateStore`; sidebar/right-panel frame calculation is delegated to `BabelSidebarLayoutCalculator`; tab item frame calculation is delegated to `BabelTabStripLayoutCalculator`. |
 
 ## Already Extracted Classes
 
@@ -738,6 +745,79 @@ The controller may use this service for module lookups and registry mutations. I
 - selected module update installation orchestration.
 
 The controller may refresh browser capabilities and reopen internal pages after the coordinator reports a successful module change. It must not implement native module panels or module action alert text directly.
+
+### `BabelAddressFieldNavigationResolver`
+
+`BabelAddressFieldNavigationResolver` owns the pure rule that maps the address field text back to the real navigation URL:
+
+- keeps stable viewer display text editable while preserving the underlying requested URL;
+- returns the typed value unchanged when the user edited the field;
+- avoids duplicating displayed-vs-actual URL comparisons in the controller.
+
+The controller may still collect the selected tab, displayed URL, and actual URL inputs. It must not reimplement the comparison rule inline.
+
+### `BabelExtensionFolderController`
+
+`BabelExtensionFolderController` owns unpacked extension folder selection:
+
+- opens the native directory picker;
+- validates the selected folder contains `manifest.json`;
+- shows the invalid-folder alert;
+- persists valid unpacked extension paths through `BabelExtensionProfileStore`.
+
+The controller may refresh the Extensions page after the action. It must not own unpacked extension folder picker validation inline.
+
+### `BabelLiveBrowserLimitEnforcer`
+
+`BabelLiveBrowserLimitEnforcer` owns the decision loop for live browser eviction:
+
+- asks `BabelAdjacentTabPreloadPlanner` which tabs are protected;
+- asks `BabelLiveBrowserEvictionPolicy` which live browsers are evictable;
+- calls back into the controller only to perform the actual CEF browser close.
+
+The controller may still own the CEF close side effect. It must not own the live-browser eviction loop.
+
+### `BabelModuleLifecycleDispatcher`
+
+`BabelModuleLifecycleDispatcher` owns module lifecycle hook dispatch:
+
+- sends `app.did-start` asynchronously;
+- parses restored Project Launcher server identifiers through `BabelProjectLifecycleResponseParser`;
+- sends `app.will-quit` synchronously during shutdown;
+- logs lifecycle failures consistently.
+
+The controller may still reload server tabs after restored projects are reported. It must not call `LocalServiceHost` directly for lifecycle hooks.
+
+### `BabelModuleNavigationURLResolver`
+
+`BabelModuleNavigationURLResolver` owns stable module URL conversion:
+
+- resolves `babelchrome://modules/<module>/<route>` URLs;
+- resolves custom module route URLs through `BabelModuleActionService`;
+- returns the current runtime-local module URL from `LocalServiceHost`.
+
+The controller may still decide when a stable URL should be resolved. It must not parse stable module path components inline.
+
+### `BabelProjectLauncherJSONImporter`
+
+`BabelProjectLauncherJSONImporter` owns the Project Launcher JSON import picker:
+
+- opens the native JSON file picker;
+- validates the selected extension;
+- shows the invalid-project alert;
+- builds the Project Launcher import URL.
+
+The controller may still choose the destination group and tab. It must not own JSON picker validation inline.
+
+### `BabelTabContentViewAttacher`
+
+`BabelTabContentViewAttacher` owns tab content view attachment:
+
+- attaches the page host view to the pages panel;
+- attaches the developer tools panel view to the pages panel;
+- centralizes this repeated wiring for restored, new, internal, and reopened tabs.
+
+The controller may still decide when a tab should be created or restored. It must not duplicate content view attachment calls.
 
 ## Extraction Candidates
 

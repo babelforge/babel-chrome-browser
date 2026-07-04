@@ -2,6 +2,7 @@
 
 #import "Browser/AddressBarDisplayResolver.h"
 #import "Browser/AddressFieldLayoutCalculator.h"
+#import "Browser/AddressFieldNavigationResolver.h"
 #import "Browser/AddressNavigationNormalizer.h"
 #import "Browser/AdjacentTabPreloadPlanner.h"
 #import "Browser/AppSettingsPageRenderer.h"
@@ -21,6 +22,7 @@
 #import "Browser/DeveloperToolsDockingPolicy.h"
 #import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/DeveloperToolsLayoutCalculator.h"
+#import "Browser/ExtensionFolderController.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/ExtensionsPageDataSource.h"
 #import "Browser/ExtensionsPageRenderer.h"
@@ -38,6 +40,7 @@
 #import "Browser/InternalPageTabClassifier.h"
 #import "Browser/InternalSettingsNavigationHandler.h"
 #import "Browser/LiveBrowserEvictionPolicy.h"
+#import "Browser/LiveBrowserLimitEnforcer.h"
 #import "Browser/LocalDropBridgeScriptBuilder.h"
 #import "Browser/LocalDropCoordinator.h"
 #import "Browser/LocalDropLogWriter.h"
@@ -46,6 +49,8 @@
 #import "Browser/LocalServiceURLClassifier.h"
 #import "Browser/MainWindowViewFactory.h"
 #import "Browser/ModuleActionService.h"
+#import "Browser/ModuleLifecycleDispatcher.h"
+#import "Browser/ModuleNavigationURLResolver.h"
 #import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleSettingsPageRenderer.h"
 #import "Browser/ModuleUpdateService.h"
@@ -55,6 +60,7 @@
 #import "Browser/OmniboxLocalSuggestionBuilder.h"
 #import "Browser/OmniboxSuggestionContextBuilder.h"
 #import "Browser/OmniboxSuggestionsController.h"
+#import "Browser/ProjectLauncherJSONImporter.h"
 #import "Browser/ProjectLifecycleResponseParser.h"
 #import "Browser/RecentlyClosedTabStore.h"
 #import "Browser/RuntimeRefreshCoordinator.h"
@@ -63,6 +69,7 @@
 #import "Browser/SidebarLayoutCalculator.h"
 #import "Browser/StableServerURLResolver.h"
 #import "Browser/StableViewerURLResolver.h"
+#import "Browser/TabContentViewAttacher.h"
 #import "Browser/TabDragCoordinator.h"
 #import "Browser/TabPlacementPolicy.h"
 #import "Browser/TabStripLayoutCalculator.h"
@@ -161,6 +168,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSTextField* linkStatusBarLabel_;
   NSMutableArray<BabelBrowserGroup*>* groups_;
   BabelAddressFieldLayoutCalculator* addressFieldLayoutCalculator_;
+  BabelAddressFieldNavigationResolver* addressFieldNavigationResolver_;
   BabelAddressNavigationNormalizer* addressNavigationNormalizer_;
   BabelAddressBarDisplayResolver* addressBarDisplayResolver_;
   BabelAdjacentTabPreloadPlanner* adjacentTabPreloadPlanner_;
@@ -172,6 +180,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelDeveloperToolsDockingPolicy* developerToolsDockingPolicy_;
   BabelDeveloperToolsDockingStore* developerToolsDockingStore_;
   BabelDeveloperToolsLayoutCalculator* developerToolsLayoutCalculator_;
+  BabelExtensionFolderController* extensionFolderController_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelExtensionsPageDataSource* extensionsPageDataSource_;
   BabelExtensionsPageRenderer* extensionsPageRenderer_;
@@ -198,6 +207,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelInternalPageTabClassifier* internalPageTabClassifier_;
   BabelInternalSettingsNavigationHandler* internalSettingsNavigationHandler_;
   BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
+  BabelLiveBrowserLimitEnforcer* liveBrowserLimitEnforcer_;
   BabelLocalDropBridgeScriptBuilder* localDropBridgeScriptBuilder_;
   BabelLocalDropCoordinator* localDropCoordinator_;
   BabelLocalDropLogWriter* localDropLogWriter_;
@@ -206,6 +216,8 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelLocalServiceURLClassifier* localServiceURLClassifier_;
   BabelMainWindowViewFactory* mainWindowViewFactory_;
   BabelModuleActionService* moduleActionService_;
+  BabelModuleLifecycleDispatcher* moduleLifecycleDispatcher_;
+  BabelModuleNavigationURLResolver* moduleNavigationURLResolver_;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
   BabelModuleUpdateService* moduleUpdateService_;
@@ -215,7 +227,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelOmniboxLocalSuggestionBuilder* omniboxLocalSuggestionBuilder_;
   BabelOmniboxSuggestionContextBuilder* omniboxSuggestionContextBuilder_;
   BabelOmniboxSuggestionsController* omniboxSuggestionsController_;
-  BabelProjectLifecycleResponseParser* projectLifecycleResponseParser_;
+  BabelProjectLauncherJSONImporter* projectLauncherJSONImporter_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
   BabelRuntimeRefreshCoordinator* runtimeRefreshCoordinator_;
   BabelRuntimeRefreshTabMatcher* runtimeRefreshTabMatcher_;
@@ -223,6 +235,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelSidebarLayoutCalculator* sidebarLayoutCalculator_;
   BabelStableServerURLResolver* stableServerURLResolver_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
+  BabelTabContentViewAttacher* tabContentViewAttacher_;
   BabelTabDragCoordinator* tabDragCoordinator_;
   BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
   BabelTabURLMatcher* tabURLMatcher_;
@@ -276,6 +289,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   if (self) {
     groups_ = [NSMutableArray array];
     addressFieldLayoutCalculator_ = [[BabelAddressFieldLayoutCalculator alloc] init];
+    addressFieldNavigationResolver_ = [[BabelAddressFieldNavigationResolver alloc] init];
     adjacentTabPreloadPlanner_ = [[BabelAdjacentTabPreloadPlanner alloc] init];
     applicationRelauncher_ = [[BabelApplicationRelauncher alloc] init];
     browserSettingsStore_ =
@@ -313,6 +327,8 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
                extensionPathsDefaultsKey:BabelChromeConfiguration.extensionPathsDefaultsKey
 disabledProfileExtensionIdentifiersDefaultsKey:BabelChromeConfiguration.disabledProfileExtensionIdentifiersDefaultsKey
 pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pendingProfileExtensionRestartStatesDefaultsKey];
+    extensionFolderController_ =
+        [[BabelExtensionFolderController alloc] initWithExtensionProfileStore:extensionProfileStore_];
     extensionsPageRenderer_ =
         [[BabelExtensionsPageRenderer alloc] initWithTrashIconHTML:[self trashIconHTML]];
     extensionsPageDataSource_ =
@@ -364,6 +380,11 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelInternalSettingsNavigationHandler alloc] initWithSettingsStore:browserSettingsStore_
                                                                  userDefaults:NSUserDefaults.standardUserDefaults];
     liveBrowserEvictionPolicy_ = [[BabelLiveBrowserEvictionPolicy alloc] init];
+    liveBrowserLimitEnforcer_ =
+        [[BabelLiveBrowserLimitEnforcer alloc]
+            initWithAdjacentTabPreloadPlanner:adjacentTabPreloadPlanner_
+                    liveBrowserEvictionPolicy:liveBrowserEvictionPolicy_
+                      maximumLivePageBrowsers:kMaximumLivePageBrowsers];
     localDropBridgeScriptBuilder_ = [[BabelLocalDropBridgeScriptBuilder alloc] init];
     localDropCoordinator_ = [[BabelLocalDropCoordinator alloc] init];
     localDropLogWriter_ =
@@ -375,6 +396,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     localServiceURLClassifier_ = [[BabelLocalServiceURLClassifier alloc] init];
     mainWindowViewFactory_ = [[BabelMainWindowViewFactory alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];
+    moduleNavigationURLResolver_ =
+        [[BabelModuleNavigationURLResolver alloc] initWithModuleActionService:moduleActionService_];
     localDropSupportResolver_ =
         [[BabelLocalDropSupportResolver alloc] initWithModuleActionService:moduleActionService_];
     modulePageRenderer_ =
@@ -406,7 +429,15 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     noViewerPageRenderer_ = [[BabelNoViewerPageRenderer alloc] init];
     omniboxLocalSuggestionBuilder_ = [[BabelOmniboxLocalSuggestionBuilder alloc] init];
     omniboxSuggestionContextBuilder_ = [[BabelOmniboxSuggestionContextBuilder alloc] init];
-    projectLifecycleResponseParser_ = [[BabelProjectLifecycleResponseParser alloc] init];
+    projectLauncherJSONImporter_ =
+        [[BabelProjectLauncherJSONImporter alloc] initWithLogHandler:^(NSString* line) {
+          [weakSelf appendLocalDropLogLine:line];
+        }];
+    BabelProjectLifecycleResponseParser* projectLifecycleResponseParser =
+        [[BabelProjectLifecycleResponseParser alloc] init];
+    moduleLifecycleDispatcher_ =
+        [[BabelModuleLifecycleDispatcher alloc]
+            initWithProjectLifecycleResponseParser:projectLifecycleResponseParser];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     historyPageDataSource_ =
         [[BabelHistoryPageDataSource alloc]
@@ -436,6 +467,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
                     internalPageTabPredicate:^BOOL(BabelBrowserTab* tab) {
                       return [weakSelf isInternalPageTab:tab];
                     }];
+    tabContentViewAttacher_ = [[BabelTabContentViewAttacher alloc] init];
     tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
     browserTabMoveCoordinator_ =
         [[BabelBrowserTabMoveCoordinator alloc] initWithDragCoordinator:tabDragCoordinator_];

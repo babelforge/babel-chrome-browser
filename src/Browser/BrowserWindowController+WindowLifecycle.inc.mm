@@ -76,29 +76,15 @@
 }
 
 - (void)dispatchApplicationDidStartModuleLifecycleHook {
-  dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-    NSError* error = nil;
-    NSDictionary* response =
-        [BabelLocalServiceHost.sharedHost dispatchModuleLifecycleHook:@"app.did-start" error:&error];
-    if (error) {
-      NSLog(@"BabelChrome module lifecycle app.did-start failed: %@", error.localizedDescription);
-    }
-    NSArray<NSString*>* restoredProjectIdentifiers =
-        [self restoredProjectIdentifiersFromLifecycleResponse:response];
-    if (restoredProjectIdentifiers.count > 0) {
-      dispatch_async(dispatch_get_main_queue(), ^{
-        [self reloadServerTabsWithProjectIdentifiers:restoredProjectIdentifiers];
-      });
-    }
-  });
+  __weak BabelBrowserWindowController* weakSelf = self;
+  [moduleLifecycleDispatcher_
+      dispatchApplicationDidStartWithRestoredProjectsHandler:^(NSArray<NSString*>* projectIdentifiers) {
+        [weakSelf reloadServerTabsWithProjectIdentifiers:projectIdentifiers];
+      }];
 }
 
 - (void)dispatchApplicationWillQuitModuleLifecycleHook {
-  NSError* error = nil;
-  [BabelLocalServiceHost.sharedHost dispatchModuleLifecycleHook:@"app.will-quit" error:&error];
-  if (error) {
-    NSLog(@"BabelChrome module lifecycle app.will-quit failed: %@", error.localizedDescription);
-  }
+  [moduleLifecycleDispatcher_ dispatchApplicationWillQuit];
 }
 - (void)buildInterface {
   isBuildingInterface_ = YES;

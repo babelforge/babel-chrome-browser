@@ -14,6 +14,8 @@ set(BABEL_CHROME_SOURCES
   Browser/AddressBarDisplayResolver.mm
   Browser/AddressFieldLayoutCalculator.h
   Browser/AddressFieldLayoutCalculator.mm
+  Browser/AddressFieldNavigationResolver.h
+  Browser/AddressFieldNavigationResolver.mm
   Browser/AdjacentTabPreloadPlanner.h
   Browser/AdjacentTabPreloadPlanner.mm
   Browser/AppSettingsPageRenderer.h
@@ -46,6 +48,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ChromeCommandParser.mm
   Browser/ClosedTabRestorationPlanner.h
   Browser/ClosedTabRestorationPlanner.mm
+  Browser/ExtensionFolderController.h
+  Browser/ExtensionFolderController.mm
   Browser/ExtensionProfileStore.h
   Browser/ExtensionProfileStore.mm
   Browser/ExtensionsPageDataSource.h
@@ -80,6 +84,8 @@ set(BABEL_CHROME_SOURCES
   Browser/InternalSettingsNavigationHandler.mm
   Browser/LiveBrowserEvictionPolicy.h
   Browser/LiveBrowserEvictionPolicy.mm
+  Browser/LiveBrowserLimitEnforcer.h
+  Browser/LiveBrowserLimitEnforcer.mm
   Browser/LocalDropBridgeScriptBuilder.h
   Browser/LocalDropBridgeScriptBuilder.mm
   Browser/LocalDropCoordinator.h
@@ -94,6 +100,10 @@ set(BABEL_CHROME_SOURCES
   Browser/LocalServiceURLClassifier.mm
   Browser/ModuleActionService.h
   Browser/ModuleActionService.mm
+  Browser/ModuleLifecycleDispatcher.h
+  Browser/ModuleLifecycleDispatcher.mm
+  Browser/ModuleNavigationURLResolver.h
+  Browser/ModuleNavigationURLResolver.mm
   Browser/ModulePageRenderer.h
   Browser/ModulePageRenderer.mm
   Browser/ModuleSettingsPageRenderer.h
@@ -112,6 +122,8 @@ set(BABEL_CHROME_SOURCES
   Browser/OmniboxSuggestionContextBuilder.mm
   Browser/OmniboxSuggestionsController.h
   Browser/OmniboxSuggestionsController.mm
+  Browser/ProjectLauncherJSONImporter.h
+  Browser/ProjectLauncherJSONImporter.mm
   Browser/ProjectLifecycleResponseParser.h
   Browser/ProjectLifecycleResponseParser.mm
   Browser/RecentlyClosedTabStore.h
@@ -128,6 +140,8 @@ set(BABEL_CHROME_SOURCES
   Browser/StableServerURLResolver.mm
   Browser/StableViewerURLResolver.h
   Browser/StableViewerURLResolver.mm
+  Browser/TabContentViewAttacher.h
+  Browser/TabContentViewAttacher.mm
   Browser/TabDragCoordinator.h
   Browser/TabDragCoordinator.mm
   Browser/TabPlacementPolicy.h

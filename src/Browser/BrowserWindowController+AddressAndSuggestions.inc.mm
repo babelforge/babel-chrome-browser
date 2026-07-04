@@ -124,13 +124,9 @@
 
   NSString* displayedURLString = [self displayURLStringForTab:selectedTab_];
   NSString* actualURLString = selectedTab_.requestedURLString ?: selectedTab_.urlString ?: @"";
-  if (displayedURLString.length > 0 &&
-      actualURLString.length > 0 &&
-      [addressString isEqualToString:displayedURLString]) {
-    return actualURLString;
-  }
-
-  return addressString;
+  return [addressFieldNavigationResolver_ navigationStringForAddressString:addressString
+                                                        displayedURLString:displayedURLString
+                                                           actualURLString:actualURLString];
 }
 - (void)navigateFromAddressField:(id)sender {
   if (!selectedTab_) {
