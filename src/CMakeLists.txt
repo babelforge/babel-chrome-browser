@@ -88,6 +88,8 @@ set(BABEL_CHROME_SOURCES
   Browser/LocalDropLogWriter.mm
   Browser/LocalDropPayloadBuilder.h
   Browser/LocalDropPayloadBuilder.mm
+  Browser/LocalDropSupportResolver.h
+  Browser/LocalDropSupportResolver.mm
   Browser/LocalServiceURLClassifier.h
   Browser/LocalServiceURLClassifier.mm
   Browser/ModuleActionService.h
@@ -116,6 +118,8 @@ set(BABEL_CHROME_SOURCES
   Browser/RecentlyClosedTabStore.mm
   Browser/RuntimeRefreshCoordinator.h
   Browser/RuntimeRefreshCoordinator.mm
+  Browser/RuntimeRefreshTabMatcher.h
+  Browser/RuntimeRefreshTabMatcher.mm
   Browser/SettingsOptionRenderer.h
   Browser/SettingsOptionRenderer.mm
   Browser/SidebarLayoutCalculator.h

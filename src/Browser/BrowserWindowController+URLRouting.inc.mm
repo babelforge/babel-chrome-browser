@@ -309,25 +309,9 @@
 }
 
 - (BOOL)tab:(BabelBrowserTab*)tab matchesRefreshURLString:(NSString*)requestedURLString {
-  if ([tab.requestedURLString isEqualToString:requestedURLString]) {
-    return YES;
-  }
-
-  if ([requestedURLString isEqualToString:@"babelchrome://project-launcher"] &&
-      [self isProjectLauncherModuleURLString:tab.urlString]) {
-    return YES;
-  }
-
-  if (![self isStableServerURLString:requestedURLString]) {
-    return NO;
-  }
-
-  NSString* requestedProjectIdentifier =
-      [self serverProjectIdentifierForStableURLString:requestedURLString];
-  NSString* tabProjectIdentifier =
-      [self serverProjectIdentifierForStableURLString:tab.requestedURLString];
-  return requestedProjectIdentifier.length > 0 &&
-         [requestedProjectIdentifier isEqualToString:tabProjectIdentifier];
+  return [runtimeRefreshTabMatcher_ tabRequestedURLString:tab.requestedURLString
+                                       tabActualURLString:tab.urlString
+                                  matchesRefreshURLString:requestedURLString];
 }
 
 - (void)reloadTabsWithRequestedURLString:(NSString*)requestedURLString excludingTab:(BabelBrowserTab*)excludedTab {

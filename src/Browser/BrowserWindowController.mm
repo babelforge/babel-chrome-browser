@@ -42,6 +42,7 @@
 #import "Browser/LocalDropCoordinator.h"
 #import "Browser/LocalDropLogWriter.h"
 #import "Browser/LocalDropPayloadBuilder.h"
+#import "Browser/LocalDropSupportResolver.h"
 #import "Browser/LocalServiceURLClassifier.h"
 #import "Browser/MainWindowViewFactory.h"
 #import "Browser/ModuleActionService.h"
@@ -57,6 +58,7 @@
 #import "Browser/ProjectLifecycleResponseParser.h"
 #import "Browser/RecentlyClosedTabStore.h"
 #import "Browser/RuntimeRefreshCoordinator.h"
+#import "Browser/RuntimeRefreshTabMatcher.h"
 #import "Browser/SettingsOptionRenderer.h"
 #import "Browser/SidebarLayoutCalculator.h"
 #import "Browser/StableServerURLResolver.h"
@@ -200,6 +202,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelLocalDropCoordinator* localDropCoordinator_;
   BabelLocalDropLogWriter* localDropLogWriter_;
   BabelLocalDropPayloadBuilder* localDropPayloadBuilder_;
+  BabelLocalDropSupportResolver* localDropSupportResolver_;
   BabelLocalServiceURLClassifier* localServiceURLClassifier_;
   BabelMainWindowViewFactory* mainWindowViewFactory_;
   BabelModuleActionService* moduleActionService_;
@@ -215,6 +218,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelProjectLifecycleResponseParser* projectLifecycleResponseParser_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
   BabelRuntimeRefreshCoordinator* runtimeRefreshCoordinator_;
+  BabelRuntimeRefreshTabMatcher* runtimeRefreshTabMatcher_;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
   BabelSidebarLayoutCalculator* sidebarLayoutCalculator_;
   BabelStableServerURLResolver* stableServerURLResolver_;
@@ -371,6 +375,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     localServiceURLClassifier_ = [[BabelLocalServiceURLClassifier alloc] init];
     mainWindowViewFactory_ = [[BabelMainWindowViewFactory alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];
+    localDropSupportResolver_ =
+        [[BabelLocalDropSupportResolver alloc] initWithModuleActionService:moduleActionService_];
     modulePageRenderer_ =
         [[BabelModulePageRenderer alloc]
             initWithGearIconHTML:[self resourceSVGIconHTMLNamed:@"settings-gear" fallback:@"&#9881;"]
@@ -419,6 +425,10 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     moduleSettingsPageRenderer_ =
         [[BabelModuleSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
     stableServerURLResolver_ = [[BabelStableServerURLResolver alloc] init];
+    runtimeRefreshTabMatcher_ =
+        [[BabelRuntimeRefreshTabMatcher alloc]
+            initWithStableServerURLResolver:stableServerURLResolver_
+                   localServiceURLClassifier:localServiceURLClassifier_];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     addressBarDisplayResolver_ =
         [[BabelAddressBarDisplayResolver alloc]
