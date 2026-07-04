@@ -61,6 +61,7 @@ BrowserWindowController
             |__ ExtensionsPageRenderer
             |__ NewTabURLResolver
             |__ OmniboxLocalSuggestionBuilder
+            |__ OmniboxSuggestionContextBuilder
             |__ GoogleSuggestClient
             |__ OmniboxSuggestionsController
             |__ BrowserGroupFactory
@@ -94,7 +95,7 @@ BrowserWindowController
 
 | Fragment | Responsibility |
 | --- | --- |
-| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
+| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`; internal-page tab classification is delegated to `BabelInternalPageTabClassifier`; stable viewer source-file resolution is delegated to `BabelViewerSourceResolver`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
@@ -198,6 +199,16 @@ The controller may still pop recently closed snapshots, create missing native gr
 - provides shared HTML escaping.
 
 The controller may provide page body HTML for now, but it must not own the common internal-page shell, theme CSS, or escaping implementation.
+
+### `BabelOmniboxSuggestionContextBuilder`
+
+`BabelOmniboxSuggestionContextBuilder` owns omnibox suggestion context preparation:
+
+- builds local suggestion rows from open tabs while filtering internal pages;
+- builds local suggestion rows from recently closed tabs in newest-first order;
+- resolves suggestion favicons from exact URL origins or normalized title matches.
+
+The controller may decide when suggestions are displayed and which suggestion is accepted, but it must not rebuild these row dictionaries or duplicate favicon-title normalization.
 
 ### `BabelStableViewerURLResolver`
 

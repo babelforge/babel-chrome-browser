@@ -268,35 +268,15 @@ doCommandBySelector:(SEL)commandSelector {
     return;
   }
 
-  NSMutableArray<NSDictionary*>* openTabRows = [NSMutableArray array];
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if ([self isInternalPageTab:tab]) {
-        continue;
-      }
-
-      [openTabRows addObject:@{
-        BabelOmniboxLocalRowTitleKey : tab.title ?: @"",
-        BabelOmniboxLocalRowURLStringKey : tab.urlString ?: @"",
-        BabelOmniboxLocalRowRequestedURLStringKey : tab.requestedURLString ?: @"",
-        BabelOmniboxLocalRowGroupNameKey : group.name ?: kDefaultGroupName,
-        BabelOmniboxLocalRowTabIdentifierKey : tab.identifier ?: @"",
-      }];
-    }
-  }
-
-  NSMutableArray<NSDictionary*>* closedTabRows = [NSMutableArray array];
-  NSArray<BabelClosedTab*>* closedTabs = [recentlyClosedTabStore_ allClosedTabs];
-  for (NSInteger index = (NSInteger)closedTabs.count - 1; index >= 0; index--) {
-    BabelClosedTab* closedTab = closedTabs[(NSUInteger)index];
-    [closedTabRows addObject:@{
-      BabelOmniboxLocalRowTitleKey : closedTab.title ?: @"",
-      BabelOmniboxLocalRowURLStringKey : closedTab.urlString ?: @"",
-      BabelOmniboxLocalRowRequestedURLStringKey : closedTab.requestedURLString ?: @"",
-      BabelOmniboxLocalRowGroupNameKey : closedTab.groupName ?: kDefaultGroupName,
-      BabelOmniboxLocalRowTabIdentifierKey : @"",
-    }];
-  }
+  NSArray<NSDictionary*>* openTabRows =
+      [omniboxSuggestionContextBuilder_ openTabRowsForGroups:groups_
+                                            defaultGroupName:kDefaultGroupName
+                                        internalTabPredicate:^BOOL(BabelBrowserTab* tab) {
+    return [self isInternalPageTab:tab];
+  }];
+  NSArray<NSDictionary*>* closedTabRows =
+      [omniboxSuggestionContextBuilder_ closedTabRowsForClosedTabs:[recentlyClosedTabStore_ allClosedTabs]
+                                                  defaultGroupName:kDefaultGroupName];
 
   NSArray<NSDictionary*>* localSuggestions =
       [omniboxLocalSuggestionBuilder_ localSuggestionsForQuery:trimmedQuery
@@ -408,44 +388,9 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (NSImage*)faviconImageForSuggestionTitle:(NSString*)title urlString:(NSString*)urlString {
-  NSImage* faviconImage = [faviconStore_ faviconImageForURLString:urlString];
-  if (faviconImage) {
-    return faviconImage;
-  }
-
-  NSString* normalizedTitle = [self normalizedFaviconLookupString:title];
-  if (normalizedTitle.length == 0) {
-    return nil;
-  }
-
-  return [faviconStore_ faviconImageMatchingNormalizedTitle:normalizedTitle];
-}
-
-- (NSString*)normalizedFaviconLookupString:(NSString*)string {
-  NSString* lowercaseString = string.lowercaseString ?: @"";
-  NSCharacterSet* charactersToKeep =
-      [NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyz0123456789 "];
-  NSMutableString* normalizedString = [NSMutableString string];
-  BOOL previousWasSpace = YES;
-  for (NSUInteger index = 0; index < lowercaseString.length; index++) {
-    unichar character = [lowercaseString characterAtIndex:index];
-    if (![charactersToKeep characterIsMember:character]) {
-      continue;
-    }
-
-    if ([[NSCharacterSet whitespaceCharacterSet] characterIsMember:character]) {
-      if (!previousWasSpace) {
-        [normalizedString appendString:@" "];
-      }
-      previousWasSpace = YES;
-      continue;
-    }
-
-    [normalizedString appendFormat:@"%C", character];
-    previousWasSpace = NO;
-  }
-
-  return [normalizedString stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+  return [omniboxSuggestionContextBuilder_ faviconImageForSuggestionTitle:title
+                                                                urlString:urlString
+                                                             faviconStore:faviconStore_];
 }
 
 - (void)showOmniboxSuggestions {

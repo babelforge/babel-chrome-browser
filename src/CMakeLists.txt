@@ -90,6 +90,8 @@ set(BABEL_CHROME_SOURCES
   Browser/NewTabURLResolver.mm
   Browser/OmniboxLocalSuggestionBuilder.h
   Browser/OmniboxLocalSuggestionBuilder.mm
+  Browser/OmniboxSuggestionContextBuilder.h
+  Browser/OmniboxSuggestionContextBuilder.mm
   Browser/OmniboxSuggestionsController.h
   Browser/OmniboxSuggestionsController.mm
   Browser/ProjectLifecycleResponseParser.h

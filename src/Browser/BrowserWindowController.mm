@@ -44,6 +44,7 @@
 #import "Browser/ModuleUIActionCoordinator.h"
 #import "Browser/NewTabURLResolver.h"
 #import "Browser/OmniboxLocalSuggestionBuilder.h"
+#import "Browser/OmniboxSuggestionContextBuilder.h"
 #import "Browser/OmniboxSuggestionsController.h"
 #import "Browser/ProjectLifecycleResponseParser.h"
 #import "Browser/RecentlyClosedTabStore.h"
@@ -191,6 +192,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleUIActionCoordinator* moduleUIActionCoordinator_;
   BabelNewTabURLResolver* newTabURLResolver_;
   BabelOmniboxLocalSuggestionBuilder* omniboxLocalSuggestionBuilder_;
+  BabelOmniboxSuggestionContextBuilder* omniboxSuggestionContextBuilder_;
   BabelOmniboxSuggestionsController* omniboxSuggestionsController_;
   BabelProjectLifecycleResponseParser* projectLifecycleResponseParser_;
   BabelRecentlyClosedTabStore* recentlyClosedTabStore_;
@@ -367,8 +369,9 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
             stableViewerURLPredicate:^BOOL(NSString* urlString) {
               BabelBrowserWindowController* strongSelf = weakSelf;
               return strongSelf ? [strongSelf->stableViewerURLResolver_ isStableViewerURLString:urlString] : NO;
-            }];
+    }];
     omniboxLocalSuggestionBuilder_ = [[BabelOmniboxLocalSuggestionBuilder alloc] init];
+    omniboxSuggestionContextBuilder_ = [[BabelOmniboxSuggestionContextBuilder alloc] init];
     projectLifecycleResponseParser_ = [[BabelProjectLifecycleResponseParser alloc] init];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     runtimeRefreshCoordinator_ = [[BabelRuntimeRefreshCoordinator alloc] init];
