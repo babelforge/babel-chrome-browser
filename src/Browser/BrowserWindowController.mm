@@ -52,6 +52,7 @@
 #import "Browser/LocalServiceURLClassifier.h"
 #import "Browser/MainWindowViewFactory.h"
 #import "Browser/ModuleActionService.h"
+#import "Browser/ModuleInternalPageHTMLBuilder.h"
 #import "Browser/ModuleLifecycleDispatcher.h"
 #import "Browser/ModuleNavigationURLResolver.h"
 #import "Browser/ModulePageRenderer.h"
@@ -222,6 +223,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelLocalServiceURLClassifier* localServiceURLClassifier_;
   BabelMainWindowViewFactory* mainWindowViewFactory_;
   BabelModuleActionService* moduleActionService_;
+  BabelModuleInternalPageHTMLBuilder* moduleInternalPageHTMLBuilder_;
   BabelModuleLifecycleDispatcher* moduleLifecycleDispatcher_;
   BabelModuleNavigationURLResolver* moduleNavigationURLResolver_;
   BabelModulePageRenderer* modulePageRenderer_;
@@ -417,6 +419,11 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
    updateLocalDirectoryDefaultsKey:kModuleUpdateLocalDirectoryDefaultsKey
                 localIndexFilePath:[BabelChromeConfiguration.applicationSupportDirectoryURL.path
                                        stringByAppendingPathComponent:kModuleUpdateLocalIndexFilename]];
+    moduleInternalPageHTMLBuilder_ =
+        [[BabelModuleInternalPageHTMLBuilder alloc] initWithModuleActionService:moduleActionService_
+                                                             modulePageRenderer:modulePageRenderer_
+                                                            moduleUpdateService:moduleUpdateService_
+                                                           internalPageRenderer:internalPageRenderer_];
     moduleUIActionCoordinator_ =
         [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
                                                         moduleUpdateService:moduleUpdateService_];
