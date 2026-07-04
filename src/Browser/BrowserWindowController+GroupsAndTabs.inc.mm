@@ -352,24 +352,12 @@
   return [browserSettingsStore_ tabOpeningStrategy];
 }
 
-- (BOOL)isSupportedTabOpeningStrategy:(NSString*)strategy {
-  return [browserSettingsStore_ isSupportedTabOpeningStrategy:strategy];
-}
-
 - (NSString*)addressSuggestionsMode {
   return [browserSettingsStore_ addressSuggestionsMode];
 }
 
-- (BOOL)isSupportedAddressSuggestionsMode:(NSString*)mode {
-  return [browserSettingsStore_ isSupportedAddressSuggestionsMode:mode];
-}
-
 - (NSString*)markdownTheme {
   return [browserSettingsStore_ markdownTheme];
-}
-
-- (BOOL)isSupportedMarkdownTheme:(NSString*)theme {
-  return [browserSettingsStore_ isSupportedMarkdownTheme:theme];
 }
 
 - (BOOL)googleSuggestEnabled {
@@ -569,32 +557,31 @@
 - (void)scheduleGroupSelectionForDraggingTabAtWindowPoint:(NSPoint)windowPoint {
   BabelBrowserGroup* group = [self groupAtWindowPoint:windowPoint];
   if (!group || group == selectedGroup_) {
-    pendingTabDragHoverGroup_ = nil;
-    tabDragHoverGeneration_++;
+    [tabDragHoverScheduler_ cancelPendingSelection];
     return;
   }
 
-  if (pendingTabDragHoverGroup_ == group) {
+  if ([tabDragHoverScheduler_ isPendingGroup:group]) {
     return;
   }
 
-  pendingTabDragHoverGroup_ = group;
-  NSUInteger generation = ++tabDragHoverGeneration_;
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, kTabDragGroupHoverDelayNanoseconds),
-                 dispatch_get_main_queue(), ^{
-    if (generation != self->tabDragHoverGeneration_ ||
-        !self->draggingTab_ ||
-        self->pendingTabDragHoverGroup_ != group) {
-      return;
-    }
+  __weak BabelBrowserWindowController* weakSelf = self;
+  [tabDragHoverScheduler_ scheduleSelectionForGroup:group
+                                  delayNanoseconds:kTabDragGroupHoverDelayNanoseconds
+                                   validationBlock:^BOOL(BabelBrowserGroup* candidateGroup) {
+                                     BabelBrowserWindowController* strongSelf = weakSelf;
+                                     if (!strongSelf || !strongSelf->draggingTab_) {
+                                       return NO;
+                                     }
 
-    NSPoint currentWindowPoint = [self.window convertPointFromScreen:NSEvent.mouseLocation];
-    if ([self groupAtWindowPoint:currentWindowPoint] != group) {
-      return;
-    }
-
-    [self selectGroup:group];
-  });
+                                     NSPoint currentWindowPoint =
+                                         [strongSelf.window convertPointFromScreen:NSEvent.mouseLocation];
+                                     return [strongSelf groupAtWindowPoint:currentWindowPoint] == candidateGroup;
+                                   }
+                                    selectionBlock:^(BabelBrowserGroup* candidateGroup) {
+                                      BabelBrowserWindowController* strongSelf = weakSelf;
+                                      [strongSelf selectGroup:candidateGroup];
+                                    }];
 }
 
 - (BOOL)moveDraggingTabIfNeededToVisibleTabStripAtWindowPoint:(NSPoint)windowPoint {
@@ -670,8 +657,7 @@
     [self moveDraggingTabToGroup:group insertionIndex:0 selectMovedTab:YES];
   }
 
-  pendingTabDragHoverGroup_ = nil;
-  tabDragHoverGeneration_++;
+  [tabDragHoverScheduler_ cancelPendingSelection];
 
   if (!isReorderingTabs_ && !isDraggingTabAcrossGroups_) {
     if (draggingTab_ && ![tabs_ containsObject:draggingTab_]) {

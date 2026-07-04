@@ -152,6 +152,8 @@ set(BABEL_CHROME_SOURCES
   Browser/TabContentViewAttacher.mm
   Browser/TabDragCoordinator.h
   Browser/TabDragCoordinator.mm
+  Browser/TabDragHoverScheduler.h
+  Browser/TabDragHoverScheduler.mm
   Browser/TabPlacementPolicy.h
   Browser/TabPlacementPolicy.mm
   Browser/TabStripLayoutCalculator.h

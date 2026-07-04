@@ -75,6 +75,7 @@
 #import "Browser/StableViewerURLResolver.h"
 #import "Browser/TabContentViewAttacher.h"
 #import "Browser/TabDragCoordinator.h"
+#import "Browser/TabDragHoverScheduler.h"
 #import "Browser/TabPlacementPolicy.h"
 #import "Browser/TabStripLayoutCalculator.h"
 #import "Browser/TabURLMatcher.h"
@@ -245,6 +246,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelTabContentViewAttacher* tabContentViewAttacher_;
   BabelTabDragCoordinator* tabDragCoordinator_;
+  BabelTabDragHoverScheduler* tabDragHoverScheduler_;
   BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
   BabelTabURLMatcher* tabURLMatcher_;
   BabelViewerSourceResolver* viewerSourceResolver_;
@@ -254,7 +256,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelBrowserTab*>* pendingTabs_;
   BabelBrowserTab* selectedTab_;
   BabelBrowserTab* draggingTab_;
-  BabelBrowserGroup* pendingTabDragHoverGroup_;
   BabelBrowserTab* pendingDeveloperToolsTab_;
   CefRefPtr<BabelBrowserClient> browserClient_;
   NSString* developerToolsDockMode_;
@@ -270,7 +271,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BOOL isBuildingInterface_;
   BOOL didApplyInitialSidebarRestore_;
   BOOL needsInitialRestoredBrowserCreation_;
-  NSUInteger tabDragHoverGeneration_;
   NSUInteger googleSuggestGeneration_;
 }
 
@@ -485,6 +485,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
                     }];
     tabContentViewAttacher_ = [[BabelTabContentViewAttacher alloc] init];
     tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
+    tabDragHoverScheduler_ = [[BabelTabDragHoverScheduler alloc] init];
     browserTabMoveCoordinator_ =
         [[BabelBrowserTabMoveCoordinator alloc] initWithDragCoordinator:tabDragCoordinator_];
     tabStripLayoutCalculator_ =
@@ -513,7 +514,6 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     isBuildingInterface_ = NO;
     didApplyInitialSidebarRestore_ = NO;
     needsInitialRestoredBrowserCreation_ = NO;
-    tabDragHoverGeneration_ = 0;
     googleSuggestGeneration_ = 0;
     [extensionProfileStore_ restoreProfileExtensionsMovedByOlderVersions];
     [extensionProfileStore_ clearPendingProfileExtensionRestartStates];
