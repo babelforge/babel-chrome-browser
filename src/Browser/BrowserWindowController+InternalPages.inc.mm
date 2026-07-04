@@ -297,10 +297,13 @@
   if ([commandName isEqualToString:@"modules"]) {
     BabelInternalNavigationAction* action =
         [internalNavigationActionParser_ modulesActionFromComponents:components];
-    if ([action.name isEqualToString:BabelInternalNavigationActionInstallSelectedUpdates]) {
-      if ([moduleUIActionCoordinator_ installPHPModuleUpdatesWithIdentifiers:action.values]) {
-        [self refreshBabelChromeFileTypeCapabilities];
-      }
+    BabelInternalModuleNavigationResult* result =
+        [internalModuleNavigationHandler_ handleModuleAction:action];
+    if (result.fileTypeCapabilitiesDidChange) {
+      [self refreshBabelChromeFileTypeCapabilities];
+    }
+
+    if ([result.destination isEqualToString:BabelInternalModuleNavigationDestinationUpdates]) {
       [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
                                     title:@"Module Updates"
                                      html:[self moduleUpdatesPageHTML]
@@ -308,81 +311,23 @@
       return YES;
     }
 
-    if ([action.name isEqualToString:BabelInternalNavigationActionInstallZip]) {
-      if ([moduleUIActionCoordinator_ installPHPModuleZipFromPanel]) {
-        [self refreshBabelChromeFileTypeCapabilities];
-      }
-      [self openModulesPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionConfigureUpdateURL]) {
-      [moduleUIActionCoordinator_ configureModuleUpdateURLFromPrompt];
-      [self openModulesPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionConfigureUpdateLocal]) {
-      [moduleUIActionCoordinator_ configureModuleUpdateLocalDirectoryFromPanel];
-      [self openModulesPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionCheckUpdates]) {
-      [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
-                                    title:@"Module Updates"
-                                     html:[self moduleUpdatesPageHTML]
-                                  browser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionInstallUpdate]) {
-      if ([moduleUIActionCoordinator_ installPHPModuleUpdateWithIdentifier:action.value]) {
-        [self refreshBabelChromeFileTypeCapabilities];
-      }
-      [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
-                                    title:@"Module Updates"
-                                     html:[self moduleUpdatesPageHTML]
-                                  browser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionEnable]) {
-      if ([moduleUIActionCoordinator_ setPHPModuleWithIdentifier:action.value enabled:YES]) {
-        [self refreshBabelChromeFileTypeCapabilities];
-      }
-      [self openModulesPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionDisable]) {
-      if ([moduleUIActionCoordinator_ setPHPModuleWithIdentifier:action.value enabled:NO]) {
-        [self refreshBabelChromeFileTypeCapabilities];
-      }
-      [self openModulesPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionRemove]) {
-      if ([moduleUIActionCoordinator_ removePHPModuleWithIdentifier:action.value]) {
-        [self refreshBabelChromeFileTypeCapabilities];
-      }
-      [self openModulesPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionModuleDetails]) {
+    if ([result.destination isEqualToString:BabelInternalModuleNavigationDestinationDetails]) {
       NSString* urlString = [NSString stringWithFormat:@"babelchrome://modules?module=%@",
-                                                       [self queryEscapedString:action.value]];
+                                                       [self queryEscapedString:result.moduleIdentifier]];
       [self openInternalPageWithURLString:urlString
                                     title:@"Module"
-                                     html:[self moduleDetailsPageHTMLForIdentifier:action.value]
+                                     html:[self moduleDetailsPageHTMLForIdentifier:result.moduleIdentifier]
                                   browser:browser];
       return YES;
     }
 
-    if ([action.name isEqualToString:BabelInternalNavigationActionOpen]) {
-      [self openPHPModuleWithIdentifier:action.value route:action.secondaryValue];
+    if ([result.destination isEqualToString:BabelInternalModuleNavigationDestinationOpenModule]) {
+      [self openPHPModuleWithIdentifier:result.moduleIdentifier route:result.route];
+      return YES;
+    }
+
+    if ([result.destination isEqualToString:BabelInternalModuleNavigationDestinationModules]) {
+      [self openModulesPageForBrowser:browser];
       return YES;
     }
 

@@ -74,6 +74,8 @@ set(BABEL_CHROME_SOURCES
   Browser/HTMLDataURLBuilder.mm
   Browser/InternalNavigationActionParser.h
   Browser/InternalNavigationActionParser.mm
+  Browser/InternalModuleNavigationHandler.h
+  Browser/InternalModuleNavigationHandler.mm
   Browser/InternalPageAssetProvider.h
   Browser/InternalPageAssetProvider.mm
   Browser/InternalPageRenderer.h

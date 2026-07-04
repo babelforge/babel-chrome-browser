@@ -35,6 +35,7 @@
 #import "Browser/HistoryPageRenderer.h"
 #import "Browser/HTMLDataURLBuilder.h"
 #import "Browser/InternalNavigationActionParser.h"
+#import "Browser/InternalModuleNavigationHandler.h"
 #import "Browser/InternalPageAssetProvider.h"
 #import "Browser/InternalPageRenderer.h"
 #import "Browser/InternalPageTabClassifier.h"
@@ -201,6 +202,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelHistoryPageDataSource* historyPageDataSource_;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelHTMLDataURLBuilder* htmlDataURLBuilder_;
+  BabelInternalModuleNavigationHandler* internalModuleNavigationHandler_;
   BabelInternalNavigationActionParser* internalNavigationActionParser_;
   BabelInternalPageAssetProvider* internalPageAssetProvider_;
   BabelInternalPageRenderer* internalPageRenderer_;
@@ -414,6 +416,9 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     moduleUIActionCoordinator_ =
         [[BabelModuleUIActionCoordinator alloc] initWithModuleActionService:moduleActionService_
                                                         moduleUpdateService:moduleUpdateService_];
+    internalModuleNavigationHandler_ =
+        [[BabelInternalModuleNavigationHandler alloc]
+            initWithModuleUIActionCoordinator:moduleUIActionCoordinator_];
     newTabURLResolver_ =
         [[BabelNewTabURLResolver alloc]
             initWithSupportedViewerURLResolver:^NSString*(NSString* urlString) {
