@@ -54,14 +54,9 @@
 
 - (void)updateWindowTitleForSelectedTab {
   NSString* pageTitle = selectedTab_.title.length > 0 ? selectedTab_.title : selectedTab_.urlString;
-  if (pageTitle.length == 0) {
-    self.window.title = BabelChromeConfiguration.applicationName;
-    return;
-  }
-
-  self.window.title = [NSString stringWithFormat:@"%@ - %@",
-                                                 BabelChromeConfiguration.applicationName,
-                                                 pageTitle];
+  self.window.title =
+      [browserPresentationFormatter_ windowTitleWithApplicationName:BabelChromeConfiguration.applicationName
+                                                          pageTitle:pageTitle];
 }
 
 - (NSString*)displayURLStringForTab:(BabelBrowserTab*)tab {
@@ -73,26 +68,7 @@
 }
 
 - (NSColor*)colorFromHexString:(NSString*)hexString fallbackColor:(NSColor*)fallbackColor {
-  NSString* normalizedHex = [hexString ?: @"" stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-  if ([normalizedHex hasPrefix:@"#"]) {
-    normalizedHex = [normalizedHex substringFromIndex:1];
-  }
-
-  if (normalizedHex.length != 6) {
-    return fallbackColor;
-  }
-
-  unsigned int colorValue = 0;
-  NSScanner* scanner = [NSScanner scannerWithString:normalizedHex];
-  if (![scanner scanHexInt:&colorValue]) {
-    return fallbackColor;
-  }
-
-  CGFloat red = ((colorValue >> 16) & 0xff) / 255.0;
-  CGFloat green = ((colorValue >> 8) & 0xff) / 255.0;
-  CGFloat blue = (colorValue & 0xff) / 255.0;
-
-  return [NSColor colorWithCalibratedRed:red green:green blue:blue alpha:1.0];
+  return [browserPresentationFormatter_ colorFromHexString:hexString fallbackColor:fallbackColor];
 }
 
 - (void)layoutAddressTextFieldContent {
@@ -498,10 +474,7 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (NSString*)compactTitleForString:(NSString*)value {
-  if (value.length <= 28) {
-    return value;
-  }
-  return [[value substringToIndex:25] stringByAppendingString:@"..."];
+  return [browserPresentationFormatter_ compactTitleForString:value];
 }
 - (BOOL)shouldPropagateBrowserClose {
   return isTerminating_;

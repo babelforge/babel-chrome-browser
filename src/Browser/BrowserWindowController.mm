@@ -58,6 +58,7 @@
 #import "Browser/TabStripLayoutCalculator.h"
 #import "Browser/TabURLMatcher.h"
 #import "Browser/BrowserModels.h"
+#import "Browser/BrowserPresentationFormatter.h"
 #import "Browser/BrowserSupportViews.h"
 #import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
@@ -165,6 +166,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserGroupCollection* browserGroupCollection_;
   BabelBrowserGroupFactory* browserGroupFactory_;
   BabelBrowserGroupMoveCoordinator* browserGroupMoveCoordinator_;
+  BabelBrowserPresentationFormatter* browserPresentationFormatter_;
   BabelBrowserTabCollection* browserTabCollection_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
   BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
@@ -297,7 +299,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
             initWithFaviconStore:faviconStore_
                     actionTarget:self
                compactTitleBlock:^NSString*(NSString* title) {
-                 return [weakSelf compactTitleForString:title];
+                 BabelBrowserWindowController* strongSelf = weakSelf;
+                 return [strongSelf->browserPresentationFormatter_ compactTitleForString:title];
                }
         localDropAcceptanceBlock:^BOOL(BabelPageContainerView* container) {
           return [weakSelf pageContainerSupportsLocalDrop:container];
@@ -309,6 +312,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     browserGroupCollection_ = [[BabelBrowserGroupCollection alloc] init];
     browserGroupFactory_ = [[BabelBrowserGroupFactory alloc] initWithActionTarget:self];
     browserGroupMoveCoordinator_ = [[BabelBrowserGroupMoveCoordinator alloc] init];
+    browserPresentationFormatter_ = [[BabelBrowserPresentationFormatter alloc] init];
     browserTabCollection_ = [[BabelBrowserTabCollection alloc] init];
     browserStringFormatter_ = [[BabelBrowserStringFormatter alloc] init];
     BabelTabPlacementPolicy* tabPlacementPolicy = [[BabelTabPlacementPolicy alloc] init];

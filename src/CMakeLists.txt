@@ -124,6 +124,8 @@ set(BABEL_CHROME_SOURCES
   Browser/MainWindowViewFactory.mm
   Browser/BrowserModels.h
   Browser/BrowserModels.mm
+  Browser/BrowserPresentationFormatter.h
+  Browser/BrowserPresentationFormatter.mm
   Browser/BrowserSupportViews.h
   Browser/BrowserSupportViews.mm
   Browser/BrowserTheme.h
