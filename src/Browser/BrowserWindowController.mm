@@ -36,6 +36,7 @@
 #import "Browser/LocalDropLogWriter.h"
 #import "Browser/LocalDropPayloadBuilder.h"
 #import "Browser/LocalServiceURLClassifier.h"
+#import "Browser/MainWindowViewFactory.h"
 #import "Browser/ModuleActionService.h"
 #import "Browser/ModulePageRenderer.h"
 #import "Browser/ModuleSettingsPageRenderer.h"
@@ -182,6 +183,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelLocalDropLogWriter* localDropLogWriter_;
   BabelLocalDropPayloadBuilder* localDropPayloadBuilder_;
   BabelLocalServiceURLClassifier* localServiceURLClassifier_;
+  BabelMainWindowViewFactory* mainWindowViewFactory_;
   BabelModuleActionService* moduleActionService_;
   BabelModulePageRenderer* modulePageRenderer_;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
@@ -338,6 +340,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
                                                isDirectory:NO]];
     localDropPayloadBuilder_ = [[BabelLocalDropPayloadBuilder alloc] init];
     localServiceURLClassifier_ = [[BabelLocalServiceURLClassifier alloc] init];
+    mainWindowViewFactory_ = [[BabelMainWindowViewFactory alloc] init];
     moduleActionService_ = [[BabelModuleActionService alloc] init];
     modulePageRenderer_ =
         [[BabelModulePageRenderer alloc]

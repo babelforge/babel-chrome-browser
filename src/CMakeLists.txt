@@ -118,6 +118,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ViewerSourceResolver.mm
   Browser/WindowStateStore.h
   Browser/WindowStateStore.mm
+  Browser/MainWindowViewFactory.h
+  Browser/MainWindowViewFactory.mm
   Browser/BrowserModels.h
   Browser/BrowserModels.mm
   Browser/BrowserSupportViews.h

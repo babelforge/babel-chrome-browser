@@ -31,6 +31,7 @@ BrowserWindowController
     |__ Services and stores
             |__ FaviconStore
             |__ WindowStateStore
+            |__ MainWindowViewFactory
             |__ ExtensionProfileStore
             |__ ModuleUpdateService
             |__ ModulePageRenderer
@@ -101,7 +102,7 @@ BrowserWindowController
 | `BrowserWindowController+InternalPages.inc.mm` | Internal page openers, routing, HTML loading, settings/history/extensions/module page value collection, action execution, and shared internal utilities. Extensions/modules/history query parsing is delegated to `BabelInternalNavigationActionParser`; settings query mutation is delegated to `BabelInternalSettingsNavigationHandler`; body rendering is delegated to page renderers and shared HTML shell rendering is delegated to `BabelInternalPageRenderer`; query/path/shell string formatting is delegated to `BabelBrowserStringFormatter`; reusable internal-page icon HTML is delegated to `BabelInternalPageAssetProvider`. |
 | `BrowserWindowController+LocalDrop.inc.mm` | Native local drag-and-drop handling, drop bridge installation, and local path event forwarding to modules. Local drop bridge JavaScript source generation is delegated to `BabelLocalDropBridgeScriptBuilder`; pending local-drop expiry state is delegated to `BabelLocalDropCoordinator`; local-drop diagnostic file writes are delegated to `BabelLocalDropLogWriter`; native drop payload validation and JSON construction are delegated to `BabelLocalDropPayloadBuilder`. |
 | `BrowserWindowController+URLRouting.inc.mm` | External URL opening, command URL execution, stable `babelchrome://...` URL conversion, and refresh handling for stable runtime URLs. Command URL parsing is delegated to `BabelChromeCommandParser`; stable server parsing is delegated to `BabelStableServerURLResolver`; stable viewer parsing is delegated to `BabelStableViewerURLResolver`; LocalServiceHost runtime URL classification is delegated to `BabelLocalServiceURLClassifier`; Project Launcher lifecycle response parsing is delegated to `BabelProjectLifecycleResponseParser`; pending runtime refresh state is delegated to `BabelRuntimeRefreshCoordinator`. |
-| `BrowserWindowController+WindowLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, module lifecycle calls, main AppKit interface construction, main layout application, and window/sidebar view resizing. Window/sidebar persistence is delegated to `BabelWindowStateStore`; sidebar/right-panel frame calculation is delegated to `BabelSidebarLayoutCalculator`; tab item frame calculation is delegated to `BabelTabStripLayoutCalculator`. |
+| `BrowserWindowController+WindowLifecycle.inc.mm` | Startup/shutdown orchestration, prioritized session restore, module lifecycle calls, main layout application, and window/sidebar view resizing. Main AppKit view construction is delegated to `BabelMainWindowViewFactory`; window/sidebar persistence is delegated to `BabelWindowStateStore`; sidebar/right-panel frame calculation is delegated to `BabelSidebarLayoutCalculator`; tab item frame calculation is delegated to `BabelTabStripLayoutCalculator`. |
 
 ## Already Extracted Classes
 
@@ -140,6 +141,18 @@ The controller may open panels, show alerts, render extension pages, and route u
 - restores zoom only when the stored frame matches the visible-frame zoom shape.
 
 The controller may compute UI constraints such as the minimum sidebar width, but it must not serialize window frames or directly read/write window/sidebar defaults.
+
+### `BabelMainWindowViewFactory`
+
+`BabelMainWindowViewFactory` owns initial construction of the main AppKit view tree:
+
+- root theme view, split view, sidebar, and right-side panels;
+- titlebar tab strip and new-tab button;
+- address bar controls, viewer badge, reload button, omnibox suggestions panel;
+- pages panel and link status bar;
+- static target/action wiring for the created controls.
+
+The controller owns the returned views, applies runtime layout and colors, and coordinates models/CEF browsers. It must not rebuild the main view hierarchy inline.
 
 ### `BrowserSupportViews`
 
