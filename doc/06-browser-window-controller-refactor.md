@@ -62,6 +62,7 @@ BrowserWindowController
             |__ AddressNavigationNormalizer
             |__ AddressFieldLayoutCalculator
             |__ AddressFieldNavigationResolver
+            |__ LinkStatusBarController
             |__ InternalPageAssetProvider
             |__ InternalPageTabClassifier
             |__ ViewerSourceResolver
@@ -114,7 +115,7 @@ BrowserWindowController
 
 | Fragment | Responsibility |
 | --- | --- |
-| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address input normalization is delegated to `BabelAddressNavigationNormalizer`; displayed-vs-actual address navigation resolution is delegated to `BabelAddressFieldNavigationResolver`; address badge/text-field frame calculation is delegated to `BabelAddressFieldLayoutCalculator`; window title, compact tab title, and badge color formatting are delegated to `BabelBrowserPresentationFormatter`; address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
+| `BrowserWindowController+AddressAndSuggestions.inc.mm` | Selected tab address display, address field editing, CEF browser title/URL/loading/favicons/status updates, and omnibox suggestions. Address input normalization is delegated to `BabelAddressNavigationNormalizer`; displayed-vs-actual address navigation resolution is delegated to `BabelAddressFieldNavigationResolver`; address badge/text-field frame calculation is delegated to `BabelAddressFieldLayoutCalculator`; link-hover status-bar presentation is delegated to `BabelLinkStatusBarController`; window title, compact tab title, and badge color formatting are delegated to `BabelBrowserPresentationFormatter`; address display URL and viewer badge resolution are delegated to `BabelAddressBarDisplayResolver`; favicon persistence is delegated to `BabelFaviconStore`; local suggestion row collection and suggestion favicon lookup are delegated to `BabelOmniboxSuggestionContextBuilder`; local suggestion matching is delegated to `BabelOmniboxLocalSuggestionBuilder`; Google Suggest is delegated to `BabelGoogleSuggestClient`; suggestion panel state/rendering is delegated to `BabelOmniboxSuggestionsController`. |
 | `BrowserWindowController+BrowserAttachment.inc.mm` | Native CEF browser view attachment, detachment, visibility, and page container placement. |
 | `BrowserWindowController+BrowserControls.inc.mm` | Toolbar and browser control actions such as reload, navigation, tab shortcuts, and command validation. Developer Tools dock-mode resolution is delegated to `BabelDeveloperToolsDockingPolicy`; internal-page tab classification is delegated to `BabelInternalPageTabClassifier`; stable viewer source-file resolution is delegated to `BabelViewerSourceResolver`. |
 | `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | Embedded DevTools creation, layout application, resizing, closing, and keyboard/menu integration. Docking preference persistence is delegated to `BabelDeveloperToolsDockingStore`; page and panel frame calculation is delegated to `BabelDeveloperToolsLayoutCalculator`. |
@@ -780,6 +781,17 @@ The controller may still render Modules, Module Updates, Details, or open-module
 - avoids duplicating displayed-vs-actual URL comparisons in the controller.
 
 The controller may still collect the selected tab, displayed URL, and actual URL inputs. It must not reimplement the comparison rule inline.
+
+### `BabelLinkStatusBarController`
+
+`BabelLinkStatusBarController` owns link-hover status-bar presentation:
+
+- hides the status bar when tab selection changes;
+- applies CEF status text to the label;
+- hides the status bar for empty status text;
+- keeps the status bar layered above the pages panel.
+
+The controller may still decide which tab emitted a CEF status update. It must not manipulate the link-hover status bar view directly.
 
 ### `BabelExtensionFolderController`
 

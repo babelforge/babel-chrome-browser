@@ -21,7 +21,7 @@
 
 - (void)selectTab:(BabelBrowserTab*)tab deferringBrowserCreation:(BOOL)deferringBrowserCreation {
   selectedTab_ = tab;
-  linkStatusBarView_.hidden = YES;
+  [linkStatusBarController_ hideStatusBar:linkStatusBarView_];
   selectedGroup_.selectedTabIdentifier = tab.identifier;
   [self touchRecentlyUsedTab:tab];
   for (BabelBrowserTab* currentTab in tabs_) {
@@ -503,18 +503,13 @@ doCommandBySelector:(SEL)commandSelector {
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser statusText:(NSString*)statusText {
   BabelBrowserTab* tab = [self tabForBrowser:browser];
-  if (!tab || tab != selectedTab_) {
-    return;
-  }
-
-  NSString* displayedStatusText = statusText ?: @"";
-  linkStatusBarLabel_.stringValue = displayedStatusText;
-  linkStatusBarView_.hidden = displayedStatusText.length == 0;
-  if (!linkStatusBarView_.hidden) {
-    [rightView_ addSubview:linkStatusBarView_
-                positioned:NSWindowAbove
-                relativeTo:pagesPanel_];
-  }
+  [linkStatusBarController_ updateStatusText:statusText
+                                      forTab:tab
+                                 selectedTab:selectedTab_
+                               statusBarView:linkStatusBarView_
+                                 statusLabel:linkStatusBarLabel_
+                                   rightView:rightView_
+                                  pagesPanel:pagesPanel_];
 }
 
 - (void)copyURLStringToPasteboard:(NSString*)urlString {

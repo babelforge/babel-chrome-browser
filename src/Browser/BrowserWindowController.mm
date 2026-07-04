@@ -43,6 +43,7 @@
 #import "Browser/InternalSettingsNavigationHandler.h"
 #import "Browser/LiveBrowserEvictionPolicy.h"
 #import "Browser/LiveBrowserLimitEnforcer.h"
+#import "Browser/LinkStatusBarController.h"
 #import "Browser/LocalDropBridgeScriptBuilder.h"
 #import "Browser/LocalDropCoordinator.h"
 #import "Browser/LocalDropLogWriter.h"
@@ -210,6 +211,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelInternalPageRenderer* internalPageRenderer_;
   BabelInternalPageTabClassifier* internalPageTabClassifier_;
   BabelInternalSettingsNavigationHandler* internalSettingsNavigationHandler_;
+  BabelLinkStatusBarController* linkStatusBarController_;
   BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
   BabelLiveBrowserLimitEnforcer* liveBrowserLimitEnforcer_;
   BabelLocalDropBridgeScriptBuilder* localDropBridgeScriptBuilder_;
@@ -382,6 +384,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     internalSettingsNavigationHandler_ =
         [[BabelInternalSettingsNavigationHandler alloc] initWithSettingsStore:browserSettingsStore_
                                                                  userDefaults:NSUserDefaults.standardUserDefaults];
+    linkStatusBarController_ = [[BabelLinkStatusBarController alloc] init];
     liveBrowserEvictionPolicy_ = [[BabelLiveBrowserEvictionPolicy alloc] init];
     liveBrowserLimitEnforcer_ =
         [[BabelLiveBrowserLimitEnforcer alloc]

@@ -90,6 +90,8 @@ set(BABEL_CHROME_SOURCES
   Browser/LiveBrowserEvictionPolicy.mm
   Browser/LiveBrowserLimitEnforcer.h
   Browser/LiveBrowserLimitEnforcer.mm
+  Browser/LinkStatusBarController.h
+  Browser/LinkStatusBarController.mm
   Browser/LocalDropBridgeScriptBuilder.h
   Browser/LocalDropBridgeScriptBuilder.mm
   Browser/LocalDropCoordinator.h
