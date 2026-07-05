@@ -42,6 +42,7 @@
 #import "Browser/InternalModuleNavigationHandler.h"
 #import "Browser/InternalExtensionsNavigationHandler.h"
 #import "Browser/InternalPageAssetProvider.h"
+#import "Browser/InternalPageHTMLComposer.h"
 #import "Browser/InternalPageRenderer.h"
 #import "Browser/InternalPageTabClassifier.h"
 #import "Browser/InternalSettingsNavigationHandler.h"
@@ -218,6 +219,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelInternalModuleNavigationHandler* internalModuleNavigationHandler_;
   BabelInternalNavigationActionParser* internalNavigationActionParser_;
   BabelInternalPageAssetProvider* internalPageAssetProvider_;
+  BabelInternalPageHTMLComposer* internalPageHTMLComposer_;
   BabelInternalPageRenderer* internalPageRenderer_;
   BabelInternalPageTabClassifier* internalPageTabClassifier_;
   BabelInternalSettingsNavigationHandler* internalSettingsNavigationHandler_;
@@ -487,6 +489,14 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelAppSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
     moduleSettingsPageRenderer_ =
         [[BabelModuleSettingsPageRenderer alloc] initWithOptionRenderer:settingsOptionRenderer_];
+    internalPageHTMLComposer_ =
+        [[BabelInternalPageHTMLComposer alloc] initWithInternalPageRenderer:internalPageRenderer_
+                                                        historyPageRenderer:historyPageRenderer_
+                                                      historyPageDataSource:historyPageDataSource_
+                                                    appSettingsPageRenderer:appSettingsPageRenderer_
+                                                 moduleSettingsPageRenderer:moduleSettingsPageRenderer_
+                                                     extensionsPageRenderer:extensionsPageRenderer_
+                                                   extensionsPageDataSource:extensionsPageDataSource_];
     stableServerURLResolver_ = [[BabelStableServerURLResolver alloc] init];
     runtimeRefreshTabMatcher_ =
         [[BabelRuntimeRefreshTabMatcher alloc]

@@ -88,6 +88,8 @@ set(BABEL_CHROME_SOURCES
   Browser/InternalModuleNavigationHandler.mm
   Browser/InternalPageAssetProvider.h
   Browser/InternalPageAssetProvider.mm
+  Browser/InternalPageHTMLComposer.h
+  Browser/InternalPageHTMLComposer.mm
   Browser/InternalPageRenderer.h
   Browser/InternalPageRenderer.mm
   Browser/InternalPageTabClassifier.h

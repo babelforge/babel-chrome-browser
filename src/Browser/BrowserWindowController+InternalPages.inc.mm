@@ -406,43 +406,27 @@
   return [htmlDataURLBuilder_ dataURLStringForHTML:html];
 }
 - (NSString*)historyPageHTML {
-  NSString* body =
-      [historyPageRenderer_ historyPageBodyWithOpenTabRows:[historyPageDataSource_ openTabRowsForGroups:groups_]
-                                      recentlyClosedTabRows:[historyPageDataSource_ recentlyClosedTabRows]];
-  return [self internalPageHTMLWithTitle:@"History" body:body];
+  return [internalPageHTMLComposer_ historyPageHTMLWithGroups:groups_];
 }
 
 - (NSString*)settingsPageHTML {
-  NSString* strategy = [self tabOpeningStrategy];
-  NSString* addressSuggestionsMode = [self addressSuggestionsMode];
-  NSString* appearanceTheme = [BabelTheme.sharedTheme appearanceMode];
-  BOOL longQuitShortcutEnabled = [browserSettingsStore_ longQuitShortcutEnabled];
-  NSString* body = [appSettingsPageRenderer_ settingsPageBodyWithDefaultURLString:BabelChromeConfiguration.defaultURLString
-                                                                  appearanceTheme:appearanceTheme
-                                                          longQuitShortcutEnabled:longQuitShortcutEnabled
-                                                               tabOpeningStrategy:strategy
-                                                           addressSuggestionsMode:addressSuggestionsMode];
-  return [self internalPageHTMLWithTitle:@"Settings" body:body];
+  return [internalPageHTMLComposer_ settingsPageHTMLWithDefaultURLString:BabelChromeConfiguration.defaultURLString
+                                                         appearanceTheme:[BabelTheme.sharedTheme appearanceMode]
+                                                longQuitShortcutEnabled:[browserSettingsStore_ longQuitShortcutEnabled]
+                                                     tabOpeningStrategy:[self tabOpeningStrategy]
+                                                 addressSuggestionsMode:[self addressSuggestionsMode]];
 }
 
 - (NSString*)moduleSettingsPageHTMLForIdentifier:(NSString*)moduleIdentifier {
   NSString* normalizedIdentifier = [self normalizedModuleSettingsIdentifier:moduleIdentifier];
   NSString* moduleName = [self moduleNameForIdentifier:normalizedIdentifier] ?: normalizedIdentifier;
-  NSString* pageTitle = [normalizedIdentifier isEqualToString:@"babelforge.markdown-viewer"]
-      ? @"Markdown Viewer Settings"
-      : [NSString stringWithFormat:@"%@ Settings", moduleName];
-  NSString* body = [moduleSettingsPageRenderer_ moduleSettingsPageBodyForIdentifier:normalizedIdentifier
-                                                                         moduleName:moduleName
-                                                                      markdownTheme:[self markdownTheme]];
-  return [self internalPageHTMLWithTitle:pageTitle body:body];
+  return [internalPageHTMLComposer_ moduleSettingsPageHTMLForIdentifier:normalizedIdentifier
+                                                             moduleName:moduleName
+                                                          markdownTheme:[self markdownTheme]];
 }
 
 - (NSString*)extensionsPageHTML {
-  NSString* body =
-      [extensionsPageRenderer_
-          extensionsPageBodyWithProfileExtensionRows:[extensionsPageDataSource_ profileExtensionRows]
-                               unpackedExtensionRows:[extensionsPageDataSource_ unpackedExtensionRows]];
-  return [self internalPageHTMLWithTitle:@"Extensions" body:body];
+  return [internalPageHTMLComposer_ extensionsPageHTML];
 }
 - (NSString*)moduleSettingsIdentifierFromSettingsComponents:(NSURLComponents*)components {
   NSString* path = components.path ?: @"";
