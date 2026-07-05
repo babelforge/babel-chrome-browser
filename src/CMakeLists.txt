@@ -48,6 +48,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserGroupSelectionController.mm
   Browser/BrowserGroupMoveCoordinator.h
   Browser/BrowserGroupMoveCoordinator.mm
+  Browser/BrowserMetadataEventController.h
+  Browser/BrowserMetadataEventController.mm
   Browser/BrowserPasteboardWriter.h
   Browser/BrowserPasteboardWriter.mm
   Browser/BrowserSettingsStore.h

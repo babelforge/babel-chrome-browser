@@ -64,6 +64,7 @@
 #import "Browser/LiveBrowserLimitEnforcer.h"
 #import "Browser/LinkStatusBarController.h"
 #import "Browser/LocalDropBridgeScriptBuilder.h"
+#import "Browser/BrowserMetadataEventController.h"
 #import "Browser/LocalDropCoordinator.h"
 #import "Browser/LocalDropLogWriter.h"
 #import "Browser/LocalDropPayloadBuilder.h"
@@ -262,6 +263,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelInternalPageTabClassifier* internalPageTabClassifier_;
   BabelInternalSettingsNavigationHandler* internalSettingsNavigationHandler_;
   BabelLinkStatusBarController* linkStatusBarController_;
+  BabelBrowserMetadataEventController* browserMetadataEventController_;
   BabelLiveBrowserEvictionPolicy* liveBrowserEvictionPolicy_;
   BabelLiveBrowserLimitEnforcer* liveBrowserLimitEnforcer_;
   BabelLocalDropBridgeScriptBuilder* localDropBridgeScriptBuilder_;
@@ -876,6 +878,61 @@ enforceLiveBrowserLimitHandler:^{
                          saveStateHandler:^{
                            [weakSelf saveGroupsState];
                          }];
+    browserMetadataEventController_ =
+        [[BabelBrowserMetadataEventController alloc]
+                    initWithMetadataUpdater:browserTabMetadataUpdater_
+                                faviconStore:faviconStore_
+                   runtimeRefreshCoordinator:runtimeRefreshCoordinator_
+                      linkStatusBarController:linkStatusBarController_
+                             pasteboardWriter:browserPasteboardWriter_
+                           browserTabProvider:^BabelBrowserTab*(CefRefPtr<CefBrowser> browser) {
+                             return [weakSelf tabForBrowser:browser];
+                           }
+                          selectedTabProvider:^BabelBrowserTab*{
+                            BabelBrowserWindowController* strongSelf = weakSelf;
+                            return strongSelf ? strongSelf->selectedTab_ : nil;
+                          }
+                            compactTitleBlock:^NSString*(NSString* value) {
+                              return [weakSelf compactTitleForString:value];
+                            }
+                        stableServerPredicate:^BOOL(NSString* urlString) {
+                          return [weakSelf isStableServerURLString:urlString];
+                        }
+                           stableURLPredicate:^BOOL(NSString* urlString) {
+                             return [weakSelf isStableBabelChromeURLString:urlString];
+                           }
+                 localServiceRuntimePredicate:^BOOL(NSString* urlString) {
+                   return [weakSelf isLocalServiceRuntimeURLString:urlString];
+                 }
+                  localServiceModulePredicate:^BOOL(NSString* urlString) {
+                    return [weakSelf isLocalServiceModuleURLString:urlString];
+                  }
+                stableServerReloadURLProvider:^NSString*(BabelBrowserTab* tab) {
+                  return [weakSelf stableServerReloadURLStringForTab:tab];
+                }
+                    refreshURLStringsProvider:^NSArray<NSString*>*(NSString* urlString) {
+                      return [weakSelf refreshURLStringsForStableURLString:urlString];
+                    }
+             reloadRequestedURLStringsHandler:^(NSArray<NSString*>* requestedURLStrings, BabelBrowserTab* excludedTab) {
+               [weakSelf reloadRequestedURLStrings:requestedURLStrings excludingTab:excludedTab];
+             }
+                             saveStateHandler:^{
+                               [weakSelf saveGroupsState];
+                             }
+                     updateWindowTitleHandler:^{
+                       [weakSelf updateWindowTitleForSelectedTab];
+                     }
+                      updateAddressBarHandler:^(BabelBrowserTab* tab) {
+                        [weakSelf updateAddressBarForTab:tab];
+                      }
+                  addressFieldEditingProvider:^BOOL{
+                    BabelBrowserWindowController* strongSelf = weakSelf;
+                    return strongSelf ? strongSelf->urlTextField_.currentEditor != nil : NO;
+                  }
+                                statusBarView:linkStatusBarView_
+                                  statusLabel:linkStatusBarLabel_
+                                    rightView:rightView_
+                                   pagesPanel:pagesPanel_];
     internalPageNavigator_ =
         [[BabelInternalPageNavigator alloc]
             initWithPagesPanel:pagesPanel_

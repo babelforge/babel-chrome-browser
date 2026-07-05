@@ -419,71 +419,21 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser title:(NSString*)title {
-  BabelBrowserTab* tab = [self tabForBrowser:browser];
-  if (![browserTabMetadataUpdater_ updateTab:tab
-                                   withTitle:title
-                           compactTitleBlock:^NSString*(NSString* value) {
-                             return [self compactTitleForString:value];
-                           }]) {
-    return;
-  }
-  [self saveGroupsState];
-  if (tab == selectedTab_) {
-    [self updateWindowTitleForSelectedTab];
-  }
+  [browserMetadataEventController_ updateBrowser:browser title:title];
 }
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser urlString:(NSString*)urlString {
-  BabelBrowserTab* tab = [self tabForBrowser:browser];
-  if (!tab || [urlString hasPrefix:@"data:"]) {
-    return;
-  }
-
-  tab.urlString = urlString;
-  if ([self isStableServerURLString:tab.requestedURLString]) {
-    tab.requestedURLString = [self stableServerReloadURLStringForTab:tab];
-  } else if (![self isStableBabelChromeURLString:tab.requestedURLString] ||
-             ![self isLocalServiceRuntimeURLString:urlString]) {
-    tab.requestedURLString = urlString;
-  }
-  if (![self isLocalServiceModuleURLString:urlString]) {
-    NSArray<NSString*>* pendingRefreshURLStrings =
-        [runtimeRefreshCoordinator_ consumeRefreshURLStringsForBrowserIdentifier:[tab browser]->GetIdentifier()];
-    if (pendingRefreshURLStrings.count > 0) {
-      [self reloadRequestedURLStrings:pendingRefreshURLStrings excludingTab:tab];
-    }
-  }
-  NSArray<NSString*>* directRefreshURLStrings =
-      [self refreshURLStringsForStableURLString:urlString];
-  if (directRefreshURLStrings.count > 0) {
-    [self reloadRequestedURLStrings:directRefreshURLStrings excludingTab:tab];
-  }
-  [self saveGroupsState];
-  if (tab == selectedTab_ && !urlTextField_.currentEditor) {
-    [self updateAddressBarForTab:tab];
-  }
+  [browserMetadataEventController_ updateBrowser:browser urlString:urlString];
 }
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser statusText:(NSString*)statusText {
-  BabelBrowserTab* tab = [self tabForBrowser:browser];
-  [linkStatusBarController_ updateStatusText:statusText
-                                      forTab:tab
-                                 selectedTab:selectedTab_
-                               statusBarView:linkStatusBarView_
-                                 statusLabel:linkStatusBarLabel_
-                                   rightView:rightView_
-                                  pagesPanel:pagesPanel_];
+  [browserMetadataEventController_ updateBrowser:browser statusText:statusText];
 }
 
 - (void)copyURLStringToPasteboard:(NSString*)urlString {
-  [browserPasteboardWriter_ copyURLStringToPasteboard:urlString];
+  [browserMetadataEventController_ copyURLStringToPasteboard:urlString];
 }
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser faviconImage:(NSImage*)faviconImage {
-  BabelBrowserTab* tab = [self tabForBrowser:browser];
-  if (![browserTabMetadataUpdater_ updateTab:tab
-                            withFaviconImage:faviconImage
-                                faviconStore:faviconStore_]) {
-    return;
-  }
+  [browserMetadataEventController_ updateBrowser:browser faviconImage:faviconImage];
 }
