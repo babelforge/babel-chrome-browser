@@ -128,6 +128,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ModulePageRenderer.mm
   Browser/ModuleSettingsPageRenderer.h
   Browser/ModuleSettingsPageRenderer.mm
+  Browser/ModuleSettingsRouteResolver.h
+  Browser/ModuleSettingsRouteResolver.mm
   Browser/ModuleUpdateService.h
   Browser/ModuleUpdateService.mm
   Browser/ModuleUIActionCoordinator.h

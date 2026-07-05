@@ -22,7 +22,7 @@
 }
 
 - (void)openModuleSettingsPageForIdentifier:(NSString*)moduleIdentifier browser:(CefRefPtr<CefBrowser>)browser {
-  NSString* normalizedIdentifier = [self normalizedModuleSettingsIdentifier:moduleIdentifier];
+  NSString* normalizedIdentifier = [moduleSettingsRouteResolver_ normalizedModuleIdentifier:moduleIdentifier];
   NSString* urlString = [NSString stringWithFormat:@"babelchrome://settings/%@",
                                                    [self pathEscapedString:normalizedIdentifier]];
   [self openInternalPageWithURLString:urlString
@@ -187,12 +187,14 @@
 
   NSString* commandName = components.host ?: @"";
   if ([commandName isEqualToString:@"settings"]) {
-    NSString* moduleSettingsIdentifier = [self moduleSettingsIdentifierFromSettingsComponents:components];
+    NSString* moduleSettingsIdentifier =
+        [moduleSettingsRouteResolver_ moduleIdentifierFromSettingsComponents:components];
     if (moduleSettingsIdentifier.length > 0) {
       BabelInternalSettingsNavigationResult* result =
           [internalSettingsNavigationHandler_
               applyModuleSettingsComponents:components
-                            moduleIdentifier:[self normalizedModuleSettingsIdentifier:moduleSettingsIdentifier]];
+                            moduleIdentifier:[moduleSettingsRouteResolver_
+                                                 normalizedModuleIdentifier:moduleSettingsIdentifier]];
       if (result.markdownThemeDidChange) {
         [self reloadMarkdownViewerTabsUsingCurrentTheme];
       }
@@ -418,8 +420,8 @@
 }
 
 - (NSString*)moduleSettingsPageHTMLForIdentifier:(NSString*)moduleIdentifier {
-  NSString* normalizedIdentifier = [self normalizedModuleSettingsIdentifier:moduleIdentifier];
-  NSString* moduleName = [self moduleNameForIdentifier:normalizedIdentifier] ?: normalizedIdentifier;
+  NSString* normalizedIdentifier = [moduleSettingsRouteResolver_ normalizedModuleIdentifier:moduleIdentifier];
+  NSString* moduleName = [moduleSettingsRouteResolver_ moduleNameForIdentifier:normalizedIdentifier] ?: normalizedIdentifier;
   return [internalPageHTMLComposer_ moduleSettingsPageHTMLForIdentifier:normalizedIdentifier
                                                              moduleName:moduleName
                                                           markdownTheme:[self markdownTheme]];
@@ -427,60 +429,6 @@
 
 - (NSString*)extensionsPageHTML {
   return [internalPageHTMLComposer_ extensionsPageHTML];
-}
-- (NSString*)moduleSettingsIdentifierFromSettingsComponents:(NSURLComponents*)components {
-  NSString* path = components.path ?: @"";
-  if ([path hasPrefix:@"/"]) {
-    path = [path substringFromIndex:1];
-  }
-  if (path.length > 0) {
-    return path;
-  }
-
-  NSString* fragment = components.fragment ?: @"";
-  if (fragment.length > 0) {
-    return fragment;
-  }
-
-  return @"";
-}
-
-- (NSString*)normalizedModuleSettingsIdentifier:(NSString*)moduleIdentifier {
-  NSString* normalizedIdentifier =
-      [moduleIdentifier stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] ?: @"";
-  if (normalizedIdentifier.length == 0) {
-    return @"";
-  }
-
-  if ([normalizedIdentifier containsString:@"."]) {
-    return normalizedIdentifier;
-  }
-
-  return [@"babelforge." stringByAppendingString:normalizedIdentifier];
-}
-
-- (NSString*)moduleNameForIdentifier:(NSString*)moduleIdentifier {
-  NSError* error = nil;
-  NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&error];
-  if (error) {
-    return nil;
-  }
-
-  NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
-  for (NSDictionary* module in modules) {
-    if (![module isKindOfClass:NSDictionary.class]) {
-      continue;
-    }
-
-    NSString* currentIdentifier = [module[@"id"] isKindOfClass:NSString.class] ? module[@"id"] : @"";
-    if (![currentIdentifier isEqualToString:moduleIdentifier ?: @""]) {
-      continue;
-    }
-
-    return [module[@"name"] isKindOfClass:NSString.class] ? module[@"name"] : currentIdentifier;
-  }
-
-  return nil;
 }
 - (void)openChromeWebStoreSearchForQuery:(NSString*)query {
   NSString* trimmedQuery = [query stringByTrimmingCharactersInSet:
