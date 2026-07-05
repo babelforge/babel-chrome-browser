@@ -21,7 +21,9 @@
 }
 
 - (void)openSettingsPage {
-  [owner_ openSettingsPageForBrowser:nullptr];
+  [owner_ openInternalPageWithURLString:kSettingsPageURLString
+                                title:@"Settings"
+                                 html:[owner_ settingsPageHTML]];
 }
 
 - (void)openSettingsPageForBrowser:(CefRefPtr<CefBrowser>)browser {

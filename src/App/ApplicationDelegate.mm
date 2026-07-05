@@ -298,6 +298,36 @@ static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutE
   return [[event.charactersIgnoringModifiers lowercaseString] isEqualToString:@"q"];
 }
 
+- (BOOL)handleApplicationShortcutEvent:(NSEvent*)event {
+  if (!event || event.type != NSEventTypeKeyDown) {
+    return NO;
+  }
+
+  NSEventModifierFlags flags = event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
+  if ((flags & NSEventModifierFlagCommand) == 0) {
+    return NO;
+  }
+
+  NSString* key = [event.charactersIgnoringModifiers lowercaseString];
+  if ([key isEqualToString:@"r"] &&
+      (flags & ~(NSEventModifierFlagCommand | NSEventModifierFlagShift)) == 0) {
+    if ((flags & NSEventModifierFlagShift) != 0) {
+      [self reloadTabIgnoringCache:event];
+      return YES;
+    }
+
+    [self reloadTab:event];
+    return YES;
+  }
+
+  if ([key isEqualToString:@","] && flags == NSEventModifierFlagCommand) {
+    [self openSettings:event];
+    return YES;
+  }
+
+  return NO;
+}
+
 - (void)completeLongQuitShortcut:(NSTimer*)timer {
   [self cancelLongQuitTracking];
   [self tryToTerminateApplication];

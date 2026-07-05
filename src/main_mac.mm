@@ -33,6 +33,12 @@
 }
 
 - (void)sendEvent:(NSEvent*)event {
+  BabelApplicationDelegate* delegate =
+      static_cast<BabelApplicationDelegate*>([NSApp delegate]);
+  if ([delegate handleApplicationShortcutEvent:event]) {
+    return;
+  }
+
   CefScopedSendingEvent sendingEventScoper;
   [super sendEvent:event];
 }

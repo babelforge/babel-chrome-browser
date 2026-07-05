@@ -90,6 +90,14 @@
  */
 - (void)reloadTabIgnoringCache:(id)sender;
 
+/**
+ * Routes a keyboard shortcut before CEF or the menu system can consume it.
+ *
+ * @param event The key event to inspect.
+ * @return YES when the delegate handled the event.
+ */
+- (BOOL)handleApplicationShortcutEvent:(NSEvent*)event;
+
 @end
 
 #endif
