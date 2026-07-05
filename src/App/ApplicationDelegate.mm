@@ -1,7 +1,7 @@
 #import "App/ApplicationDelegate.h"
 
 #import "App/MainMenuBuilder.h"
-#import "Browser/BrowserWindowController.h"
+#import "Browser/Window/Controller/BrowserWindowController.h"
 
 @implementation BabelApplicationDelegate {
   BabelBrowserWindowController* browserWindowController_;
