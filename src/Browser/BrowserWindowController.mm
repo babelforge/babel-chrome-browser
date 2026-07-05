@@ -22,6 +22,7 @@
 #import "Browser/BrowserTabMoveCoordinator.h"
 #import "Browser/BrowserThemeApplier.h"
 #import "Browser/ChromeCommandParser.h"
+#import "Browser/ClosedTabReopenCoordinator.h"
 #import "Browser/ClosedTabRestorationPlanner.h"
 #import "Browser/DeveloperToolsDockingPolicy.h"
 #import "Browser/DeveloperToolsDockingStore.h"
@@ -82,6 +83,7 @@
 #import "Browser/StableServerURLResolver.h"
 #import "Browser/StableViewerURLResolver.h"
 #import "Browser/TabContentViewAttacher.h"
+#import "Browser/TabDefaultPageResetter.h"
 #import "Browser/TabDragCoordinator.h"
 #import "Browser/TabDragHoverScheduler.h"
 #import "Browser/TabPlacementPolicy.h"
@@ -215,6 +217,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
   BabelBrowserThemeApplier* browserThemeApplier_;
   BabelBrowserStringFormatter* browserStringFormatter_;
+  BabelClosedTabReopenCoordinator* closedTabReopenCoordinator_;
   BabelClosedTabRestorationPlanner* closedTabRestorationPlanner_;
   BabelGroupListCoordinator* groupListCoordinator_;
   BabelGroupRenameController* groupRenameController_;
@@ -263,6 +266,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelStableServerURLResolver* stableServerURLResolver_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelTabContentViewAttacher* tabContentViewAttacher_;
+  BabelTabDefaultPageResetter* tabDefaultPageResetter_;
   BabelTabDragCoordinator* tabDragCoordinator_;
   BabelTabDragHoverScheduler* tabDragHoverScheduler_;
   BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
@@ -331,6 +335,13 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
              stableNavigationURLResolver:^NSString*(NSString* urlString) {
                return [weakSelf navigationURLStringForStableBabelChromeURLString:urlString];
              }];
+    tabDefaultPageResetter_ =
+        [[BabelTabDefaultPageResetter alloc]
+            initWithDefaultURLString:BabelChromeConfiguration.defaultURLString
+                   compactTitleBlock:^NSString*(NSString* title) {
+                     BabelBrowserWindowController* strongSelf = weakSelf;
+                     return strongSelf ? [strongSelf compactTitleForString:title] : title;
+                   }];
     developerToolsDockingPolicy_ =
         [[BabelDeveloperToolsDockingPolicy alloc] initWithBottomMode:kDeveloperToolsDockModeBottom
                                                              topMode:kDeveloperToolsDockModeTop
@@ -485,6 +496,10 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelModuleLifecycleDispatcher alloc]
             initWithProjectLifecycleResponseParser:projectLifecycleResponseParser];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
+    closedTabReopenCoordinator_ =
+        [[BabelClosedTabReopenCoordinator alloc]
+            initWithRecentlyClosedTabStore:recentlyClosedTabStore_
+              closedTabRestorationPlanner:closedTabRestorationPlanner_];
     historyPageDataSource_ =
         [[BabelHistoryPageDataSource alloc]
             initWithInternalPageTabClassifier:internalPageTabClassifier_

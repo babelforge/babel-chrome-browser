@@ -56,6 +56,8 @@ set(BABEL_CHROME_SOURCES
   Browser/ChromeCommandParser.mm
   Browser/ClosedTabRestorationPlanner.h
   Browser/ClosedTabRestorationPlanner.mm
+  Browser/ClosedTabReopenCoordinator.h
+  Browser/ClosedTabReopenCoordinator.mm
   Browser/ExtensionFolderController.h
   Browser/ExtensionFolderController.mm
   Browser/ExtensionProfileStore.h
@@ -164,6 +166,8 @@ set(BABEL_CHROME_SOURCES
   Browser/StableViewerURLResolver.mm
   Browser/TabContentViewAttacher.h
   Browser/TabContentViewAttacher.mm
+  Browser/TabDefaultPageResetter.h
+  Browser/TabDefaultPageResetter.mm
   Browser/TabDragCoordinator.h
   Browser/TabDragCoordinator.mm
   Browser/TabDragHoverScheduler.h

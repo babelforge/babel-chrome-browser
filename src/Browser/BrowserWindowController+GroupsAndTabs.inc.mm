@@ -699,13 +699,8 @@
 }
 
 - (void)reopenClosedTabAtIndex:(NSUInteger)closedTabIndex {
-  BabelClosedTab* closedTab = [recentlyClosedTabStore_ popClosedTabAtIndex:closedTabIndex];
-  if (!closedTab) {
-    return;
-  }
-
   BabelClosedTabRestorationPlan* plan =
-      [closedTabRestorationPlanner_ restorationPlanForClosedTab:closedTab];
+      [closedTabReopenCoordinator_ restorationPlanForClosedTabAtIndex:closedTabIndex];
   if (!plan) {
     return;
   }
@@ -728,15 +723,11 @@
 }
 
 - (void)resetTabToDefaultPage:(BabelBrowserTab*)tab {
-  NSString* defaultURLString = BabelChromeConfiguration.defaultURLString;
-  tab.urlString = defaultURLString;
-  tab.requestedURLString = defaultURLString;
-  tab.title = defaultURLString;
-  tab.tabItemView.title = [self compactTitleForString:defaultURLString];
+  [tabDefaultPageResetter_ resetTabToDefaultPage:tab];
   [self selectTab:tab];
 
   if ([tab browser]) {
-    [tab browser]->GetMainFrame()->LoadURL(std::string(defaultURLString.UTF8String));
+    [tab browser]->GetMainFrame()->LoadURL(std::string(tab.urlString.UTF8String));
   }
 
   [self saveGroupsState];
