@@ -118,6 +118,8 @@ set(BABEL_CHROME_SOURCES
   Browser/LocalDropLogWriter.mm
   Browser/LocalDropPayloadBuilder.h
   Browser/LocalDropPayloadBuilder.mm
+  Browser/LocalDropSessionController.h
+  Browser/LocalDropSessionController.mm
   Browser/LocalDropSupportResolver.h
   Browser/LocalDropSupportResolver.mm
   Browser/LocalServiceURLClassifier.h
@@ -194,6 +196,8 @@ set(BABEL_CHROME_SOURCES
   Browser/MainWindowViewFactory.mm
   Browser/BrowserModels.h
   Browser/BrowserModels.mm
+  Browser/BrowserNavigationController.h
+  Browser/BrowserNavigationController.mm
   Browser/BrowserPresentationFormatter.h
   Browser/BrowserPresentationFormatter.mm
   Browser/BrowserSupportViews.h

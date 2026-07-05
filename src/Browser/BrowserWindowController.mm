@@ -59,6 +59,7 @@
 #import "Browser/LocalDropCoordinator.h"
 #import "Browser/LocalDropLogWriter.h"
 #import "Browser/LocalDropPayloadBuilder.h"
+#import "Browser/LocalDropSessionController.h"
 #import "Browser/LocalDropSupportResolver.h"
 #import "Browser/LocalServiceURLClassifier.h"
 #import "Browser/MainWindowViewFactory.h"
@@ -93,6 +94,7 @@
 #import "Browser/TabStripLayoutCalculator.h"
 #import "Browser/TabURLMatcher.h"
 #import "Browser/BrowserModels.h"
+#import "Browser/BrowserNavigationController.h"
 #import "Browser/BrowserPresentationFormatter.h"
 #import "Browser/BrowserSupportViews.h"
 #import "Browser/BrowserTheme.h"
@@ -215,6 +217,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserGroupCollection* browserGroupCollection_;
   BabelBrowserGroupFactory* browserGroupFactory_;
   BabelBrowserGroupMoveCoordinator* browserGroupMoveCoordinator_;
+  BabelBrowserNavigationController* browserNavigationController_;
   BabelBrowserPasteboardWriter* browserPasteboardWriter_;
   BabelBrowserPresentationFormatter* browserPresentationFormatter_;
   BabelBrowserTabCollection* browserTabCollection_;
@@ -246,6 +249,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelLocalDropCoordinator* localDropCoordinator_;
   BabelLocalDropLogWriter* localDropLogWriter_;
   BabelLocalDropPayloadBuilder* localDropPayloadBuilder_;
+  BabelLocalDropSessionController* localDropSessionController_;
   BabelLocalDropSupportResolver* localDropSupportResolver_;
   BabelLocalServiceURLClassifier* localServiceURLClassifier_;
   BabelMainWindowViewFactory* mainWindowViewFactory_;
@@ -411,6 +415,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     browserGroupCollection_ = [[BabelBrowserGroupCollection alloc] init];
     browserGroupFactory_ = [[BabelBrowserGroupFactory alloc] initWithActionTarget:self];
     browserGroupMoveCoordinator_ = [[BabelBrowserGroupMoveCoordinator alloc] init];
+    browserNavigationController_ = [[BabelBrowserNavigationController alloc] init];
     browserPasteboardWriter_ = [[BabelBrowserPasteboardWriter alloc] init];
     browserPresentationFormatter_ = [[BabelBrowserPresentationFormatter alloc] init];
     browserTabCollection_ = [[BabelBrowserTabCollection alloc] init];
@@ -490,6 +495,22 @@ enforceLiveBrowserLimitHandler:^{
         [[BabelModuleNavigationURLResolver alloc] initWithModuleActionService:moduleActionService_];
     localDropSupportResolver_ =
         [[BabelLocalDropSupportResolver alloc] initWithModuleActionService:moduleActionService_];
+    localDropSessionController_ =
+        [[BabelLocalDropSessionController alloc]
+            initWithCoordinator:localDropCoordinator_
+            bridgeScriptBuilder:localDropBridgeScriptBuilder_
+                      logWriter:localDropLogWriter_
+                 payloadBuilder:localDropPayloadBuilder_
+                supportResolver:localDropSupportResolver_
+             browserTabProvider:^BabelBrowserTab*(CefRefPtr<CefBrowser> browser) {
+               return [weakSelf tabForBrowser:browser];
+             }
+             currentURLProvider:^NSString*(CefRefPtr<CefBrowser> browser) {
+               if (!browser || !browser->GetMainFrame()) {
+                 return @"";
+               }
+               return [NSString stringWithUTF8String:browser->GetMainFrame()->GetURL().ToString().c_str()];
+             }];
     modulePageRenderer_ =
         [[BabelModulePageRenderer alloc]
             initWithGearIconHTML:[self resourceSVGIconHTMLNamed:@"settings-gear" fallback:@"&#9881;"]

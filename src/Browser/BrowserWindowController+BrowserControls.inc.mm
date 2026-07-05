@@ -136,19 +136,11 @@
 }
 
 - (void)navigateSelectedTabBack {
-  if (!selectedTab_ || ![selectedTab_ browser] || ![selectedTab_ browser]->CanGoBack()) {
-    return;
-  }
-
-  [selectedTab_ browser]->GoBack();
+  [browserNavigationController_ navigateTabBack:selectedTab_];
 }
 
 - (void)navigateSelectedTabForward {
-  if (!selectedTab_ || ![selectedTab_ browser] || ![selectedTab_ browser]->CanGoForward()) {
-    return;
-  }
-
-  [selectedTab_ browser]->GoForward();
+  [browserNavigationController_ navigateTabForward:selectedTab_];
 }
 
 - (void)reloadSelectedTab {
@@ -186,17 +178,11 @@
   }
 
   if (!ignoringCache) {
-    browser->Reload();
+    [browserNavigationController_ reloadTab:selectedTab_];
     return;
   }
 
-  CefRefPtr<CefRequestContext> requestContext = browser->GetHost()->GetRequestContext();
-  if (requestContext) {
-    requestContext->ClearHttpCache(new BabelReloadIgnoreCacheCallback(browser));
-    return;
-  }
-
-  browser->ReloadIgnoreCache();
+  [browserNavigationController_ reloadTabIgnoringCache:selectedTab_];
 }
 
 - (void)reloadMarkdownViewerTabsUsingCurrentTheme {
