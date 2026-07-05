@@ -9,6 +9,7 @@
 #import "Browser/AppSettingsPageRenderer.h"
 #import "Browser/ApplicationRelauncher.h"
 #import "Browser/BrowserClient.h"
+#import "Browser/BrowserAttachmentCoordinator.h"
 #import "Browser/BrowserCreationScheduler.h"
 #import "Browser/BrowserGroupCollection.h"
 #import "Browser/BrowserGroupFactory.h"
@@ -28,6 +29,7 @@
 #import "Browser/DeveloperToolsDockingPolicy.h"
 #import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/DeveloperToolsLayoutCalculator.h"
+#import "Browser/DeveloperToolsPanelController.h"
 #import "Browser/DeveloperToolsTargetResolver.h"
 #import "Browser/ExtensionFolderController.h"
 #import "Browser/ExtensionProfileStore.h"
@@ -193,6 +195,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelAdjacentTabPreloadPlanner* adjacentTabPreloadPlanner_;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelApplicationRelauncher* applicationRelauncher_;
+  BabelBrowserAttachmentCoordinator* browserAttachmentCoordinator_;
   BabelBrowserCreationScheduler* browserCreationScheduler_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelBrowserTabFactory* browserTabFactory_;
@@ -200,6 +203,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelDeveloperToolsDockingPolicy* developerToolsDockingPolicy_;
   BabelDeveloperToolsDockingStore* developerToolsDockingStore_;
   BabelDeveloperToolsLayoutCalculator* developerToolsLayoutCalculator_;
+  BabelDeveloperToolsPanelController* developerToolsPanelController_;
   BabelDeveloperToolsTargetResolver* developerToolsTargetResolver_;
   BabelExtensionFolderController* extensionFolderController_;
   BabelExtensionProfileStore* extensionProfileStore_;
@@ -359,6 +363,18 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
                                                  sizeRatioDefaultsKey:kDeveloperToolsSizeRatioDefaultsKey];
     developerToolsLayoutCalculator_ = [[BabelDeveloperToolsLayoutCalculator alloc] init];
     developerToolsTargetResolver_ = [[BabelDeveloperToolsTargetResolver alloc] init];
+    developerToolsPanelController_ =
+        [[BabelDeveloperToolsPanelController alloc]
+            initWithTargetResolver:developerToolsTargetResolver_
+                  layoutCalculator:developerToolsLayoutCalculator_
+                browserLookupBlock:^BabelBrowserTab*(CefRefPtr<CefBrowser> browser) {
+                  return [weakSelf tabForBrowser:browser];
+                }
+                createBrowserBlock:^(BabelBrowserTab* tab, NSString* urlString) {
+                  [weakSelf createDeveloperToolsBrowserForTab:tab urlString:urlString];
+                }
+                     toolbarHeight:kDeveloperToolsToolbarHeight
+             resizeHandleThickness:kDeveloperToolsResizeHandleThickness];
     extensionProfileStore_ =
         [[BabelExtensionProfileStore alloc]
             initWithProfileDirectoryURL:BabelChromeConfiguration.profileDirectoryURL
@@ -436,6 +452,29 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
             initWithAdjacentTabPreloadPlanner:adjacentTabPreloadPlanner_
                     liveBrowserEvictionPolicy:liveBrowserEvictionPolicy_
                       maximumLivePageBrowsers:kMaximumLivePageBrowsers];
+    browserAttachmentCoordinator_ =
+        [[BabelBrowserAttachmentCoordinator alloc]
+            initWithGroups:groups_
+               pendingTabs:pendingTabs_
+            evictionPolicy:liveBrowserEvictionPolicy_
+        selectGroupHandler:^(BabelBrowserGroup* group) {
+          [weakSelf selectGroup:group];
+        }
+          removeTabHandler:^(BabelBrowserTab* tab) {
+            [weakSelf removeTab:tab];
+          }
+  hideDeveloperToolsHandler:^(BabelBrowserTab* tab) {
+    [weakSelf hideDeveloperToolsForTab:tab];
+  }
+layoutDeveloperToolsHandler:^(BabelBrowserTab* tab) {
+  [weakSelf layoutBrowserViewsForTab:tab];
+}
+enforceLiveBrowserLimitHandler:^{
+  [weakSelf enforceLivePageBrowserLimit];
+}
+     totalTabCountProvider:^NSUInteger{
+       return [weakSelf totalTabCount];
+     }];
     localDropBridgeScriptBuilder_ = [[BabelLocalDropBridgeScriptBuilder alloc] init];
     localDropCoordinator_ = [[BabelLocalDropCoordinator alloc] init];
     localDropLogWriter_ =

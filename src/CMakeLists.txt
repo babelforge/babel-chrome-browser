@@ -28,6 +28,8 @@ set(BABEL_CHROME_SOURCES
   Browser/AddressNavigationNormalizer.mm
   Browser/BrowserClient.h
   Browser/BrowserClient.mm
+  Browser/BrowserAttachmentCoordinator.h
+  Browser/BrowserAttachmentCoordinator.mm
   Browser/BrowserCreationScheduler.h
   Browser/BrowserCreationScheduler.mm
   Browser/BrowserGroupCollection.h
@@ -206,6 +208,8 @@ set(BABEL_CHROME_SOURCES
   Browser/DeveloperToolsDockingPolicy.mm
   Browser/DeveloperToolsLayoutCalculator.h
   Browser/DeveloperToolsLayoutCalculator.mm
+  Browser/DeveloperToolsPanelController.h
+  Browser/DeveloperToolsPanelController.mm
   Browser/DeveloperToolsTargetResolver.h
   Browser/DeveloperToolsTargetResolver.mm
   Browser/BrowserWindowController.h
