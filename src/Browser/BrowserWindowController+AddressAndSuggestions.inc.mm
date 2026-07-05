@@ -59,18 +59,6 @@
                                                           pageTitle:pageTitle];
 }
 
-- (NSString*)displayURLStringForTab:(BabelBrowserTab*)tab {
-  return [addressBarDisplayResolver_ displayURLStringForTab:tab];
-}
-
-- (NSDictionary*)addressBadgeForTab:(BabelBrowserTab*)tab {
-  return [addressBarDisplayResolver_ addressBadgeForTab:tab];
-}
-
-- (NSColor*)colorFromHexString:(NSString*)hexString fallbackColor:(NSColor*)fallbackColor {
-  return [browserPresentationFormatter_ colorFromHexString:hexString fallbackColor:fallbackColor];
-}
-
 - (void)layoutAddressTextFieldContent {
   BabelAddressFieldLayout* layout =
       [addressFieldLayoutCalculator_ layoutForBounds:addressTextFieldContainer_.bounds
@@ -88,8 +76,10 @@
   viewerBadgeLabel_.hidden = !hasBadge;
   viewerBadgeLabel_.settingsRoute = hasBadge ? settingsRoute : @"";
   [viewerBadgeLabel_ configureWithText:normalizedBadgeString
-                             textColor:[self colorFromHexString:textColorString fallbackColor:NSColor.whiteColor]
-                       backgroundColor:[self colorFromHexString:backgroundColorString fallbackColor:NSColor.clearColor]];
+                             textColor:[browserPresentationFormatter_ colorFromHexString:textColorString
+                                                                            fallbackColor:NSColor.whiteColor]
+                       backgroundColor:[browserPresentationFormatter_ colorFromHexString:backgroundColorString
+                                                                            fallbackColor:NSColor.clearColor]];
   [self layoutAddressTextFieldContent];
 }
 
@@ -106,8 +96,8 @@
 
 - (void)updateAddressBarForTab:(BabelBrowserTab*)tab {
   addressLabel_.stringValue = @"URL";
-  [self setAddressBadge:[self addressBadgeForTab:tab]];
-  urlTextField_.stringValue = [self displayURLStringForTab:tab];
+  [self setAddressBadge:[addressBarDisplayResolver_ addressBadgeForTab:tab]];
+  urlTextField_.stringValue = [addressBarDisplayResolver_ displayURLStringForTab:tab];
 }
 
 - (void)clearAddressBar {
@@ -122,7 +112,7 @@
     return addressString;
   }
 
-  NSString* displayedURLString = [self displayURLStringForTab:selectedTab_];
+  NSString* displayedURLString = [addressBarDisplayResolver_ displayURLStringForTab:selectedTab_];
   NSString* actualURLString = selectedTab_.requestedURLString ?: selectedTab_.urlString ?: @"";
   return [addressFieldNavigationResolver_ navigationStringForAddressString:addressString
                                                         displayedURLString:displayedURLString
@@ -134,7 +124,9 @@
   }
 
   [self hideOmniboxSuggestions];
-  NSString* urlString = [self normalizedURLStringFromAddress:[self addressFieldNavigationString]];
+  NSString* urlString =
+      [addressNavigationNormalizer_ navigationStringFromAddress:[self addressFieldNavigationString]
+                                               defaultURLString:BabelChromeConfiguration.defaultURLString];
   NSString* requestedURLString = [self stableViewerURLStringForSupportedURLString:urlString] ?: urlString;
   NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
   if (navigationURLString.length == 0) {
@@ -213,7 +205,9 @@ doCommandBySelector:(SEL)commandSelector {
 
   if (commandSelector == @selector(cancelOperation:)) {
     [self hideOmniboxSuggestions];
-    urlTextField_.stringValue = selectedTab_ ? [self displayURLStringForTab:selectedTab_] : @"";
+    urlTextField_.stringValue = selectedTab_
+        ? [addressBarDisplayResolver_ displayURLStringForTab:selectedTab_]
+        : @"";
     return YES;
   }
 
@@ -428,11 +422,6 @@ doCommandBySelector:(SEL)commandSelector {
   return YES;
 }
 
-- (NSString*)normalizedURLStringFromAddress:(NSString*)address {
-  return [addressNavigationNormalizer_ navigationStringFromAddress:address
-                                                 defaultURLString:BabelChromeConfiguration.defaultURLString];
-}
-
 - (NSString*)compactTitleForString:(NSString*)value {
   return [browserPresentationFormatter_ compactTitleForString:value];
 }
@@ -448,13 +437,13 @@ doCommandBySelector:(SEL)commandSelector {
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser title:(NSString*)title {
   BabelBrowserTab* tab = [self tabForBrowser:browser];
-  if (!tab) {
+  if (![browserTabMetadataUpdater_ updateTab:tab
+                                   withTitle:title
+                           compactTitleBlock:^NSString*(NSString* value) {
+                             return [self compactTitleForString:value];
+                           }]) {
     return;
   }
-
-  BOOL isGeneratedTitle = [title hasPrefix:@"data:"] || [title containsString:@"data:text"];
-  tab.title = title.length > 0 && !isGeneratedTitle ? title : tab.urlString;
-  tab.tabItemView.title = [self compactTitleForString:tab.title];
   [self saveGroupsState];
   if (tab == selectedTab_) {
     [self updateWindowTitleForSelectedTab];
@@ -504,26 +493,14 @@ doCommandBySelector:(SEL)commandSelector {
 }
 
 - (void)copyURLStringToPasteboard:(NSString*)urlString {
-  if (urlString.length == 0) {
-    return;
-  }
-
-  NSPasteboard* pasteboard = NSPasteboard.generalPasteboard;
-  [pasteboard clearContents];
-  [pasteboard setString:urlString forType:NSPasteboardTypeString];
+  [browserPasteboardWriter_ copyURLStringToPasteboard:urlString];
 }
 
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser faviconImage:(NSImage*)faviconImage {
-  if (!faviconImage) {
-    return;
-  }
-
   BabelBrowserTab* tab = [self tabForBrowser:browser];
-  if (!tab) {
+  if (![browserTabMetadataUpdater_ updateTab:tab
+                            withFaviconImage:faviconImage
+                                faviconStore:faviconStore_]) {
     return;
   }
-
-  tab.faviconImage = faviconImage;
-  tab.tabItemView.faviconImage = faviconImage;
-  [faviconStore_ cacheFaviconImage:faviconImage forURLString:tab.urlString];
 }

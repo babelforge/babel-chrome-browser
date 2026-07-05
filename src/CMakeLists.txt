@@ -34,6 +34,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserGroupFactory.mm
   Browser/BrowserGroupMoveCoordinator.h
   Browser/BrowserGroupMoveCoordinator.mm
+  Browser/BrowserPasteboardWriter.h
+  Browser/BrowserPasteboardWriter.mm
   Browser/BrowserSettingsStore.h
   Browser/BrowserSettingsStore.mm
   Browser/BrowserStringFormatter.h
@@ -44,6 +46,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserTabFactory.mm
   Browser/BrowserTabInsertionCoordinator.h
   Browser/BrowserTabInsertionCoordinator.mm
+  Browser/BrowserTabMetadataUpdater.h
+  Browser/BrowserTabMetadataUpdater.mm
   Browser/BrowserTabMoveCoordinator.h
   Browser/BrowserTabMoveCoordinator.mm
   Browser/ChromeCommandParser.h

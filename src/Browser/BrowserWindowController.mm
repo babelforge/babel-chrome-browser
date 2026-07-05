@@ -12,11 +12,13 @@
 #import "Browser/BrowserGroupCollection.h"
 #import "Browser/BrowserGroupFactory.h"
 #import "Browser/BrowserGroupMoveCoordinator.h"
+#import "Browser/BrowserPasteboardWriter.h"
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/BrowserStringFormatter.h"
 #import "Browser/BrowserTabCollection.h"
 #import "Browser/BrowserTabFactory.h"
 #import "Browser/BrowserTabInsertionCoordinator.h"
+#import "Browser/BrowserTabMetadataUpdater.h"
 #import "Browser/BrowserTabMoveCoordinator.h"
 #import "Browser/ChromeCommandParser.h"
 #import "Browser/ClosedTabRestorationPlanner.h"
@@ -197,9 +199,11 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserGroupCollection* browserGroupCollection_;
   BabelBrowserGroupFactory* browserGroupFactory_;
   BabelBrowserGroupMoveCoordinator* browserGroupMoveCoordinator_;
+  BabelBrowserPasteboardWriter* browserPasteboardWriter_;
   BabelBrowserPresentationFormatter* browserPresentationFormatter_;
   BabelBrowserTabCollection* browserTabCollection_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
+  BabelBrowserTabMetadataUpdater* browserTabMetadataUpdater_;
   BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
   BabelBrowserStringFormatter* browserStringFormatter_;
   BabelClosedTabRestorationPlanner* closedTabRestorationPlanner_;
@@ -363,8 +367,10 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     browserGroupCollection_ = [[BabelBrowserGroupCollection alloc] init];
     browserGroupFactory_ = [[BabelBrowserGroupFactory alloc] initWithActionTarget:self];
     browserGroupMoveCoordinator_ = [[BabelBrowserGroupMoveCoordinator alloc] init];
+    browserPasteboardWriter_ = [[BabelBrowserPasteboardWriter alloc] init];
     browserPresentationFormatter_ = [[BabelBrowserPresentationFormatter alloc] init];
     browserTabCollection_ = [[BabelBrowserTabCollection alloc] init];
+    browserTabMetadataUpdater_ = [[BabelBrowserTabMetadataUpdater alloc] init];
     browserStringFormatter_ = [[BabelBrowserStringFormatter alloc] init];
     BabelTabPlacementPolicy* tabPlacementPolicy = [[BabelTabPlacementPolicy alloc] init];
     browserTabInsertionCoordinator_ =
