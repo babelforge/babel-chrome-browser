@@ -344,76 +344,19 @@
 }
 
 - (void)closeTabFromItem:(BabelTabItemView*)tabItemView {
-  for (BabelBrowserTab* tab in [tabs_ copy]) {
-    if (![tab.identifier isEqualToString:tabItemView.identifier]) {
-      continue;
-    }
-
-    [recentlyClosedTabStore_ pushTab:tab fromGroup:selectedGroup_ defaultGroupName:kDefaultGroupName];
-
-    if (selectedGroup_.tabs.count <= 1) {
-      if ([tab browser]) {
-        [tab browser]->GetHost()->CloseDevTools();
-      }
-      [self hideDeveloperToolsForTab:tab];
-      [self resetTabToDefaultPage:tab];
-      return;
-    }
-
-    if ([tab browser]) {
-      CefRefPtr<CefBrowser> browser = [tab browser];
-      browser->GetHost()->CloseDevTools();
-      [self removeSelectedGroupTab:tab];
-      browser->GetHost()->CloseBrowser(true);
-      return;
-    }
-
-    [self removeSelectedGroupTab:tab];
-    return;
-  }
+  [browserClosedTabController_ closeTabWithIdentifier:tabItemView.identifier];
 }
 
 - (void)reopenLastClosedTab {
-  if (recentlyClosedTabStore_.count == 0) {
-    return;
-  }
-
-  [self reopenClosedTabAtIndex:recentlyClosedTabStore_.count - 1];
+  [browserClosedTabController_ reopenLastClosedTab];
 }
 
 - (void)reopenClosedTabAtIndex:(NSUInteger)closedTabIndex {
-  BabelClosedTabRestorationPlan* plan =
-      [closedTabReopenCoordinator_ restorationPlanForClosedTabAtIndex:closedTabIndex];
-  if (!plan) {
-    return;
-  }
-
-  BabelBrowserGroup* group = [self groupWithIdentifier:plan.groupIdentifier];
-  if (!group) {
-    group = [self createGroupWithName:plan.groupName identifier:plan.groupIdentifier];
-  }
-
-  BabelBrowserTab* tab = [self makeTabForURL:plan.navigationURLString
-                                  identifier:nil
-                                       title:plan.title];
-  tab.requestedURLString = plan.requestedURLString;
-  [group.tabs addObject:tab];
-  [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
-  [self selectGroup:group];
-  [self selectTab:tab];
-  [self showMainWindow];
-  [self saveGroupsState];
+  [browserClosedTabController_ reopenClosedTabAtIndex:closedTabIndex];
 }
 
 - (void)resetTabToDefaultPage:(BabelBrowserTab*)tab {
-  [tabDefaultPageResetter_ resetTabToDefaultPage:tab];
-  [self selectTab:tab];
-
-  if ([tab browser]) {
-    [tab browser]->GetMainFrame()->LoadURL(std::string(tab.urlString.UTF8String));
-  }
-
-  [self saveGroupsState];
+  [browserClosedTabController_ resetTabToDefaultPage:tab];
 }
 
 - (void)selectNextTab {

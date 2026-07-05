@@ -10,6 +10,7 @@
 #import "Browser/ApplicationRelauncher.h"
 #import "Browser/BrowserClient.h"
 #import "Browser/BrowserAttachmentCoordinator.h"
+#import "Browser/BrowserClosedTabController.h"
 #import "Browser/BrowserCreationScheduler.h"
 #import "Browser/BrowserGroupCollection.h"
 #import "Browser/BrowserGroupFactory.h"
@@ -206,6 +207,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelAppSettingsPageRenderer* appSettingsPageRenderer_;
   BabelApplicationRelauncher* applicationRelauncher_;
   BabelBrowserAttachmentCoordinator* browserAttachmentCoordinator_;
+  BabelBrowserClosedTabController* browserClosedTabController_;
   BabelBrowserCreationScheduler* browserCreationScheduler_;
   BabelBrowserSettingsStore* browserSettingsStore_;
   BabelBrowserTabFactory* browserTabFactory_;
@@ -787,6 +789,49 @@ enforceLiveBrowserLimitHandler:^{
                      saveStateHandler:^{
                        [weakSelf saveGroupsState];
                      }];
+    browserClosedTabController_ =
+        [[BabelBrowserClosedTabController alloc]
+            initWithRecentlyClosedTabStore:recentlyClosedTabStore_
+                closedTabReopenCoordinator:closedTabReopenCoordinator_
+                   tabDefaultPageResetter:tabDefaultPageResetter_
+                  tabContentViewAttacher:tabContentViewAttacher_
+                              pagesPanel:pagesPanel_
+                        defaultGroupName:kDefaultGroupName
+                     visibleTabsProvider:^NSArray<BabelBrowserTab*>*{
+                       BabelBrowserWindowController* strongSelf = weakSelf;
+                       return strongSelf ? strongSelf->tabs_ : @[];
+                     }
+                   selectedGroupProvider:^BabelBrowserGroup*{
+                     BabelBrowserWindowController* strongSelf = weakSelf;
+                     return strongSelf ? strongSelf->selectedGroup_ : nil;
+                   }
+                     groupLookupProvider:^BabelBrowserGroup*(NSString* identifier) {
+                       return [weakSelf groupWithIdentifier:identifier];
+                     }
+                       groupCreateHandler:^BabelBrowserGroup*(NSString* name, NSString* identifier) {
+                         return [weakSelf createGroupWithName:name identifier:identifier];
+                       }
+                         tabCreateHandler:^BabelBrowserTab*(NSString* urlString, NSString* identifier, NSString* title) {
+                           return [weakSelf makeTabForURL:urlString identifier:identifier title:title];
+                         }
+               hideDeveloperToolsHandler:^(BabelBrowserTab* tab) {
+                 [weakSelf hideDeveloperToolsForTab:tab];
+               }
+           removeSelectedGroupTabHandler:^(BabelBrowserTab* tab) {
+             [weakSelf removeSelectedGroupTab:tab];
+           }
+                       selectGroupHandler:^(BabelBrowserGroup* group) {
+                         [weakSelf selectGroup:group];
+                       }
+                         selectTabHandler:^(BabelBrowserTab* tab) {
+                           [weakSelf selectTab:tab];
+                         }
+                        showWindowHandler:^{
+                          [weakSelf showMainWindow];
+                        }
+                         saveStateHandler:^{
+                           [weakSelf saveGroupsState];
+                         }];
     internalPageNavigator_ =
         [[BabelInternalPageNavigator alloc]
             initWithPagesPanel:pagesPanel_

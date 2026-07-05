@@ -28,6 +28,8 @@ set(BABEL_CHROME_SOURCES
   Browser/AddressNavigationNormalizer.mm
   Browser/BrowserClient.h
   Browser/BrowserClient.mm
+  Browser/BrowserClosedTabController.h
+  Browser/BrowserClosedTabController.mm
   Browser/BrowserAttachmentCoordinator.h
   Browser/BrowserAttachmentCoordinator.mm
   Browser/BrowserCreationScheduler.h
