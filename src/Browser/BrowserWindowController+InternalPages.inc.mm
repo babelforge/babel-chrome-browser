@@ -215,45 +215,13 @@
   }
 
   if ([commandName isEqualToString:@"extensions"]) {
-    BabelInternalNavigationAction* action =
-        [internalNavigationActionParser_ extensionsActionFromComponents:components];
-    if ([action.name isEqualToString:BabelInternalNavigationActionSearch]) {
-      [self openChromeWebStoreSearchForQuery:action.value];
-      [self openExtensionsPageForBrowser:browser];
-      return YES;
+    BabelInternalExtensionsNavigationResult* result =
+        [internalExtensionsNavigationHandler_ handleExtensionsComponents:components];
+    if (result.searchQuery.length > 0) {
+      [self openChromeWebStoreSearchForQuery:result.searchQuery];
     }
 
-    if ([action.name isEqualToString:BabelInternalNavigationActionAddUnpacked]) {
-      [self addUnpackedExtensionFromPanel];
-      [self openExtensionsPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionRemove]) {
-      [self removeUnpackedExtensionAtPath:action.value];
-      [self openExtensionsPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionDisableProfile]) {
-      [extensionProfileStore_ setProfileExtensionWithIdentifier:action.value enabled:NO];
-      [self openExtensionsPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionEnableProfile]) {
-      [extensionProfileStore_ setProfileExtensionWithIdentifier:action.value enabled:YES];
-      [self openExtensionsPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionRemoveProfile]) {
-      [self removeProfileExtensionWithIdentifier:action.value];
-      [self openExtensionsPageForBrowser:browser];
-      return YES;
-    }
-
-    if ([action.name isEqualToString:BabelInternalNavigationActionRestart]) {
+    if (result.shouldRestartApplication) {
       [self restartApplication];
       return YES;
     }
@@ -530,21 +498,6 @@
 
   return nil;
 }
-- (void)removeProfileExtensionWithIdentifier:(NSString*)extensionIdentifier {
-  [extensionProfileStore_ removeProfileExtensionWithIdentifier:extensionIdentifier];
-}
-
-- (void)addUnpackedExtensionFromPanel {
-  [extensionFolderController_ addUnpackedExtensionFromPanel];
-}
-
-- (void)removeUnpackedExtensionAtPath:(NSString*)extensionPath {
-  NSMutableArray<NSString*>* extensionPaths =
-      [[extensionProfileStore_ installedExtensionPaths] mutableCopy];
-  [extensionPaths removeObject:extensionPath];
-  [extensionProfileStore_ saveInstalledExtensionPaths:extensionPaths];
-}
-
 - (void)openChromeWebStoreSearchForQuery:(NSString*)query {
   NSString* trimmedQuery = [query stringByTrimmingCharactersInSet:
       NSCharacterSet.whitespaceAndNewlineCharacterSet];

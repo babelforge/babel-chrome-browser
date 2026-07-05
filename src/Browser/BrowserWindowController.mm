@@ -40,6 +40,7 @@
 #import "Browser/GoogleSuggestionScheduler.h"
 #import "Browser/InternalNavigationActionParser.h"
 #import "Browser/InternalModuleNavigationHandler.h"
+#import "Browser/InternalExtensionsNavigationHandler.h"
 #import "Browser/InternalPageAssetProvider.h"
 #import "Browser/InternalPageRenderer.h"
 #import "Browser/InternalPageTabClassifier.h"
@@ -213,6 +214,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelHistoryPageDataSource* historyPageDataSource_;
   BabelHistoryPageRenderer* historyPageRenderer_;
   BabelHTMLDataURLBuilder* htmlDataURLBuilder_;
+  BabelInternalExtensionsNavigationHandler* internalExtensionsNavigationHandler_;
   BabelInternalModuleNavigationHandler* internalModuleNavigationHandler_;
   BabelInternalNavigationActionParser* internalNavigationActionParser_;
   BabelInternalPageAssetProvider* internalPageAssetProvider_;
@@ -382,6 +384,11 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     historyPageRenderer_ = [[BabelHistoryPageRenderer alloc] init];
     htmlDataURLBuilder_ = [[BabelHTMLDataURLBuilder alloc] init];
     internalNavigationActionParser_ = [[BabelInternalNavigationActionParser alloc] init];
+    internalExtensionsNavigationHandler_ =
+        [[BabelInternalExtensionsNavigationHandler alloc]
+                  initWithActionParser:internalNavigationActionParser_
+             extensionFolderController:extensionFolderController_
+                  extensionProfileStore:extensionProfileStore_];
     internalPageAssetProvider_ = [[BabelInternalPageAssetProvider alloc] init];
     internalPageRenderer_ = [[BabelInternalPageRenderer alloc] init];
     internalPageTabClassifier_ =
