@@ -152,25 +152,7 @@
 }
 
 - (void)reloadSelectedTab {
-  if (!selectedTab_ || ![selectedTab_ browser]) {
-    return;
-  }
-
-  NSString* requestedURLString =
-      [self stableServerReloadURLStringForTab:selectedTab_] ?: selectedTab_.requestedURLString;
-  if ([self isStableBabelChromeURLString:requestedURLString]) {
-    NSString* navigationURLString =
-        [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
-    if (navigationURLString.length > 0) {
-      selectedTab_.requestedURLString = requestedURLString;
-      selectedTab_.urlString = navigationURLString;
-      selectedTab_.browser->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
-      [self saveGroupsState];
-      return;
-    }
-  }
-
-  [selectedTab_ browser]->Reload();
+  [self reloadSelectedTabIgnoringCache:NO];
 }
 
 - (void)reloadSelectedTabFromButton:(id)sender {
@@ -178,6 +160,10 @@
 }
 
 - (void)reloadSelectedTabIgnoringCache {
+  [self reloadSelectedTabIgnoringCache:YES];
+}
+
+- (void)reloadSelectedTabIgnoringCache:(BOOL)ignoringCache {
   if (!selectedTab_ || ![selectedTab_ browser]) {
     return;
   }
@@ -193,7 +179,15 @@
       selectedTab_.urlString = navigationURLString;
       browser->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
       [self saveGroupsState];
+      if (!ignoringCache) {
+        return;
+      }
     }
+  }
+
+  if (!ignoringCache) {
+    browser->Reload();
+    return;
   }
 
   CefRefPtr<CefRequestContext> requestContext = browser->GetHost()->GetRequestContext();
