@@ -21,6 +21,7 @@
 #import "Browser/BrowserStringFormatter.h"
 #import "Browser/BrowserTabCollection.h"
 #import "Browser/BrowserTabCreationCoordinator.h"
+#import "Browser/BrowserTabDragSessionController.h"
 #import "Browser/BrowserTabFactory.h"
 #import "Browser/BrowserTabInsertionCoordinator.h"
 #import "Browser/BrowserTabLookupService.h"
@@ -230,6 +231,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserPresentationFormatter* browserPresentationFormatter_;
   BabelBrowserTabCollection* browserTabCollection_;
   BabelBrowserTabCreationCoordinator* browserTabCreationCoordinator_;
+  BabelBrowserTabDragSessionController* browserTabDragSessionController_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
   BabelBrowserTabLookupService* browserTabLookupService_;
   BabelBrowserTabMetadataUpdater* browserTabMetadataUpdater_;
@@ -301,7 +303,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelBrowserTab*>* tabs_;
   NSMutableArray<BabelBrowserTab*>* pendingTabs_;
   BabelBrowserTab* selectedTab_;
-  BabelBrowserTab* draggingTab_;
   BabelBrowserTab* pendingDeveloperToolsTab_;
   CefRefPtr<BabelBrowserClient> browserClient_;
   NSString* developerToolsDockMode_;
@@ -311,8 +312,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BOOL isTerminating_;
   BOOL didRestoreMainWindowState_;
   BOOL isReorderingGroups_;
-  BOOL isReorderingTabs_;
-  BOOL isDraggingTabAcrossGroups_;
   BOOL isRestoringSession_;
   BOOL isBuildingInterface_;
   BOOL didApplyInitialSidebarRestore_;
@@ -664,8 +663,6 @@ enforceLiveBrowserLimitHandler:^{
     isTerminating_ = NO;
     didRestoreMainWindowState_ = NO;
     isReorderingGroups_ = NO;
-    isReorderingTabs_ = NO;
-    isDraggingTabAcrossGroups_ = NO;
     isRestoringSession_ = NO;
     isBuildingInterface_ = NO;
     didApplyInitialSidebarRestore_ = NO;
@@ -716,6 +713,47 @@ enforceLiveBrowserLimitHandler:^{
      tabOpeningStrategyProvider:^NSString*{
        return [weakSelf tabOpeningStrategy];
      }];
+    browserTabDragSessionController_ =
+        [[BabelBrowserTabDragSessionController alloc]
+                  initWithGroups:groups_
+                           window:window
+                   groupsListView:groupsListView_
+                      sidebarView:sidebarView_
+                   tabsItemsPanel:tabsItemsPanel_
+                    tabCollection:browserTabCollection_
+                  dragCoordinator:tabDragCoordinator_
+                   hoverScheduler:tabDragHoverScheduler_
+                  moveCoordinator:browserTabMoveCoordinator_
+              visibleTabsProvider:^NSArray<BabelBrowserTab*>*{
+                BabelBrowserWindowController* strongSelf = weakSelf;
+                return strongSelf ? strongSelf->tabs_ : @[];
+              }
+            selectedGroupProvider:^BabelBrowserGroup*{
+              BabelBrowserWindowController* strongSelf = weakSelf;
+              return strongSelf ? strongSelf->selectedGroup_ : nil;
+            }
+                tabLookupProvider:^BabelBrowserTab*(NSString* identifier) {
+                  return [weakSelf tabWithIdentifier:identifier];
+                }
+          manualGroupNameProvider:^NSString*{
+            return [weakSelf nextManualGroupName];
+          }
+               groupCreateHandler:^BabelBrowserGroup*(NSString* groupName, NSString* identifier) {
+                 return [weakSelf createGroupWithName:groupName identifier:identifier];
+               }
+               selectGroupHandler:^(BabelBrowserGroup* group) {
+                 [weakSelf selectGroup:group];
+               }
+                 selectTabHandler:^(BabelBrowserTab* tab) {
+                   [weakSelf selectTab:tab];
+                 }
+                layoutTabsHandler:^{
+                  [weakSelf layoutTabItemsSelectingLastTab:NO];
+                }
+                 saveStateHandler:^{
+                   [weakSelf saveGroupsState];
+                 }
+            hoverDelayNanoseconds:kTabDragGroupHoverDelayNanoseconds];
     internalPageNavigator_ =
         [[BabelInternalPageNavigator alloc]
             initWithPagesPanel:pagesPanel_

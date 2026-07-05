@@ -52,6 +52,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserTabCollection.mm
   Browser/BrowserTabCreationCoordinator.h
   Browser/BrowserTabCreationCoordinator.mm
+  Browser/BrowserTabDragSessionController.h
+  Browser/BrowserTabDragSessionController.mm
   Browser/BrowserTabFactory.h
   Browser/BrowserTabFactory.mm
   Browser/BrowserTabInsertionCoordinator.h

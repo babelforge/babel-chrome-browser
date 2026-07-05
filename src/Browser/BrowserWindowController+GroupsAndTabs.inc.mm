@@ -132,7 +132,7 @@
   for (BabelBrowserGroup* currentGroup in groups_) {
     currentGroup.groupItemView.selected = currentGroup == group;
     for (BabelBrowserTab* tab in currentGroup.tabs) {
-      if (tab != draggingTab_) {
+      if (tab != browserTabDragSessionController_.draggingTab) {
         [tab.tabItemView removeFromSuperview];
       }
       tab.hostView.hidden = YES;
@@ -365,43 +365,7 @@
 }
 
 - (void)dragTabFromItem:(BabelTabItemView*)tabItemView {
-  if (!draggingTab_) {
-    draggingTab_ = [self tabWithIdentifier:tabItemView.identifier];
-  }
-
-  BabelBrowserTab* tab = draggingTab_;
-  if (!tab) {
-    return;
-  }
-
-  NSEvent* currentEvent = NSApp.currentEvent;
-  [self scheduleGroupSelectionForDraggingTabAtWindowPoint:currentEvent.locationInWindow];
-
-  if ([self moveDraggingTabIfNeededToVisibleTabStripAtWindowPoint:currentEvent.locationInWindow]) {
-    return;
-  }
-
-  if (![self isWindowPointInsideTabStrip:currentEvent.locationInWindow]) {
-    return;
-  }
-
-  if (![tabs_ containsObject:tab]) {
-    return;
-  }
-
-  NSPoint tabStripPoint = [tabsItemsPanel_ convertPoint:currentEvent.locationInWindow fromView:nil];
-  NSUInteger targetIndex = [self tabInsertionIndexForTabStripX:tabStripPoint.x];
-  BabelBrowserTabMoveResult* moveResult =
-      [browserTabMoveCoordinator_ moveTab:tab
-                                fromGroup:selectedGroup_
-                                  toGroup:selectedGroup_
-                            insertionIndex:targetIndex];
-  if (!moveResult.didMove) {
-    return;
-  }
-
-  isReorderingTabs_ = YES;
-  [self layoutTabItemsSelectingLastTab:NO];
+  [browserTabDragSessionController_ dragTabWithIdentifier:tabItemView.identifier];
 }
 
 - (BabelBrowserTab*)tabWithIdentifier:(NSString*)identifier {
@@ -412,142 +376,8 @@
   return [browserTabCollection_ groupContainingTab:tab groups:groups_];
 }
 
-- (BabelBrowserGroup*)groupAtWindowPoint:(NSPoint)windowPoint {
-  NSPoint listPoint = [groupsListView_ convertPoint:windowPoint fromView:nil];
-  return [tabDragCoordinator_ groupAtListPoint:listPoint
-                                        groups:groups_
-                              groupsListBounds:groupsListView_.bounds];
-}
-
-- (BOOL)isWindowPointInsideSidebar:(NSPoint)windowPoint {
-  NSPoint sidebarPoint = [sidebarView_ convertPoint:windowPoint fromView:nil];
-  return NSPointInRect(sidebarPoint, sidebarView_.bounds);
-}
-
-- (BOOL)isWindowPointInsideTabStrip:(NSPoint)windowPoint {
-  NSPoint tabStripPoint = [tabsItemsPanel_ convertPoint:windowPoint fromView:nil];
-  return NSPointInRect(tabStripPoint, tabsItemsPanel_.bounds);
-}
-
-- (void)scheduleGroupSelectionForDraggingTabAtWindowPoint:(NSPoint)windowPoint {
-  BabelBrowserGroup* group = [self groupAtWindowPoint:windowPoint];
-  if (!group || group == selectedGroup_) {
-    [tabDragHoverScheduler_ cancelPendingSelection];
-    return;
-  }
-
-  if ([tabDragHoverScheduler_ isPendingGroup:group]) {
-    return;
-  }
-
-  __weak BabelBrowserWindowController* weakSelf = self;
-  [tabDragHoverScheduler_ scheduleSelectionForGroup:group
-                                  delayNanoseconds:kTabDragGroupHoverDelayNanoseconds
-                                   validationBlock:^BOOL(BabelBrowserGroup* candidateGroup) {
-                                     BabelBrowserWindowController* strongSelf = weakSelf;
-                                     if (!strongSelf || !strongSelf->draggingTab_) {
-                                       return NO;
-                                     }
-
-                                     NSPoint currentWindowPoint =
-                                         [strongSelf.window convertPointFromScreen:NSEvent.mouseLocation];
-                                     return [strongSelf groupAtWindowPoint:currentWindowPoint] == candidateGroup;
-                                   }
-                                    selectionBlock:^(BabelBrowserGroup* candidateGroup) {
-                                      BabelBrowserWindowController* strongSelf = weakSelf;
-                                      [strongSelf selectGroup:candidateGroup];
-                                    }];
-}
-
-- (BOOL)moveDraggingTabIfNeededToVisibleTabStripAtWindowPoint:(NSPoint)windowPoint {
-  if (!draggingTab_ || ![self isWindowPointInsideTabStrip:windowPoint]) {
-    return NO;
-  }
-
-  BabelBrowserGroup* sourceGroup = [self groupContainingTab:draggingTab_];
-  BabelBrowserGroup* destinationGroup = selectedGroup_;
-  if (!sourceGroup || !destinationGroup || sourceGroup == destinationGroup) {
-    return NO;
-  }
-
-  NSPoint tabStripPoint = [tabsItemsPanel_ convertPoint:windowPoint fromView:nil];
-  NSUInteger targetIndex = [self tabInsertionIndexForTabStripX:tabStripPoint.x];
-  [self moveDraggingTabToGroup:destinationGroup insertionIndex:targetIndex selectMovedTab:YES];
-  return YES;
-}
-
-- (void)moveDraggingTabToGroup:(BabelBrowserGroup*)destinationGroup
-                insertionIndex:(NSUInteger)insertionIndex
-                  selectMovedTab:(BOOL)selectMovedTab {
-  if (!draggingTab_ || !destinationGroup) {
-    return;
-  }
-
-  BabelBrowserGroup* sourceGroup = [self groupContainingTab:draggingTab_];
-  if (!sourceGroup) {
-    return;
-  }
-
-  BabelBrowserTabMoveResult* moveResult =
-      [browserTabMoveCoordinator_ moveTab:draggingTab_
-                                fromGroup:sourceGroup
-                                  toGroup:destinationGroup
-                            insertionIndex:insertionIndex];
-  if (!moveResult.didMove) {
-    return;
-  }
-
-  isReorderingTabs_ = YES;
-  if (!moveResult.movedAcrossGroups) {
-    [self layoutTabItemsSelectingLastTab:NO];
-    return;
-  }
-
-  isDraggingTabAcrossGroups_ = YES;
-  [self selectGroup:destinationGroup];
-  if (selectMovedTab) {
-    [self selectTab:draggingTab_];
-  } else {
-    [self layoutTabItemsSelectingLastTab:NO];
-  }
-}
-
-- (NSUInteger)tabInsertionIndexForTabStripX:(CGFloat)x {
-  return [tabDragCoordinator_ insertionIndexForTabStripX:x tabs:tabs_];
-}
-
 - (void)finishDraggingTabFromItem:(BabelTabItemView*)tabItemView {
-  NSEvent* currentEvent = NSApp.currentEvent;
-  BabelBrowserGroup* dropGroup = [self groupAtWindowPoint:currentEvent.locationInWindow];
-  BabelBrowserGroup* sourceGroup = [self groupContainingTab:draggingTab_];
-  if (draggingTab_ && dropGroup && dropGroup != sourceGroup) {
-    [self moveDraggingTabToGroup:dropGroup
-                  insertionIndex:dropGroup.tabs.count
-                    selectMovedTab:YES];
-  } else if (draggingTab_ && !dropGroup &&
-             [self isWindowPointInsideSidebar:currentEvent.locationInWindow]) {
-    NSString* groupName = [self nextManualGroupName];
-    BabelBrowserGroup* group = [self createGroupWithName:groupName
-                                              identifier:NSUUID.UUID.UUIDString];
-    [self moveDraggingTabToGroup:group insertionIndex:0 selectMovedTab:YES];
-  }
-
-  [tabDragHoverScheduler_ cancelPendingSelection];
-
-  if (!isReorderingTabs_ && !isDraggingTabAcrossGroups_) {
-    if (draggingTab_ && ![tabs_ containsObject:draggingTab_]) {
-      [draggingTab_.tabItemView removeFromSuperview];
-    }
-    draggingTab_ = nil;
-    [self layoutTabItemsSelectingLastTab:NO];
-    return;
-  }
-
-  isReorderingTabs_ = NO;
-  isDraggingTabAcrossGroups_ = NO;
-  draggingTab_ = nil;
-  [self layoutTabItemsSelectingLastTab:NO];
-  [self saveGroupsState];
+  [browserTabDragSessionController_ finishDraggingTab];
 }
 
 - (void)closeTabFromItem:(BabelTabItemView*)tabItemView {
