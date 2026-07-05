@@ -22,6 +22,7 @@ open "babelchrome://open?group=Group%20n&url=http%3A%2F%2F127.0.0.1%3A8772"
 - [Features](04-features.md)
 - [PHP Modules](05-php-modules.md)
 - [Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
+- [Browser Source Layout](07-browser-source-layout.md)
 
 ## Current Scope
 
@@ -83,7 +84,8 @@ BabelChrome currently provides:
 - macOS URL event handling through `NSApplicationDelegate` and an early Apple Event URL handler;
 - a `babelchrome://open?group=...&url=...` command scheme;
 - a `tools/babelchrome-open` helper for shell-safe URL encoding and opening;
-- installation into `/Applications/BabelChrome.app`.
+- installation into `/Applications/BabelChrome.app`;
+- a responsibility-based native browser source layout under `src/Browser`, with second-level directories for address bar behavior, CEF integration, Developer Tools, drag-and-drop, extensions, groups, internal pages, modules, navigation, state, tabs, UI helpers, utilities, and window orchestration.
 
 ## Navigation
 
