@@ -7,10 +7,9 @@
       [NSString stringWithUTF8String:browser->GetMainFrame()->GetURL().ToString().c_str()];
 
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-    NSString* targetIdentifier =
-        [self developerToolsTargetIdentifierForURLString:inspectedURLString port:port];
     NSString* developerToolsURLString =
-        [self developerToolsURLStringForTargetIdentifier:targetIdentifier port:port];
+        [developerToolsTargetResolver_ developerToolsURLStringForInspectedURLString:inspectedURLString
+                                                                               port:port];
 
     dispatch_async(dispatch_get_main_queue(), ^{
       if (![self tabForBrowser:browser]) {
@@ -26,20 +25,6 @@
       [self createDeveloperToolsBrowserForTab:tab urlString:developerToolsURLString];
     });
   });
-}
-
-- (NSString*)developerToolsURLStringForTargetIdentifier:(NSString*)targetIdentifier
-                                                  port:(int)port {
-  if (!targetIdentifier) {
-    return @"data:text/html,<html><body style='font-family:-apple-system;padding:24px'>"
-        "Unable to find the inspected page in the local DevTools target list.</body></html>";
-  }
-
-  return [NSString stringWithFormat:
-      @"http://127.0.0.1:%d/devtools/inspector.html?ws=127.0.0.1:%d/devtools/page/%@&panel=console",
-      port,
-      port,
-      targetIdentifier];
 }
 
 - (void)createDeveloperToolsBrowserForTab:(BabelBrowserTab*)tab
@@ -59,71 +44,6 @@
                                 settings,
                                 nullptr,
                                 nullptr);
-}
-
-- (NSString*)developerToolsTargetIdentifierForURLString:(NSString*)inspectedURLString
-                                                  port:(int)port {
-  NSURL* targetsURL = [NSURL URLWithString:
-      [NSString stringWithFormat:@"http://127.0.0.1:%d/json/list", port]];
-  for (NSUInteger attempt = 0; attempt < 10; attempt++) {
-    NSData* data = [NSData dataWithContentsOfURL:targetsURL];
-    if (!data) {
-      [NSThread sleepForTimeInterval:0.1];
-      continue;
-    }
-
-    NSError* error = nil;
-    id payload = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
-    if (error || ![payload isKindOfClass:NSArray.class]) {
-      [NSThread sleepForTimeInterval:0.1];
-      continue;
-    }
-
-    NSArray* targets = (NSArray*)payload;
-    NSString* fallbackIdentifier = nil;
-    for (NSDictionary* target in targets) {
-      if (![target isKindOfClass:NSDictionary.class]) {
-        continue;
-      }
-
-      NSString* type = target[@"type"];
-      NSString* urlString = target[@"url"];
-      NSString* identifier = target[@"id"];
-      if (![type isEqualToString:@"page"] ||
-          ![identifier isKindOfClass:NSString.class] ||
-          ![urlString isKindOfClass:NSString.class] ||
-          [self shouldIgnoreDeveloperToolsTargetURLString:urlString port:port]) {
-        continue;
-      }
-
-      fallbackIdentifier = identifier;
-      if ([urlString isEqualToString:inspectedURLString]) {
-        return identifier;
-      }
-    }
-
-    if (fallbackIdentifier) {
-      return fallbackIdentifier;
-    }
-
-    [NSThread sleepForTimeInterval:0.1];
-  }
-
-  return nil;
-}
-
-- (BOOL)shouldIgnoreDeveloperToolsTargetURLString:(NSString*)urlString port:(int)port {
-  if ([urlString hasPrefix:@"data:text/html"]) {
-    return YES;
-  }
-
-  NSURLComponents* components = [NSURLComponents componentsWithString:urlString ?: @""];
-  NSString* path = components.path ?: @"";
-  NSInteger targetPort = components.port.integerValue;
-
-  return [components.host isEqualToString:@"127.0.0.1"] &&
-         targetPort == port &&
-         ([path hasPrefix:@"/devtools/"] || [path isEqualToString:@"/json/list"]);
 }
 
 - (void)hideDeveloperToolsForTab:(BabelBrowserTab*)tab {

@@ -26,6 +26,7 @@
 #import "Browser/DeveloperToolsDockingPolicy.h"
 #import "Browser/DeveloperToolsDockingStore.h"
 #import "Browser/DeveloperToolsLayoutCalculator.h"
+#import "Browser/DeveloperToolsTargetResolver.h"
 #import "Browser/ExtensionFolderController.h"
 #import "Browser/ExtensionProfileStore.h"
 #import "Browser/ExtensionsPageDataSource.h"
@@ -193,6 +194,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelDeveloperToolsDockingPolicy* developerToolsDockingPolicy_;
   BabelDeveloperToolsDockingStore* developerToolsDockingStore_;
   BabelDeveloperToolsLayoutCalculator* developerToolsLayoutCalculator_;
+  BabelDeveloperToolsTargetResolver* developerToolsTargetResolver_;
   BabelExtensionFolderController* extensionFolderController_;
   BabelExtensionProfileStore* extensionProfileStore_;
   BabelExtensionsPageDataSource* extensionsPageDataSource_;
@@ -339,6 +341,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
                                                   dockModeDefaultsKey:kDeveloperToolsDockModeDefaultsKey
                                                  sizeRatioDefaultsKey:kDeveloperToolsSizeRatioDefaultsKey];
     developerToolsLayoutCalculator_ = [[BabelDeveloperToolsLayoutCalculator alloc] init];
+    developerToolsTargetResolver_ = [[BabelDeveloperToolsTargetResolver alloc] init];
     extensionProfileStore_ =
         [[BabelExtensionProfileStore alloc]
             initWithProfileDirectoryURL:BabelChromeConfiguration.profileDirectoryURL

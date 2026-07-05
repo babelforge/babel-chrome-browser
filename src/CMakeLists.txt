@@ -196,6 +196,8 @@ set(BABEL_CHROME_SOURCES
   Browser/DeveloperToolsDockingPolicy.mm
   Browser/DeveloperToolsLayoutCalculator.h
   Browser/DeveloperToolsLayoutCalculator.mm
+  Browser/DeveloperToolsTargetResolver.h
+  Browser/DeveloperToolsTargetResolver.mm
   Browser/BrowserWindowController.h
   Browser/BrowserWindowController.mm
   Configuration/Configuration.h
