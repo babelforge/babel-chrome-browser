@@ -20,6 +20,7 @@ const int kOpenViewerSourceCommandId = MENU_ID_USER_FIRST + 3;
 const int kRevealViewerSourceCommandId = MENU_ID_USER_FIRST + 4;
 const int kCopyLinkCommandId = MENU_ID_USER_FIRST + 5;
 const int kFaviconDownloadMaximumSize = 32;
+const int kReloadVirtualKeyCode = 0x52;
 const char kBabelChromeFileTypesHeaderName[] = "X-BabelChrome-File-Types";
 
 /**
@@ -302,6 +303,28 @@ bool ShouldExposeBabelChromeHeadersToURL(const std::string& urlString,
 }
 
 /**
+ * Reports whether a key event is a BabelChrome reload shortcut.
+ *
+ * @param event The CEF key event.
+ * @return True when the key event is Command+R or Shift+Command+R.
+ */
+bool IsReloadShortcutKeyEvent(const CefKeyEvent& event) {
+  if (event.type != KEYEVENT_RAWKEYDOWN) {
+    return false;
+  }
+
+  if (event.windows_key_code != kReloadVirtualKeyCode) {
+    return false;
+  }
+
+  if (0 == (event.modifiers & EVENTFLAG_COMMAND_DOWN)) {
+    return false;
+  }
+
+  return 0 == (event.modifiers & (EVENTFLAG_CONTROL_DOWN | EVENTFLAG_ALT_DOWN));
+}
+
+/**
  * Returns the file type header value advertised by the local extension host.
  *
  * @return A comma-separated file type list, or an empty string when unavailable.
@@ -381,6 +404,10 @@ CefRefPtr<CefDisplayHandler> BabelBrowserClient::GetDisplayHandler() {
   return this;
 }
 
+CefRefPtr<CefKeyboardHandler> BabelBrowserClient::GetKeyboardHandler() {
+  return this;
+}
+
 CefRefPtr<CefLifeSpanHandler> BabelBrowserClient::GetLifeSpanHandler() {
   return this;
 }
@@ -434,6 +461,31 @@ CefResourceRequestHandler::ReturnValue BabelBrowserClient::OnBeforeResourceLoad(
   }
 
   return RV_CONTINUE;
+}
+
+bool BabelBrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
+                                       const CefKeyEvent& event,
+                                       CefEventHandle os_event,
+                                       bool* is_keyboard_shortcut) {
+  CEF_REQUIRE_UI_THREAD();
+  if (!IsReloadShortcutKeyEvent(event)) {
+    return false;
+  }
+
+  if (is_keyboard_shortcut) {
+    *is_keyboard_shortcut = true;
+  }
+
+  const bool ignoringCache = 0 != (event.modifiers & EVENTFLAG_SHIFT_DOWN);
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (ignoringCache) {
+      [controller_ reloadSelectedTabIgnoringCache];
+      return;
+    }
+
+    [controller_ reloadSelectedTab];
+  });
+  return true;
 }
 
 void BabelBrowserClient::OnTitleChange(CefRefPtr<CefBrowser> browser,

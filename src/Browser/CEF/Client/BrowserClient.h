@@ -2,6 +2,7 @@
 #define BABEL_CHROME_BROWSER_CLIENT_H_
 
 #include "include/cef_client.h"
+#include "include/cef_keyboard_handler.h"
 #include "include/cef_resource_request_handler.h"
 
 #include <mutex>
@@ -17,6 +18,7 @@ class BabelBrowserClient final : public CefClient,
                                  public CefContextMenuHandler,
                                  public CefDragHandler,
                                  public CefDisplayHandler,
+                                 public CefKeyboardHandler,
                                  public CefLifeSpanHandler,
                                  public CefLoadHandler,
                                  public CefRequestHandler,
@@ -63,6 +65,13 @@ class BabelBrowserClient final : public CefClient,
    * @return The display handler.
    */
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override;
+
+  /**
+   * Returns the keyboard shortcut callback handler.
+   *
+   * @return The keyboard handler.
+   */
+  CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override;
 
   /**
    * Returns the lifespan callback handler.
@@ -119,6 +128,20 @@ class BabelBrowserClient final : public CefClient,
                                    CefRefPtr<CefFrame> frame,
                                    CefRefPtr<CefRequest> request,
                                    CefRefPtr<CefCallback> callback) override;
+
+  /**
+   * Handles browser-level keyboard shortcuts before page JavaScript receives them.
+   *
+   * @param browser The browser that received the key event.
+   * @param event The CEF key event.
+   * @param os_event The native operating system event handle.
+   * @param is_keyboard_shortcut Receives whether the key is a keyboard shortcut.
+   * @return True when BabelChrome handled the event.
+   */
+  bool OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
+                     const CefKeyEvent& event,
+                     CefEventHandle os_event,
+                     bool* is_keyboard_shortcut) override;
 
   /**
    * Receives page title changes.
