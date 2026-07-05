@@ -13,6 +13,7 @@
 #import "Browser/BrowserCreationScheduler.h"
 #import "Browser/BrowserGroupCollection.h"
 #import "Browser/BrowserGroupFactory.h"
+#import "Browser/BrowserGroupManager.h"
 #import "Browser/BrowserGroupMoveCoordinator.h"
 #import "Browser/BrowserPasteboardWriter.h"
 #import "Browser/BrowserSettingsStore.h"
@@ -219,6 +220,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelGoogleSuggestionScheduler* googleSuggestionScheduler_;
   BabelBrowserGroupCollection* browserGroupCollection_;
   BabelBrowserGroupFactory* browserGroupFactory_;
+  BabelBrowserGroupManager* browserGroupManager_;
   BabelBrowserGroupMoveCoordinator* browserGroupMoveCoordinator_;
   BabelBrowserNavigationController* browserNavigationController_;
   BabelBrowserPasteboardWriter* browserPasteboardWriter_;
@@ -669,6 +671,16 @@ enforceLiveBrowserLimitHandler:^{
     [extensionProfileStore_ clearPendingProfileExtensionRestartStates];
     window.delegate = self;
     [self buildInterface];
+    browserGroupManager_ =
+        [[BabelBrowserGroupManager alloc] initWithGroups:groups_
+                                          groupsListView:groupsListView_
+                                         groupCollection:browserGroupCollection_
+                                            groupFactory:browserGroupFactory_
+                                  defaultGroupIdentifier:kDefaultGroupIdentifier
+                                        defaultGroupName:kDefaultGroupName
+                                           layoutHandler:^{
+                                             [weakSelf layoutGroupItems];
+                                           }];
     internalPageNavigator_ =
         [[BabelInternalPageNavigator alloc]
             initWithPagesPanel:pagesPanel_

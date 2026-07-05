@@ -46,37 +46,19 @@
 }
 
 - (BabelBrowserGroup*)createGroupWithName:(NSString*)name identifier:(NSString*)identifier {
-  BabelBrowserGroup* existingGroup = [self groupWithIdentifier:identifier];
-  if (existingGroup) {
-    return existingGroup;
-  }
-
-  BabelBrowserGroup* group = [browserGroupFactory_ makeGroupWithName:name identifier:identifier];
-  [groups_ addObject:group];
-  [groupsListView_ addSubview:group.groupItemView];
-  [self layoutGroupItems];
-  return group;
+  return [browserGroupManager_ createGroupWithName:name identifier:identifier];
 }
 
 - (BabelBrowserGroup*)groupWithIdentifier:(NSString*)identifier {
-  return [browserGroupCollection_ groupWithIdentifier:identifier groups:groups_];
+  return [browserGroupManager_ groupWithIdentifier:identifier];
 }
 
 - (BabelBrowserGroup*)groupWithName:(NSString*)name {
-  return [browserGroupCollection_ groupWithName:name groups:groups_];
+  return [browserGroupManager_ groupWithName:name];
 }
 
 - (BabelBrowserGroup*)ensureGroupNamed:(NSString*)name {
-  NSString* normalizedName = name.length > 0 ? name : kDefaultGroupName;
-  BabelBrowserGroup* existingGroup = [self groupWithName:normalizedName];
-  if (existingGroup) {
-    return existingGroup;
-  }
-
-  NSString* identifier = [normalizedName isEqualToString:kDefaultGroupName]
-      ? kDefaultGroupIdentifier
-      : NSUUID.UUID.UUIDString;
-  return [self createGroupWithName:normalizedName identifier:identifier];
+  return [browserGroupManager_ ensureGroupNamed:name];
 }
 
 - (BabelBrowserGroup*)targetGroupForModuleIdentifier:(NSString*)moduleIdentifier
@@ -90,7 +72,7 @@
 }
 
 - (NSString*)nextManualGroupName {
-  return [browserGroupCollection_ nextManualGroupNameForGroups:groups_];
+  return [browserGroupManager_ nextManualGroupName];
 }
 
 - (void)addGroupFromButton:(id)sender {

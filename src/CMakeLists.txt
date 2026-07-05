@@ -36,6 +36,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserGroupCollection.mm
   Browser/BrowserGroupFactory.h
   Browser/BrowserGroupFactory.mm
+  Browser/BrowserGroupManager.h
+  Browser/BrowserGroupManager.mm
   Browser/BrowserGroupMoveCoordinator.h
   Browser/BrowserGroupMoveCoordinator.mm
   Browser/BrowserPasteboardWriter.h
