@@ -3,11 +3,11 @@
 - (void)restoreSessionByPriority {
   [self restoreSessionPositionState];
 
-  NSData* stateData = [self persistedGroupsAndTabsStateData];
-  NSDictionary* state = [self persistedGroupsAndTabsStateFromData:stateData];
+  NSData* stateData = [groupSessionStore_ persistedGroupsAndTabsStateData];
+  NSDictionary* state = [groupSessionStore_ persistedGroupsAndTabsStateFromData:stateData];
 
   isRestoringSession_ = YES;
-  [self restoreSessionTabsFromState:state];
+  [self restoreGroupsFromState:state];
   [self restoreSessionGroupsFromState:state];
   isRestoringSession_ = NO;
 

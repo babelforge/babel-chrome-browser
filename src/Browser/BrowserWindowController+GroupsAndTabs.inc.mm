@@ -1,32 +1,17 @@
 // This file is included by BrowserWindowController.mm.
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
-- (NSData*)persistedGroupsAndTabsStateData {
-  return [groupSessionStore_ persistedGroupsAndTabsStateData];
-}
-
-- (NSDictionary*)persistedGroupsAndTabsStateFromData:(NSData*)data {
-  return [groupSessionStore_ persistedGroupsAndTabsStateFromData:data];
-}
-
-- (void)restoreSessionTabsFromState:(NSDictionary*)state {
-  [self restoreGroupsFromState:state];
-}
-
 - (void)restoreSessionGroupsFromState:(NSDictionary*)state {
   BabelBrowserGroup* defaultGroup = [self groupWithIdentifier:kDefaultGroupIdentifier];
   if (!defaultGroup) {
     defaultGroup = [self createGroupWithName:kDefaultGroupName identifier:kDefaultGroupIdentifier];
   }
 
-  NSString* selectedGroupIdentifier = [self persistedSelectedGroupIdentifierFromState:state];
+  NSString* selectedGroupIdentifier =
+      [groupSessionStore_ selectedGroupIdentifierFromState:state
+                                        fallbackIdentifier:kDefaultGroupIdentifier];
   BabelBrowserGroup* groupToSelect = [self groupWithIdentifier:selectedGroupIdentifier] ?: defaultGroup;
   [self selectGroup:groupToSelect];
   [self saveGroupsState];
-}
-
-- (NSString*)persistedSelectedGroupIdentifierFromState:(NSDictionary*)state {
-  return [groupSessionStore_ selectedGroupIdentifierFromState:state
-                                           fallbackIdentifier:kDefaultGroupIdentifier];
 }
 
 - (void)restoreGroupsFromState:(NSDictionary*)state {
