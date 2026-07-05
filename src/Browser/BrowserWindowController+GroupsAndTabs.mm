@@ -1,5 +1,10 @@
-// This file is included by BrowserWindowController.mm.
-// It remains in the same translation unit so private Objective-C++ ivars stay accessible.
+#import "Browser/BrowserWindowController+Private.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-protocol-method-implementation"
+
+@implementation BabelBrowserWindowController (GroupsAndTabs)
+
 - (void)restoreSessionGroupsFromState:(NSDictionary*)state {
   [browserSessionRestorationCoordinator_ restoreSelectedGroupFromState:state];
 }
@@ -386,3 +391,7 @@
   [self saveGroupsState];
   [self showMainWindow];
 }
+
+@end
+
+#pragma clang diagnostic pop

@@ -1,5 +1,10 @@
-// This file is included by BrowserWindowController.mm.
-// It remains in the same translation unit so private Objective-C++ ivars stay accessible.
+#import "Browser/BrowserWindowController+Private.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-protocol-method-implementation"
+
+@implementation BabelBrowserWindowController (DeveloperToolsEmbedding)
+
 - (void)loadDeveloperToolsForTab:(BabelBrowserTab*)tab
                 inspectingBrowser:(CefRefPtr<CefBrowser>)browser {
   [developerToolsPanelController_ loadDeveloperToolsForTab:tab
@@ -54,3 +59,7 @@
                                                   dockMode:developerToolsDockMode_
                                                  sizeRatio:developerToolsSizeRatio_];
 }
+
+@end
+
+#pragma clang diagnostic pop

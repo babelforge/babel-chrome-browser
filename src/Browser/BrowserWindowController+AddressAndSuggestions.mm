@@ -1,5 +1,10 @@
-// This file is included by BrowserWindowController.mm.
-// It remains in the same translation unit so private Objective-C++ ivars stay accessible.
+#import "Browser/BrowserWindowController+Private.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-protocol-method-implementation"
+
+@implementation BabelBrowserWindowController (AddressAndSuggestions)
+
 - (void)selectTabWithOffset:(NSInteger)offset {
   if (!selectedTab_ || tabs_.count < 2) {
     return;
@@ -437,3 +442,7 @@ doCommandBySelector:(SEL)commandSelector {
 - (void)updateBrowser:(CefRefPtr<CefBrowser>)browser faviconImage:(NSImage*)faviconImage {
   [browserMetadataEventController_ updateBrowser:browser faviconImage:faviconImage];
 }
+
+@end
+
+#pragma clang diagnostic pop

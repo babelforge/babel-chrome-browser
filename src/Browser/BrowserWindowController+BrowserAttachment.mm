@@ -1,5 +1,10 @@
-// This file is included by BrowserWindowController.mm.
-// It remains in the same translation unit so private Objective-C++ ivars stay accessible.
+#import "Browser/BrowserWindowController+Private.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-protocol-method-implementation"
+
+@implementation BabelBrowserWindowController (BrowserAttachment)
+
 - (void)attachCreatedBrowser:(CefRefPtr<CefBrowser>)browser {
   if (browser->IsPopup()) {
     [self attachCreatedPopupBrowser:browser];
@@ -67,3 +72,7 @@
   }
   [self saveGroupsState];
 }
+
+@end
+
+#pragma clang diagnostic pop

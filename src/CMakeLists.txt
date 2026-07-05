@@ -240,6 +240,15 @@ set(BABEL_CHROME_SOURCES
   Browser/DeveloperToolsTargetResolver.mm
   Browser/BrowserWindowController.h
   Browser/BrowserWindowController.mm
+  Browser/BrowserWindowController+AddressAndSuggestions.mm
+  Browser/BrowserWindowController+BrowserAttachment.mm
+  Browser/BrowserWindowController+BrowserControls.mm
+  Browser/BrowserWindowController+DeveloperToolsEmbedding.mm
+  Browser/BrowserWindowController+GroupsAndTabs.mm
+  Browser/BrowserWindowController+InternalPages.mm
+  Browser/BrowserWindowController+LocalDrop.mm
+  Browser/BrowserWindowController+URLRouting.mm
+  Browser/BrowserWindowController+WindowLifecycle.mm
   Configuration/Configuration.h
   Configuration/Configuration.mm
   LocalServices/LocalServiceHost.h
