@@ -20,6 +20,7 @@
 #import "Browser/BrowserTabCollection.h"
 #import "Browser/BrowserTabFactory.h"
 #import "Browser/BrowserTabInsertionCoordinator.h"
+#import "Browser/BrowserTabLookupService.h"
 #import "Browser/BrowserTabMetadataUpdater.h"
 #import "Browser/BrowserTabMoveCoordinator.h"
 #import "Browser/BrowserThemeApplier.h"
@@ -85,6 +86,7 @@
 #import "Browser/SettingsOptionRenderer.h"
 #import "Browser/SidebarLayoutCalculator.h"
 #import "Browser/StableServerURLResolver.h"
+#import "Browser/StableURLTabReloader.h"
 #import "Browser/StableViewerURLResolver.h"
 #import "Browser/TabContentViewAttacher.h"
 #import "Browser/TabDefaultPageResetter.h"
@@ -222,6 +224,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserPresentationFormatter* browserPresentationFormatter_;
   BabelBrowserTabCollection* browserTabCollection_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
+  BabelBrowserTabLookupService* browserTabLookupService_;
   BabelBrowserTabMetadataUpdater* browserTabMetadataUpdater_;
   BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
   BabelBrowserThemeApplier* browserThemeApplier_;
@@ -274,6 +277,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelSettingsOptionRenderer* settingsOptionRenderer_;
   BabelSidebarLayoutCalculator* sidebarLayoutCalculator_;
   BabelStableServerURLResolver* stableServerURLResolver_;
+  BabelStableURLTabReloader* stableURLTabReloader_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
   BabelTabContentViewAttacher* tabContentViewAttacher_;
   BabelTabDefaultPageResetter* tabDefaultPageResetter_;
@@ -426,6 +430,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     browserTabInsertionCoordinator_ =
         [[BabelBrowserTabInsertionCoordinator alloc] initWithPlacementPolicy:tabPlacementPolicy
                                                                tabCollection:browserTabCollection_];
+    browserTabLookupService_ = [[BabelBrowserTabLookupService alloc] init];
     groupListCoordinator_ = [[BabelGroupListCoordinator alloc] init];
     groupRenameController_ = [[BabelGroupRenameController alloc] init];
     groupSessionStore_ = [[BabelGroupSessionStore alloc] init];
@@ -592,6 +597,13 @@ enforceLiveBrowserLimitHandler:^{
         [[BabelRuntimeRefreshTabMatcher alloc]
             initWithStableServerURLResolver:stableServerURLResolver_
                    localServiceURLClassifier:localServiceURLClassifier_];
+    stableURLTabReloader_ =
+        [[BabelStableURLTabReloader alloc]
+            initWithStableServerURLResolver:stableServerURLResolver_
+                          refreshTabMatcher:runtimeRefreshTabMatcher_
+                    navigationResolverBlock:^NSString*(NSString* stableURLString) {
+                      return [weakSelf navigationURLStringForStableBabelChromeURLString:stableURLString];
+                    }];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     viewerNavigationURLResolver_ =
         [[BabelViewerNavigationURLResolver alloc] initWithStableViewerURLResolver:stableViewerURLResolver_

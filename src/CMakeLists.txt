@@ -50,6 +50,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserTabFactory.mm
   Browser/BrowserTabInsertionCoordinator.h
   Browser/BrowserTabInsertionCoordinator.mm
+  Browser/BrowserTabLookupService.h
+  Browser/BrowserTabLookupService.mm
   Browser/BrowserTabMetadataUpdater.h
   Browser/BrowserTabMetadataUpdater.mm
   Browser/BrowserTabMoveCoordinator.h
@@ -168,6 +170,8 @@ set(BABEL_CHROME_SOURCES
   Browser/SidebarLayoutCalculator.mm
   Browser/StableServerURLResolver.h
   Browser/StableServerURLResolver.mm
+  Browser/StableURLTabReloader.h
+  Browser/StableURLTabReloader.mm
   Browser/StableViewerURLResolver.h
   Browser/StableViewerURLResolver.mm
   Browser/TabContentViewAttacher.h

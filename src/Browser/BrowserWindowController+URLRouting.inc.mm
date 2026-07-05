@@ -195,19 +195,7 @@
   return [moduleNavigationURLResolver_ navigationURLStringForStableBabelChromeURLString:urlString];
 }
 - (BabelBrowserTab*)tabForBrowser:(CefRefPtr<CefBrowser>)browser {
-  if (!browser) {
-    return nil;
-  }
-
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if ([tab browser] && [tab browser]->IsSame(browser)) {
-        return tab;
-      }
-    }
-  }
-
-  return nil;
+  return [browserTabLookupService_ tabForBrowser:browser groups:groups_];
 }
 
 - (BOOL)isLocalServiceModuleURLString:(NSString*)urlString {
@@ -229,31 +217,11 @@
 }
 
 - (void)reloadTabsWithRequestedURLString:(NSString*)requestedURLString excludingTab:(BabelBrowserTab*)excludedTab {
-  if (![self isStableBabelChromeURLString:requestedURLString]) {
-    return;
+  if ([stableURLTabReloader_ reloadTabsWithRequestedURLString:requestedURLString
+                                                 excludingTab:excludedTab
+                                                       groups:groups_]) {
+    [self saveGroupsState];
   }
-
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      if (tab == excludedTab || ![self tab:tab matchesRefreshURLString:requestedURLString]) {
-        continue;
-      }
-
-      NSString* stableURLString =
-          [self isStableServerURLString:requestedURLString] ? tab.requestedURLString : requestedURLString;
-      NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:stableURLString];
-      if (navigationURLString.length == 0) {
-        continue;
-      }
-
-      tab.urlString = navigationURLString;
-      if ([tab browser]) {
-        tab.browser->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
-      }
-    }
-  }
-
-  [self saveGroupsState];
 }
 
 - (void)reloadRequestedURLStrings:(NSArray<NSString*>*)requestedURLStrings excludingTab:(BabelBrowserTab*)excludedTab {
@@ -267,31 +235,8 @@
 }
 
 - (void)reloadServerTabsWithProjectIdentifiers:(NSArray<NSString*>*)projectIdentifiers {
-  NSSet<NSString*>* identifierSet = [NSSet setWithArray:projectIdentifiers];
-  if (identifierSet.count == 0) {
-    return;
+  if ([stableURLTabReloader_ reloadServerTabsWithProjectIdentifiers:projectIdentifiers
+                                                             groups:groups_]) {
+    [self saveGroupsState];
   }
-
-  for (BabelBrowserGroup* group in groups_) {
-    for (BabelBrowserTab* tab in group.tabs) {
-      NSString* projectIdentifier =
-          [self serverProjectIdentifierForStableURLString:tab.requestedURLString];
-      if (projectIdentifier.length == 0 || ![identifierSet containsObject:projectIdentifier]) {
-        continue;
-      }
-
-      NSString* navigationURLString =
-          [self navigationURLStringForStableBabelChromeURLString:tab.requestedURLString];
-      if (navigationURLString.length == 0) {
-        continue;
-      }
-
-      tab.urlString = navigationURLString;
-      if ([tab browser]) {
-        tab.browser->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
-      }
-    }
-  }
-
-  [self saveGroupsState];
 }
