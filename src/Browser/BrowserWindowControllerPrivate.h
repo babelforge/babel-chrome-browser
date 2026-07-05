@@ -125,6 +125,16 @@
 #include "include/cef_callback.h"
 #include "include/wrapper/cef_helpers.h"
 
+@class BabelBrowserWindowAddressAndSuggestionsActions;
+@class BabelBrowserWindowBrowserAttachmentActions;
+@class BabelBrowserWindowBrowserControlsActions;
+@class BabelBrowserWindowDeveloperToolsActions;
+@class BabelBrowserWindowGroupsAndTabsActions;
+@class BabelBrowserWindowInternalPagesActions;
+@class BabelBrowserWindowLifecycleActions;
+@class BabelBrowserWindowLocalDropActions;
+@class BabelBrowserWindowURLRoutingActions;
+
 #include <string>
 static const CGFloat kSidebarInitialWidth = 240.0;
 static const CGFloat kSidebarHeaderButtonSize = 28.0;
@@ -178,6 +188,16 @@ static const int64_t kTabDragGroupHoverDelayNanoseconds = 450 * NSEC_PER_MSEC;
 static const NSUInteger kMaximumLivePageBrowsers = 8;
 
 @interface BabelBrowserWindowController () {
+ @public
+  BabelBrowserWindowAddressAndSuggestionsActions* addressAndSuggestionsActions_;
+  BabelBrowserWindowBrowserAttachmentActions* browserAttachmentActions_;
+  BabelBrowserWindowBrowserControlsActions* browserControlsActions_;
+  BabelBrowserWindowDeveloperToolsActions* developerToolsActions_;
+  BabelBrowserWindowGroupsAndTabsActions* groupsAndTabsActions_;
+  BabelBrowserWindowInternalPagesActions* internalPagesActions_;
+  BabelBrowserWindowLifecycleActions* lifecycleActions_;
+  BabelBrowserWindowLocalDropActions* localDropActions_;
+  BabelBrowserWindowURLRoutingActions* urlRoutingActions_;
 
   NSView* rootView_;
   NSView* splitView_;

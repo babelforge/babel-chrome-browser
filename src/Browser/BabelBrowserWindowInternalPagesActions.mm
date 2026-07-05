@@ -1,77 +1,86 @@
-#import "Browser/BrowserWindowController+Private.h"
+#import "Browser/BabelBrowserWindowInternalPagesActions.h"
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wobjc-protocol-method-implementation"
+#import "Browser/BrowserWindowControllerPrivate.h"
 
-@implementation BabelBrowserWindowController (InternalPages)
+@implementation BabelBrowserWindowInternalPagesActions {
+  __weak BabelBrowserWindowController* owner_;
+}
+
+- (instancetype)initWithOwner:(BabelBrowserWindowController*)owner {
+  self = [super init];
+  if (self) {
+    owner_ = owner;
+  }
+  return self;
+}
 
 - (void)openHistoryPage {
-  [self openInternalPageWithURLString:kHistoryPageURLString
+  [owner_ openInternalPageWithURLString:kHistoryPageURLString
                                 title:@"History"
-                                 html:[self historyPageHTML]];
+                                 html:[owner_ historyPageHTML]];
 }
 
 - (void)openSettingsPage {
-  [self openSettingsPageForBrowser:nullptr];
+  [owner_ openSettingsPageForBrowser:nullptr];
 }
 
 - (void)openSettingsPageForBrowser:(CefRefPtr<CefBrowser>)browser {
-  [self openInternalPageWithURLString:kSettingsPageURLString
+  [owner_ openInternalPageWithURLString:kSettingsPageURLString
                                 title:@"Settings"
-                                 html:[self settingsPageHTML]
+                                 html:[owner_ settingsPageHTML]
                               browser:browser];
 }
 
 - (void)openModuleSettingsPageForIdentifier:(NSString*)moduleIdentifier {
-  [self openModuleSettingsPageForIdentifier:moduleIdentifier browser:nullptr];
+  [owner_ openModuleSettingsPageForIdentifier:moduleIdentifier browser:nullptr];
 }
 
 - (void)openModuleSettingsPageForIdentifier:(NSString*)moduleIdentifier browser:(CefRefPtr<CefBrowser>)browser {
-  NSString* normalizedIdentifier = [moduleSettingsRouteResolver_ normalizedModuleIdentifier:moduleIdentifier];
+  NSString* normalizedIdentifier = [owner_->moduleSettingsRouteResolver_ normalizedModuleIdentifier:moduleIdentifier];
   NSString* urlString = [NSString stringWithFormat:@"babelchrome://settings/%@",
-                                                   [self pathEscapedString:normalizedIdentifier]];
-  [self openInternalPageWithURLString:urlString
+                                                   [owner_ pathEscapedString:normalizedIdentifier]];
+  [owner_ openInternalPageWithURLString:urlString
                                 title:@"Module Settings"
-                                 html:[self moduleSettingsPageHTMLForIdentifier:normalizedIdentifier]
+                                 html:[owner_ moduleSettingsPageHTMLForIdentifier:normalizedIdentifier]
                               browser:browser];
 }
 
 - (void)openExtensionsPage {
-  [self openExtensionsPageForBrowser:nullptr];
+  [owner_ openExtensionsPageForBrowser:nullptr];
 }
 
 - (void)openExtensionsPageForBrowser:(CefRefPtr<CefBrowser>)browser {
-  [self openInternalPageWithURLString:kExtensionsPageURLString
+  [owner_ openInternalPageWithURLString:kExtensionsPageURLString
                                 title:@"Extensions"
-                                 html:[self extensionsPageHTML]
+                                 html:[owner_ extensionsPageHTML]
                               browser:browser];
 }
 
 - (void)openModulesPage {
-  [self openModulesPageForBrowser:nullptr];
+  [owner_ openModulesPageForBrowser:nullptr];
 }
 
 - (void)openModulesPageForBrowser:(CefRefPtr<CefBrowser>)browser {
-  [self openInternalPageWithURLString:kModulesPageURLString
+  [owner_ openInternalPageWithURLString:kModulesPageURLString
                                 title:@"Modules"
-                                 html:[self modulesPageHTML]
+                                 html:[owner_ modulesPageHTML]
                               browser:browser];
 }
 
 - (NSString*)modulesPageHTML {
-  return [moduleInternalPageHTMLBuilder_ modulesPageHTML];
+  return [owner_->moduleInternalPageHTMLBuilder_ modulesPageHTML];
 }
 
 - (NSString*)moduleDetailsPageHTMLForIdentifier:(NSString*)moduleIdentifier {
-  return [moduleInternalPageHTMLBuilder_ moduleDetailsPageHTMLForIdentifier:moduleIdentifier];
+  return [owner_->moduleInternalPageHTMLBuilder_ moduleDetailsPageHTMLForIdentifier:moduleIdentifier];
 }
 
 - (NSString*)moduleUpdatesPageHTML {
-  return [moduleInternalPageHTMLBuilder_ moduleUpdatesPageHTML];
+  return [owner_->moduleInternalPageHTMLBuilder_ moduleUpdatesPageHTML];
 }
 
 - (void)openPHPModuleWithIdentifier:(NSString*)moduleIdentifier route:(NSString*)route {
-  [self openPHPModuleWithIdentifier:moduleIdentifier
+  [owner_ openPHPModuleWithIdentifier:moduleIdentifier
                               route:route
                     sourceURLString:nil
                  requestedURLString:[NSString stringWithFormat:@"babelchrome://modules/%@/%@",
@@ -89,19 +98,19 @@
                                                              sourceURLString:sourceURLString
                                                                        error:&error];
   if (!moduleURL) {
-    [moduleUIActionCoordinator_ showModuleActionAlertWithError:error];
+    [owner_->moduleUIActionCoordinator_ showModuleActionAlertWithError:error];
     return;
   }
 
-  BabelBrowserGroup* group = [self targetGroupForModuleIdentifier:moduleIdentifier
-                                                    fallbackGroup:selectedGroup_];
-  [self selectGroup:group];
-  BabelBrowserTab* tab = [self createTabForURL:moduleURL.absoluteString
+  BabelBrowserGroup* group = [owner_ targetGroupForModuleIdentifier:moduleIdentifier
+                                                    fallbackGroup:owner_->selectedGroup_];
+  [owner_ selectGroup:group];
+  BabelBrowserTab* tab = [owner_ createTabForURL:moduleURL.absoluteString
                                        inGroup:group
-                                     parentTab:selectedTab_];
+                                     parentTab:owner_->selectedTab_];
   tab.requestedURLString = requestedURLString.length > 0 ? requestedURLString : moduleURL.absoluteString;
-  [self saveGroupsState];
-  [self showMainWindow];
+  [owner_ saveGroupsState];
+  [owner_ showMainWindow];
 }
 
 - (BOOL)openPHPModuleURLString:(NSString*)urlString {
@@ -111,10 +120,10 @@
   }
 
   NSError* error = nil;
-  NSDictionary* moduleRoute = [moduleActionService_ moduleRouteForBabelChromeComponents:components error:&error];
+  NSDictionary* moduleRoute = [owner_->moduleActionService_ moduleRouteForBabelChromeComponents:components error:&error];
   if (!moduleRoute) {
     if (error) {
-      [moduleUIActionCoordinator_ showModuleActionAlertWithError:error];
+      [owner_->moduleUIActionCoordinator_ showModuleActionAlertWithError:error];
     }
     return NO;
   }
@@ -126,7 +135,7 @@
     return NO;
   }
 
-  [self openPHPModuleWithIdentifier:moduleIdentifier
+  [owner_ openPHPModuleWithIdentifier:moduleIdentifier
                               route:route
                     sourceURLString:urlString
                  requestedURLString:urlString];
@@ -134,54 +143,54 @@
 }
 
 - (void)importProjectLauncherJSONFromPanel {
-  NSURL* importURL = [projectLauncherJSONImporter_ projectLauncherImportURLFromPanel];
+  NSURL* importURL = [owner_->projectLauncherJSONImporter_ projectLauncherImportURLFromPanel];
   if (!importURL) {
     return;
   }
 
-  BabelBrowserGroup* group = [self targetGroupForModuleIdentifier:@"babelforge.project-launcher"
-                                                    fallbackGroup:selectedGroup_];
-  [self selectGroup:group];
-  BabelBrowserTab* tab = [self createTabForURL:importURL.absoluteString
+  BabelBrowserGroup* group = [owner_ targetGroupForModuleIdentifier:@"babelforge.project-launcher"
+                                                    fallbackGroup:owner_->selectedGroup_];
+  [owner_ selectGroup:group];
+  BabelBrowserTab* tab = [owner_ createTabForURL:importURL.absoluteString
                                        inGroup:group
-                                     parentTab:selectedTab_];
+                                     parentTab:owner_->selectedTab_];
   tab.requestedURLString = @"babelchrome://project-launcher";
-  [self saveGroupsState];
-  [self showMainWindow];
+  [owner_ saveGroupsState];
+  [owner_ showMainWindow];
 }
 - (BOOL)handleInternalNavigationURLString:(NSString*)urlString {
-  return [self handleInternalNavigationURLString:urlString browser:nullptr];
+  return [owner_ handleInternalNavigationURLString:urlString browser:nullptr];
 }
 
 - (BOOL)navigateBrowser:(CefRefPtr<CefBrowser>)browser toInternalURLStringInSameTab:(NSString*)urlString {
-  BabelBrowserTab* tab = [self tabForBrowser:browser];
-  if (!tab || ![stableServerURLResolver_ stableServerURLStringRequestsStart:urlString]) {
+  BabelBrowserTab* tab = [owner_ tabForBrowser:browser];
+  if (!tab || ![owner_->stableServerURLResolver_ stableServerURLStringRequestsStart:urlString]) {
     return NO;
   }
 
-  NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:urlString];
+  NSString* navigationURLString = [owner_ navigationURLStringForStableBabelChromeURLString:urlString];
   if (navigationURLString.length == 0) {
     return NO;
   }
 
   NSString* requestedURLString =
-      [stableServerURLResolver_ stableURLStringByRemovingInternalQueryParameters:urlString];
+      [owner_->stableServerURLResolver_ stableURLStringByRemovingInternalQueryParameters:urlString];
   NSArray<NSString*>* refreshURLStrings =
-      [stableServerURLResolver_ refreshURLStringsForStableURLString:urlString];
+      [owner_->stableServerURLResolver_ refreshURLStringsForStableURLString:urlString];
   if (refreshURLStrings.count > 0) {
-    [runtimeRefreshCoordinator_ enqueueRefreshURLStrings:refreshURLStrings
+    [owner_->runtimeRefreshCoordinator_ enqueueRefreshURLStrings:refreshURLStrings
                                     forBrowserIdentifier:browser->GetIdentifier()];
   }
 
   tab.requestedURLString = requestedURLString;
   tab.urlString = navigationURLString;
   browser->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
-  [self saveGroupsState];
+  [owner_ saveGroupsState];
   return YES;
 }
 
 - (BOOL)handleInternalNavigationURLString:(NSString*)urlString browser:(CefRefPtr<CefBrowser>)browser {
-  if (browser && [self navigateBrowser:browser toInternalURLStringInSameTab:urlString]) {
+  if (browser && [owner_ navigateBrowser:browser toInternalURLStringInSameTab:urlString]) {
     return YES;
   }
 
@@ -193,168 +202,168 @@
   NSString* commandName = components.host ?: @"";
   if ([commandName isEqualToString:@"settings"]) {
     NSString* moduleSettingsIdentifier =
-        [moduleSettingsRouteResolver_ moduleIdentifierFromSettingsComponents:components];
+        [owner_->moduleSettingsRouteResolver_ moduleIdentifierFromSettingsComponents:components];
     if (moduleSettingsIdentifier.length > 0) {
       BabelInternalSettingsNavigationResult* result =
-          [internalSettingsNavigationHandler_
+          [owner_->internalSettingsNavigationHandler_
               applyModuleSettingsComponents:components
-                            moduleIdentifier:[moduleSettingsRouteResolver_
+                            moduleIdentifier:[owner_->moduleSettingsRouteResolver_
                                                  normalizedModuleIdentifier:moduleSettingsIdentifier]];
       if (result.markdownThemeDidChange) {
-        [self reloadMarkdownViewerTabsUsingCurrentTheme];
+        [owner_ reloadMarkdownViewerTabsUsingCurrentTheme];
       }
-      [self openModuleSettingsPageForIdentifier:moduleSettingsIdentifier browser:browser];
+      [owner_ openModuleSettingsPageForIdentifier:moduleSettingsIdentifier browser:browser];
       return YES;
     }
 
     BabelInternalSettingsNavigationResult* result =
-        [internalSettingsNavigationHandler_ applyApplicationSettingsComponents:components];
+        [owner_->internalSettingsNavigationHandler_ applyApplicationSettingsComponents:components];
     if (result.markdownThemeDidChange) {
-      [self reloadMarkdownViewerTabsUsingCurrentTheme];
+      [owner_ reloadMarkdownViewerTabsUsingCurrentTheme];
     }
     if (result.appearanceThemeDidChange) {
-      [self applyThemeColors];
-      [self layoutTabItemsSelectingLastTab:NO];
-      [self layoutGroupItems];
+      [owner_ applyThemeColors];
+      [owner_ layoutTabItemsSelectingLastTab:NO];
+      [owner_ layoutGroupItems];
     }
-    [self openSettingsPageForBrowser:browser];
+    [owner_ openSettingsPageForBrowser:browser];
     return YES;
   }
 
   if ([commandName isEqualToString:@"extensions"]) {
     BabelInternalExtensionsNavigationResult* result =
-        [internalExtensionsNavigationHandler_ handleExtensionsComponents:components];
+        [owner_->internalExtensionsNavigationHandler_ handleExtensionsComponents:components];
     if (result.searchQuery.length > 0) {
-      [self openChromeWebStoreSearchForQuery:result.searchQuery];
+      [owner_ openChromeWebStoreSearchForQuery:result.searchQuery];
     }
 
     if (result.shouldRestartApplication) {
-      [self restartApplication];
+      [owner_ restartApplication];
       return YES;
     }
 
-    [self openExtensionsPageForBrowser:browser];
+    [owner_ openExtensionsPageForBrowser:browser];
     return YES;
   }
 
   if ([commandName isEqualToString:@"modules"]) {
     BabelInternalNavigationAction* action =
-        [internalNavigationActionParser_ modulesActionFromComponents:components];
+        [owner_->internalNavigationActionParser_ modulesActionFromComponents:components];
     BabelInternalModuleNavigationResult* result =
-        [internalModuleNavigationHandler_ handleModuleAction:action];
+        [owner_->internalModuleNavigationHandler_ handleModuleAction:action];
     if (result.fileTypeCapabilitiesDidChange) {
-      [self refreshBabelChromeFileTypeCapabilities];
+      [owner_ refreshBabelChromeFileTypeCapabilities];
     }
 
     if ([result.destination isEqualToString:BabelInternalModuleNavigationDestinationUpdates]) {
-      [self openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
+      [owner_ openInternalPageWithURLString:@"babelchrome://modules?checkUpdates=1"
                                     title:@"Module Updates"
-                                     html:[self moduleUpdatesPageHTML]
+                                     html:[owner_ moduleUpdatesPageHTML]
                                   browser:browser];
       return YES;
     }
 
     if ([result.destination isEqualToString:BabelInternalModuleNavigationDestinationDetails]) {
       NSString* urlString = [NSString stringWithFormat:@"babelchrome://modules?module=%@",
-                                                       [self queryEscapedString:result.moduleIdentifier]];
-      [self openInternalPageWithURLString:urlString
+                                                       [owner_ queryEscapedString:result.moduleIdentifier]];
+      [owner_ openInternalPageWithURLString:urlString
                                     title:@"Module"
-                                     html:[self moduleDetailsPageHTMLForIdentifier:result.moduleIdentifier]
+                                     html:[owner_ moduleDetailsPageHTMLForIdentifier:result.moduleIdentifier]
                                   browser:browser];
       return YES;
     }
 
     if ([result.destination isEqualToString:BabelInternalModuleNavigationDestinationOpenModule]) {
-      [self openPHPModuleWithIdentifier:result.moduleIdentifier route:result.route];
+      [owner_ openPHPModuleWithIdentifier:result.moduleIdentifier route:result.route];
       return YES;
     }
 
     if ([result.destination isEqualToString:BabelInternalModuleNavigationDestinationModules]) {
-      [self openModulesPageForBrowser:browser];
+      [owner_ openModulesPageForBrowser:browser];
       return YES;
     }
 
-    [self openModulesPageForBrowser:browser];
+    [owner_ openModulesPageForBrowser:browser];
     return YES;
   }
 
   if ([commandName isEqualToString:@"project-launcher"]) {
     if ([components.path isEqualToString:@"/import-config"]) {
-      [self importProjectLauncherJSONFromPanel];
+      [owner_ importProjectLauncherJSONFromPanel];
       return YES;
     }
   }
 
   if ([commandName isEqualToString:@"history"]) {
     BabelInternalNavigationAction* action =
-        [internalNavigationActionParser_ historyActionFromComponents:components];
+        [owner_->internalNavigationActionParser_ historyActionFromComponents:components];
     if ([action.name isEqualToString:BabelInternalNavigationActionReopen]) {
       NSInteger closedTabIndex = action.value.integerValue;
       if (closedTabIndex >= 0) {
-        [self reopenClosedTabAtIndex:(NSUInteger)closedTabIndex];
+        [owner_ reopenClosedTabAtIndex:(NSUInteger)closedTabIndex];
       }
       return YES;
     }
 
-    [self openHistoryPage];
+    [owner_ openHistoryPage];
     return YES;
   }
 
   if ([commandName isEqualToString:@"open"]) {
     NSURL* commandURL = [NSURL URLWithString:urlString];
     if (commandURL) {
-      [self openBabelChromeCommandURL:commandURL];
+      [owner_ openBabelChromeCommandURL:commandURL];
     } else {
-      [self openCompactBabelChromeCommandString:urlString];
+      [owner_ openCompactBabelChromeCommandString:urlString];
     }
     return YES;
   }
 
-  if ([stableViewerURLResolver_ isStableViewerURLString:urlString]) {
-    [self navigateSelectedTabToViewerURLString:urlString];
+  if ([owner_->stableViewerURLResolver_ isStableViewerURLString:urlString]) {
+    [owner_ navigateSelectedTabToViewerURLString:urlString];
     return YES;
   }
 
-  if ([self openPHPModuleURLString:urlString]) {
+  if ([owner_ openPHPModuleURLString:urlString]) {
     return YES;
   }
 
   return NO;
 }
 - (void)navigateSelectedTabToViewerURLString:(NSString*)urlString {
-  NSString* requestedURLString = [self stableViewerURLStringForSupportedURLString:urlString] ?: urlString;
-  NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
+  NSString* requestedURLString = [owner_ stableViewerURLStringForSupportedURLString:urlString] ?: urlString;
+  NSString* navigationURLString = [owner_ navigationURLStringForStableBabelChromeURLString:requestedURLString];
   if (navigationURLString.length == 0) {
     return;
   }
 
-  BabelBrowserGroup* group = selectedGroup_ ?: [self ensureGroupNamed:kDefaultGroupName];
-  [self selectGroup:group];
+  BabelBrowserGroup* group = owner_->selectedGroup_ ?: [owner_ ensureGroupNamed:kDefaultGroupName];
+  [owner_ selectGroup:group];
 
-  if (!selectedTab_) {
-    BabelBrowserTab* tab = [self createTabForURL:navigationURLString inGroup:group];
+  if (!owner_->selectedTab_) {
+    BabelBrowserTab* tab = [owner_ createTabForURL:navigationURLString inGroup:group];
     tab.requestedURLString = requestedURLString;
-    [self saveGroupsState];
+    [owner_ saveGroupsState];
     return;
   }
 
-  selectedTab_.urlString = navigationURLString;
-  selectedTab_.requestedURLString = requestedURLString;
-  [self updateAddressBarForTab:selectedTab_];
+  owner_->selectedTab_.urlString = navigationURLString;
+  owner_->selectedTab_.requestedURLString = requestedURLString;
+  [owner_ updateAddressBarForTab:owner_->selectedTab_];
 
-  if ([selectedTab_ browser]) {
-    [selectedTab_ browser]->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
+  if ([owner_->selectedTab_ browser]) {
+    [owner_->selectedTab_ browser]->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
   } else {
-    [self selectTab:selectedTab_];
+    [owner_ selectTab:owner_->selectedTab_];
   }
 
-  [self saveGroupsState];
+  [owner_ saveGroupsState];
 }
 
 - (void)openInternalPageWithURLString:(NSString*)internalURLString
                                 title:(NSString*)title
                                  html:(NSString*)html {
-  [self openInternalPageWithURLString:internalURLString
+  [owner_ openInternalPageWithURLString:internalURLString
                                 title:title
                                  html:html
                               browser:nullptr];
@@ -364,37 +373,37 @@
                                 title:(NSString*)title
                                  html:(NSString*)html
                               browser:(CefRefPtr<CefBrowser>)browser {
-  [internalPageNavigator_ openInternalPageWithURLString:internalURLString
+  [owner_->internalPageNavigator_ openInternalPageWithURLString:internalURLString
                                                  title:title
                                                   html:html
                                                browser:browser];
 }
 
 - (NSString*)dataURLStringForHTML:(NSString*)html {
-  return [htmlDataURLBuilder_ dataURLStringForHTML:html];
+  return [owner_->htmlDataURLBuilder_ dataURLStringForHTML:html];
 }
 - (NSString*)historyPageHTML {
-  return [internalPageHTMLComposer_ historyPageHTMLWithGroups:groups_];
+  return [owner_->internalPageHTMLComposer_ historyPageHTMLWithGroups:owner_->groups_];
 }
 
 - (NSString*)settingsPageHTML {
-  return [internalPageHTMLComposer_ settingsPageHTMLWithDefaultURLString:BabelChromeConfiguration.defaultURLString
+  return [owner_->internalPageHTMLComposer_ settingsPageHTMLWithDefaultURLString:BabelChromeConfiguration.defaultURLString
                                                          appearanceTheme:[BabelTheme.sharedTheme appearanceMode]
-                                                longQuitShortcutEnabled:[browserSettingsStore_ longQuitShortcutEnabled]
-                                                     tabOpeningStrategy:[self tabOpeningStrategy]
-                                                 addressSuggestionsMode:[self addressSuggestionsMode]];
+                                                longQuitShortcutEnabled:[owner_->browserSettingsStore_ longQuitShortcutEnabled]
+                                                     tabOpeningStrategy:[owner_ tabOpeningStrategy]
+                                                 addressSuggestionsMode:[owner_ addressSuggestionsMode]];
 }
 
 - (NSString*)moduleSettingsPageHTMLForIdentifier:(NSString*)moduleIdentifier {
-  NSString* normalizedIdentifier = [moduleSettingsRouteResolver_ normalizedModuleIdentifier:moduleIdentifier];
-  NSString* moduleName = [moduleSettingsRouteResolver_ moduleNameForIdentifier:normalizedIdentifier] ?: normalizedIdentifier;
-  return [internalPageHTMLComposer_ moduleSettingsPageHTMLForIdentifier:normalizedIdentifier
+  NSString* normalizedIdentifier = [owner_->moduleSettingsRouteResolver_ normalizedModuleIdentifier:moduleIdentifier];
+  NSString* moduleName = [owner_->moduleSettingsRouteResolver_ moduleNameForIdentifier:normalizedIdentifier] ?: normalizedIdentifier;
+  return [owner_->internalPageHTMLComposer_ moduleSettingsPageHTMLForIdentifier:normalizedIdentifier
                                                              moduleName:moduleName
-                                                          markdownTheme:[self markdownTheme]];
+                                                          markdownTheme:[owner_ markdownTheme]];
 }
 
 - (NSString*)extensionsPageHTML {
-  return [internalPageHTMLComposer_ extensionsPageHTML];
+  return [owner_->internalPageHTMLComposer_ extensionsPageHTML];
 }
 - (void)openChromeWebStoreSearchForQuery:(NSString*)query {
   NSString* trimmedQuery = [query stringByTrimmingCharactersInSet:
@@ -404,8 +413,8 @@
   }
 
   NSString* urlString = [NSString stringWithFormat:@"https://chromewebstore.google.com/search/%@",
-                                                   [self pathEscapedString:trimmedQuery]];
-  [self openURLStringInNewTab:urlString];
+                                                   [owner_ pathEscapedString:trimmedQuery]];
+  [owner_ openURLStringInNewTab:urlString];
 }
 
 - (void)showLocalServiceStartupAlert:(NSError*)error {
@@ -416,32 +425,31 @@
   [alert runModal];
 }
 - (NSString*)queryEscapedString:(NSString*)value {
-  return [browserStringFormatter_ queryEscapedString:value];
+  return [owner_->browserStringFormatter_ queryEscapedString:value];
 }
 
 - (NSString*)pathEscapedString:(NSString*)value {
-  return [browserStringFormatter_ pathEscapedString:value];
+  return [owner_->browserStringFormatter_ pathEscapedString:value];
 }
 
 - (NSString*)trashIconHTML {
-  return [internalPageAssetProvider_ trashIconHTML];
+  return [owner_->internalPageAssetProvider_ trashIconHTML];
 }
 
 - (NSString*)resourceSVGIconHTMLNamed:(NSString*)resourceName fallback:(NSString*)fallbackHTML {
-  return [internalPageAssetProvider_ resourceSVGIconHTMLNamed:resourceName fallback:fallbackHTML];
+  return [owner_->internalPageAssetProvider_ resourceSVGIconHTMLNamed:resourceName fallback:fallbackHTML];
 }
 
 - (void)restartApplication {
   NSString* bundlePath = NSBundle.mainBundle.bundlePath;
-  [applicationRelauncher_ scheduleRelaunchForBundlePath:bundlePath
+  [owner_->applicationRelauncher_ scheduleRelaunchForBundlePath:bundlePath
                                       processIdentifier:NSProcessInfo.processInfo.processIdentifier];
-  [self requestApplicationTermination];
+  [owner_ requestApplicationTermination];
 }
 
 - (NSString*)internalPageHTMLWithTitle:(NSString*)title body:(NSString*)body {
-  return [internalPageRenderer_ internalPageHTMLWithTitle:title body:body];
+  return [owner_->internalPageRenderer_ internalPageHTMLWithTitle:title body:body];
 }
 
-@end
 
-#pragma clang diagnostic pop
+@end

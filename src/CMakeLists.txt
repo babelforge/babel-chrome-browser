@@ -240,15 +240,25 @@ set(BABEL_CHROME_SOURCES
   Browser/DeveloperToolsTargetResolver.mm
   Browser/BrowserWindowController.h
   Browser/BrowserWindowController.mm
-  Browser/BrowserWindowController+AddressAndSuggestions.mm
-  Browser/BrowserWindowController+BrowserAttachment.mm
-  Browser/BrowserWindowController+BrowserControls.mm
-  Browser/BrowserWindowController+DeveloperToolsEmbedding.mm
-  Browser/BrowserWindowController+GroupsAndTabs.mm
-  Browser/BrowserWindowController+InternalPages.mm
-  Browser/BrowserWindowController+LocalDrop.mm
-  Browser/BrowserWindowController+URLRouting.mm
-  Browser/BrowserWindowController+WindowLifecycle.mm
+  Browser/BabelBrowserWindowAddressAndSuggestionsActions.h
+  Browser/BabelBrowserWindowAddressAndSuggestionsActions.mm
+  Browser/BabelBrowserWindowBrowserAttachmentActions.h
+  Browser/BabelBrowserWindowBrowserAttachmentActions.mm
+  Browser/BabelBrowserWindowBrowserControlsActions.h
+  Browser/BabelBrowserWindowBrowserControlsActions.mm
+  Browser/BabelBrowserWindowDeveloperToolsActions.h
+  Browser/BabelBrowserWindowDeveloperToolsActions.mm
+  Browser/BabelBrowserWindowGroupsAndTabsActions.h
+  Browser/BabelBrowserWindowGroupsAndTabsActions.mm
+  Browser/BabelBrowserWindowInternalPagesActions.h
+  Browser/BabelBrowserWindowInternalPagesActions.mm
+  Browser/BabelBrowserWindowLocalDropActions.h
+  Browser/BabelBrowserWindowLocalDropActions.mm
+  Browser/BabelBrowserWindowURLRoutingActions.h
+  Browser/BabelBrowserWindowURLRoutingActions.mm
+  Browser/BabelBrowserWindowLifecycleActions.h
+  Browser/BabelBrowserWindowLifecycleActions.mm
+  Browser/BrowserWindowControllerPrivate.h
   Configuration/Configuration.h
   Configuration/Configuration.mm
   LocalServices/LocalServiceHost.h

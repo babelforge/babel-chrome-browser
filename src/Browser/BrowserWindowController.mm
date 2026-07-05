@@ -1,4 +1,13 @@
-#import "Browser/BrowserWindowController+Private.h"
+#import "Browser/BrowserWindowControllerPrivate.h"
+#import "Browser/BabelBrowserWindowAddressAndSuggestionsActions.h"
+#import "Browser/BabelBrowserWindowBrowserAttachmentActions.h"
+#import "Browser/BabelBrowserWindowBrowserControlsActions.h"
+#import "Browser/BabelBrowserWindowDeveloperToolsActions.h"
+#import "Browser/BabelBrowserWindowGroupsAndTabsActions.h"
+#import "Browser/BabelBrowserWindowInternalPagesActions.h"
+#import "Browser/BabelBrowserWindowLifecycleActions.h"
+#import "Browser/BabelBrowserWindowLocalDropActions.h"
+#import "Browser/BabelBrowserWindowURLRoutingActions.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincomplete-implementation"
@@ -24,6 +33,15 @@
 
   self = [super initWithWindow:window];
   if (self) {
+    addressAndSuggestionsActions_ = [[BabelBrowserWindowAddressAndSuggestionsActions alloc] initWithOwner:self];
+    browserAttachmentActions_ = [[BabelBrowserWindowBrowserAttachmentActions alloc] initWithOwner:self];
+    browserControlsActions_ = [[BabelBrowserWindowBrowserControlsActions alloc] initWithOwner:self];
+    developerToolsActions_ = [[BabelBrowserWindowDeveloperToolsActions alloc] initWithOwner:self];
+    groupsAndTabsActions_ = [[BabelBrowserWindowGroupsAndTabsActions alloc] initWithOwner:self];
+    internalPagesActions_ = [[BabelBrowserWindowInternalPagesActions alloc] initWithOwner:self];
+    lifecycleActions_ = [[BabelBrowserWindowLifecycleActions alloc] initWithOwner:self];
+    localDropActions_ = [[BabelBrowserWindowLocalDropActions alloc] initWithOwner:self];
+    urlRoutingActions_ = [[BabelBrowserWindowURLRoutingActions alloc] initWithOwner:self];
     groups_ = [NSMutableArray array];
     addressFieldLayoutCalculator_ = [[BabelAddressFieldLayoutCalculator alloc] init];
     addressFieldNavigationResolver_ = [[BabelAddressFieldNavigationResolver alloc] init];
@@ -657,6 +675,44 @@ enforceLiveBrowserLimitHandler:^{
     [self restoreSessionByPriority];
   }
   return self;
+}
+
+- (NSArray<id>*)browserWindowActionTargets {
+  return @[
+    lifecycleActions_,
+    groupsAndTabsActions_,
+    urlRoutingActions_,
+    localDropActions_,
+    internalPagesActions_,
+    browserControlsActions_,
+    browserAttachmentActions_,
+    developerToolsActions_,
+    addressAndSuggestionsActions_
+  ];
+}
+
+- (BOOL)respondsToSelector:(SEL)selector {
+  if ([super respondsToSelector:selector]) {
+    return YES;
+  }
+
+  for (id target in [self browserWindowActionTargets]) {
+    if ([target respondsToSelector:selector]) {
+      return YES;
+    }
+  }
+
+  return NO;
+}
+
+- (id)forwardingTargetForSelector:(SEL)selector {
+  for (id target in [self browserWindowActionTargets]) {
+    if ([target respondsToSelector:selector]) {
+      return target;
+    }
+  }
+
+  return [super forwardingTargetForSelector:selector];
 }
 
 @end
