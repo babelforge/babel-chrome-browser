@@ -904,6 +904,26 @@ The controller may still choose the destination group and tab. It must not own J
 
 The controller may still decide when a tab should be created or restored. It must not duplicate content view attachment calls.
 
+## Current Pass Status
+
+The July 2026 pass treated every remaining `BrowserWindowController+*.inc.mm` fragment. The pass intentionally did not remove every fragment, because the remaining code is still the place where AppKit state, CEF browser state, and selected group/tab state meet.
+
+Current fragment sizes after this pass:
+
+| Fragment | Lines | Current status |
+| --- | ---: | --- |
+| `BrowserWindowController+BrowserAttachment.inc.mm` | 131 | Small CEF/AppKit attachment boundary; keep as controller callback glue. |
+| `BrowserWindowController+DeveloperToolsEmbedding.inc.mm` | 174 | DevTools target lookup and layout math are extracted; remaining code coordinates visible browser state. |
+| `BrowserWindowController+LocalDrop.inc.mm` | 176 | Local-drop parsing, support resolution, bridge generation, and logging are extracted; remaining code bridges native CEF/AppKit callbacks. |
+| `BrowserWindowController+BrowserControls.inc.mm` | 220 | Viewer source actions and reload duplication are extracted/cleaned; remaining code maps commands to selected-tab actions. |
+| `BrowserWindowController+URLRouting.inc.mm` | 297 | Stable server/viewer/module URL resolution is extracted; remaining code chooses tab/group side effects. |
+| `BrowserWindowController+WindowLifecycle.inc.mm` | 392 | View construction, theme application, layout calculators, state store, and lifecycle dispatcher are extracted; remaining code preserves startup/shutdown ordering. |
+| `BrowserWindowController+InternalPages.inc.mm` | 477 | Renderers, action handlers, module settings route resolution, and page data sources are extracted; remaining code is the internal URL router and tab replacement coordinator. |
+| `BrowserWindowController+AddressAndSuggestions.inc.mm` | 489 | Address navigation request resolution, metadata application, pasteboard, favicon store, and omnibox helpers are extracted; remaining code is field delegate and CEF callback coordination. |
+| `BrowserWindowController+GroupsAndTabs.inc.mm` | 792 | Group/tab lookup, factories, session store, drag coordinators, creation schedulers, insertion/move policies, closed-tab planning, default reset, and live browser limit services are extracted; remaining code is the high-risk selected group/tab/AppKit/CEF orchestration core. |
+
+Do not treat the line count alone as the extraction target. The next extraction should only happen when it removes a decision from the controller without hiding AppKit/CEF side effects behind a callback-heavy service.
+
 ## Extraction Candidates
 
 ### Internal Navigation Action Routing
