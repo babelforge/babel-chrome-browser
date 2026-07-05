@@ -20,6 +20,7 @@
 #import "Browser/BrowserTabInsertionCoordinator.h"
 #import "Browser/BrowserTabMetadataUpdater.h"
 #import "Browser/BrowserTabMoveCoordinator.h"
+#import "Browser/BrowserThemeApplier.h"
 #import "Browser/ChromeCommandParser.h"
 #import "Browser/ClosedTabRestorationPlanner.h"
 #import "Browser/DeveloperToolsDockingPolicy.h"
@@ -208,6 +209,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
   BabelBrowserTabMetadataUpdater* browserTabMetadataUpdater_;
   BabelBrowserTabMoveCoordinator* browserTabMoveCoordinator_;
+  BabelBrowserThemeApplier* browserThemeApplier_;
   BabelBrowserStringFormatter* browserStringFormatter_;
   BabelClosedTabRestorationPlanner* closedTabRestorationPlanner_;
   BabelGroupListCoordinator* groupListCoordinator_;
@@ -377,6 +379,7 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     browserPresentationFormatter_ = [[BabelBrowserPresentationFormatter alloc] init];
     browserTabCollection_ = [[BabelBrowserTabCollection alloc] init];
     browserTabMetadataUpdater_ = [[BabelBrowserTabMetadataUpdater alloc] init];
+    browserThemeApplier_ = [[BabelBrowserThemeApplier alloc] init];
     browserStringFormatter_ = [[BabelBrowserStringFormatter alloc] init];
     BabelTabPlacementPolicy* tabPlacementPolicy = [[BabelTabPlacementPolicy alloc] init];
     browserTabInsertionCoordinator_ =

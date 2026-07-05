@@ -50,6 +50,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserTabMetadataUpdater.mm
   Browser/BrowserTabMoveCoordinator.h
   Browser/BrowserTabMoveCoordinator.mm
+  Browser/BrowserThemeApplier.h
+  Browser/BrowserThemeApplier.mm
   Browser/ChromeCommandParser.h
   Browser/ChromeCommandParser.mm
   Browser/ClosedTabRestorationPlanner.h

@@ -222,50 +222,18 @@
 }
 
 - (void)applyThemeColors {
-  BabelTheme* theme = BabelTheme.sharedTheme;
-  rootView_.appearance = [theme forcedAppearance];
-  sidebarView_.layer.backgroundColor = [theme cgColorForToken:@"sidebar.background" view:sidebarView_];
-  rightView_.layer.backgroundColor = [theme cgColorForToken:@"address.panel.background" view:rightView_];
-  tabsBarPanel_.layer.backgroundColor = [theme cgColorForToken:@"tabsBar.background" view:tabsBarPanel_];
-  addressBarPanel_.layer.backgroundColor =
-      [theme cgColorForToken:@"address.panel.background" view:addressBarPanel_];
-  addressLabel_.textColor = [theme colorForToken:@"address.title" view:addressLabel_];
-  addressTextFieldContainer_.layer.backgroundColor =
-      [theme cgColorForToken:@"address.container.background" view:addressTextFieldContainer_];
-  addressTextFieldContainer_.layer.borderColor =
-      [theme cgColorForToken:@"address.border" view:addressTextFieldContainer_];
-  urlTextField_.textColor = [theme colorForToken:@"address.text" view:urlTextField_];
-  omniboxSuggestionsPanel_.layer.backgroundColor =
-      [theme cgColorForToken:@"omnibox.panel.background" view:omniboxSuggestionsPanel_];
-  omniboxSuggestionsPanel_.layer.borderColor =
-      [theme cgColorForToken:@"omnibox.border" view:omniboxSuggestionsPanel_];
-  linkStatusBarView_.layer.backgroundColor =
-      [theme cgColorForToken:@"linkStatus.background" view:linkStatusBarView_];
-  linkStatusBarView_.layer.borderColor =
-      [theme cgColorForToken:@"linkStatus.border" view:linkStatusBarView_];
-  linkStatusBarLabel_.textColor = [theme colorForToken:@"linkStatus.text" view:linkStatusBarLabel_];
-
-  for (BabelBrowserGroup* group in groups_) {
-    [group.groupItemView setNeedsDisplay:YES];
-    for (BabelBrowserTab* tab in group.tabs) {
-      tab.developerToolsPanelView.layer.backgroundColor =
-          [theme cgColorForToken:@"developerTools.panel.background" view:tab.developerToolsPanelView];
-      tab.developerToolsToolbarView.layer.backgroundColor =
-          [theme cgColorForToken:@"developerTools.toolbar.background" view:tab.developerToolsToolbarView];
-      tab.developerToolsResizeHandleView.layer.backgroundColor =
-          [theme cgColorForToken:@"developerTools.handle.background" view:tab.developerToolsResizeHandleView];
-      tab.developerToolsHostView.layer.backgroundColor =
-          [theme cgColorForToken:@"developerTools.panel.background" view:tab.developerToolsHostView];
-      [tab.developerToolsResizeHandleView setNeedsDisplay:YES];
-      [tab.tabItemView setNeedsDisplay:YES];
-    }
-  }
-
-  for (NSView* suggestionRow in omniboxSuggestionsPanel_.subviews) {
-    if ([suggestionRow respondsToSelector:@selector(setSuggestionHighlighted:)]) {
-      [suggestionRow setNeedsDisplay:YES];
-    }
-  }
+  [browserThemeApplier_ applyThemeToRootView:rootView_
+                                  sidebarView:sidebarView_
+                                    rightView:rightView_
+                                 tabsBarPanel:tabsBarPanel_
+                              addressBarPanel:addressBarPanel_
+                                 addressLabel:addressLabel_
+                    addressTextFieldContainer:addressTextFieldContainer_
+                                 urlTextField:urlTextField_
+                      omniboxSuggestionsPanel:omniboxSuggestionsPanel_
+                            linkStatusBarView:linkStatusBarView_
+                           linkStatusBarLabel:linkStatusBarLabel_
+                                       groups:groups_];
 }
 
 - (void)layoutInterfaceForCurrentSplitViewSize {
