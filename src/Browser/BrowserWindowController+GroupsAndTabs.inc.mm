@@ -253,16 +253,13 @@
 - (BabelBrowserTab*)makeTabForURL:(NSString*)urlString
                         identifier:(NSString*)identifier
                              title:(NSString*)title {
-  return [browserTabFactory_ makeTabForURL:urlString
-                                identifier:identifier
-                                     title:title
-                                hostBounds:pagesPanel_.bounds];
+  return [browserTabCreationCoordinator_ makeTabForURL:urlString
+                                            identifier:identifier
+                                                 title:title];
 }
 
 - (BabelBrowserTab*)createTabForURL:(NSString*)urlString inGroup:(BabelBrowserGroup*)group {
-  BabelBrowserTab* tab = [self makeTabForURL:urlString identifier:nil title:urlString];
-  [group.tabs addObject:tab];
-  [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
+  BabelBrowserTab* tab = [browserTabCreationCoordinator_ createTabForURL:urlString inGroup:group];
   [self selectGroup:group];
   [self selectTab:tab];
   [self saveGroupsState];
@@ -282,13 +279,10 @@
                 inGroup:(BabelBrowserGroup*)group
               parentTab:(BabelBrowserTab*)parentTab
    respectingUserStrategy:(BOOL)respectingUserStrategy {
-  BabelBrowserTab* tab = [self makeTabForURL:urlString identifier:nil title:urlString];
-  tab.parentTabIdentifier = parentTab.identifier;
-  [self insertTab:tab
-          inGroup:group
-        parentTab:parentTab
- respectingUserStrategy:respectingUserStrategy];
-  [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
+  BabelBrowserTab* tab = [browserTabCreationCoordinator_ createTabForURL:urlString
+                                                                 inGroup:group
+                                                               parentTab:parentTab
+                                                  respectingUserStrategy:respectingUserStrategy];
   [self selectGroup:group];
   [self selectTab:tab];
   [self saveGroupsState];
@@ -308,10 +302,9 @@
           inGroup:(BabelBrowserGroup*)group
         parentTab:(BabelBrowserTab*)parentTab
  respectingUserStrategy:(BOOL)respectingUserStrategy {
-  [browserTabInsertionCoordinator_ insertTab:tab
-                                     inGroup:group
-                                   parentTab:parentTab
-                                    strategy:[self tabOpeningStrategy]
+  [browserTabCreationCoordinator_ insertTab:tab
+                                    inGroup:group
+                                  parentTab:parentTab
                      respectingUserStrategy:respectingUserStrategy];
 }
 

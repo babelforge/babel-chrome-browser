@@ -19,6 +19,7 @@
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/BrowserStringFormatter.h"
 #import "Browser/BrowserTabCollection.h"
+#import "Browser/BrowserTabCreationCoordinator.h"
 #import "Browser/BrowserTabFactory.h"
 #import "Browser/BrowserTabInsertionCoordinator.h"
 #import "Browser/BrowserTabLookupService.h"
@@ -226,6 +227,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserPasteboardWriter* browserPasteboardWriter_;
   BabelBrowserPresentationFormatter* browserPresentationFormatter_;
   BabelBrowserTabCollection* browserTabCollection_;
+  BabelBrowserTabCreationCoordinator* browserTabCreationCoordinator_;
   BabelBrowserTabInsertionCoordinator* browserTabInsertionCoordinator_;
   BabelBrowserTabLookupService* browserTabLookupService_;
   BabelBrowserTabMetadataUpdater* browserTabMetadataUpdater_;
@@ -681,6 +683,15 @@ enforceLiveBrowserLimitHandler:^{
                                            layoutHandler:^{
                                              [weakSelf layoutGroupItems];
                                            }];
+    browserTabCreationCoordinator_ =
+        [[BabelBrowserTabCreationCoordinator alloc]
+            initWithTabFactory:browserTabFactory_
+          insertionCoordinator:browserTabInsertionCoordinator_
+            contentViewAttacher:tabContentViewAttacher_
+                     pagesPanel:pagesPanel_
+     tabOpeningStrategyProvider:^NSString*{
+       return [weakSelf tabOpeningStrategy];
+     }];
     internalPageNavigator_ =
         [[BabelInternalPageNavigator alloc]
             initWithPagesPanel:pagesPanel_
