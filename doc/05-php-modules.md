@@ -1,6 +1,6 @@
 # PHP Modules
 
-Navigation: [README](README.md) | [Previous: Features](04-features.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
+Navigation: [Previous: Features](04-features.md) | [README](README.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
 
 BabelChrome modules are installable PHP packages. They live outside the application bundle after installation and are discovered from:
 
@@ -294,4 +294,4 @@ From the meta workspace, prefer:
 
 The production shipper keeps module runtime files, Composer dependencies, compiled public assets, templates, and manifests. It excludes development-only files such as tests, source assets, caches, and `ai/`.
 
-Navigation: [README](README.md) | [Previous: Features](04-features.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
+Navigation: [Previous: Features](04-features.md) | [README](README.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)

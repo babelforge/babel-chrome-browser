@@ -1,5 +1,7 @@
 # Manual Tests
 
+Navigation: [Previous: Architecture](02-architecture.md) | [README](README.md) | [Next: Features](04-features.md)
+
 ## Build Validation
 
 ```bash
@@ -180,8 +182,4 @@ Expected result:
 - extensions are shown as missing if an older BabelChrome version already removed the package;
 - `Remove` deletes active or disabled extensions from the profile listing.
 
-## Navigation
-
-Previous: [Architecture](02-architecture.md)  
-Next: [Features](04-features.md)
-README: [README](README.md)
+Navigation: [Previous: Architecture](02-architecture.md) | [README](README.md) | [Next: Features](04-features.md)

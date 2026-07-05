@@ -1,5 +1,7 @@
 # Installation
 
+Navigation: [README](README.md) | [Next: Architecture](02-architecture.md)
+
 ## Requirements
 
 - macOS on x86_64.
@@ -41,9 +43,4 @@ CEF 149.0.2+ged5b3fd+chromium-149.0.7827.53 macosx64
 
 Downloaded CEF files are stored under `var/` and are not committed.
 
-## Navigation
-
-Previous: [README](README.md)  
-Next: [Architecture](02-architecture.md)  
-README: [README](README.md)
-
+Navigation: [README](README.md) | [Next: Architecture](02-architecture.md)

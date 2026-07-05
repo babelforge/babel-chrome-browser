@@ -1,6 +1,6 @@
 # Browser Source Layout
 
-Navigation: [README](README.md) | [Previous: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
+Navigation: [Previous: Browser Window Controller Refactor](06-browser-window-controller-refactor.md) | [README](README.md)
 
 This page documents the responsibility-based source layout under `src/Browser`.
 
@@ -266,8 +266,4 @@ After moving or adding files:
 ./tools/install-app.sh
 ```
 
-## Navigation
-
-- Previous: [Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
-- Next: none
-- README: [README](README.md)
+Navigation: [Previous: Browser Window Controller Refactor](06-browser-window-controller-refactor.md) | [README](README.md)

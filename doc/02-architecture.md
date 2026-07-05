@@ -1,5 +1,7 @@
 # Architecture
 
+Navigation: [Previous: Installation](01-installation.md) | [README](README.md) | [Next: Manual Tests](03-manual-tests.md)
+
 ## Responsibility
 
 BabelChrome owns only the local browser shell for BabelForge. It does not own BabelForge service hosting, task management, or project orchestration.
@@ -205,8 +207,4 @@ The helper prints or opens command URLs without requiring callers to manually pe
 ./tools/babelchrome-open --group "Group n" "http://127.0.0.1:8772"
 ```
 
-## Navigation
-
-Previous: [Installation](01-installation.md)  
-Next: [Manual Tests](03-manual-tests.md)  
-README: [README](README.md)
+Navigation: [Previous: Installation](01-installation.md) | [README](README.md) | [Next: Manual Tests](03-manual-tests.md)

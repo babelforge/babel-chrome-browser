@@ -1,5 +1,7 @@
 # Features
 
+Navigation: [Previous: Manual Tests](03-manual-tests.md) | [README](README.md) | [Next: PHP Modules](05-php-modules.md)
+
 ## Application Role
 
 BabelChrome is a native macOS browser shell for BabelForge. It embeds Chromium through CEF, uses a dedicated BabelForge profile, and accepts URLs from macOS.
@@ -669,8 +671,4 @@ BabelChrome - <page title>
 
 Clickable native controls use a pointing hand cursor on hover.
 
-## Navigation
-
-Previous: [Manual Tests](03-manual-tests.md)  
-Next: [PHP Modules](05-php-modules.md)  
-README: [README](README.md)
+Navigation: [Previous: Manual Tests](03-manual-tests.md) | [README](README.md) | [Next: PHP Modules](05-php-modules.md)

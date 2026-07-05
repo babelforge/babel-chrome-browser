@@ -1,5 +1,7 @@
 # BabelChrome Documentation
 
+Navigation: [Next: Installation](01-installation.md)
+
 BabelChrome is a native macOS AppKit application that embeds Chromium through CEF and provides a dedicated BabelForge browser shell.
 
 It opens URLs received from macOS, including:
@@ -87,8 +89,4 @@ BabelChrome currently provides:
 - installation into `/Applications/BabelChrome.app`;
 - a responsibility-based native browser source layout under `src/Browser`, with second-level directories for address bar behavior, CEF integration, Developer Tools, drag-and-drop, extensions, groups, internal pages, modules, navigation, state, tabs, UI helpers, utilities, and window orchestration.
 
-## Navigation
-
-Previous: none  
-Next: [Installation](01-installation.md)  
-README: [README](README.md)
+Navigation: [Next: Installation](01-installation.md)
