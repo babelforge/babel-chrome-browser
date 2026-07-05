@@ -359,49 +359,10 @@
                                 title:(NSString*)title
                                  html:(NSString*)html
                               browser:(CefRefPtr<CefBrowser>)browser {
-  if (browser) {
-    BabelBrowserTab* targetTab = [self tabForBrowser:browser];
-    if (targetTab) {
-      NSString* dataURLString = [self dataURLStringForHTML:html];
-      targetTab.urlString = dataURLString;
-      targetTab.requestedURLString = internalURLString;
-      targetTab.title = title;
-      targetTab.tabItemView.title = [self compactTitleForString:title];
-      browser->GetMainFrame()->LoadURL(std::string(dataURLString.UTF8String));
-      [self selectTab:targetTab];
-      [self showMainWindow];
-      [self saveGroupsState];
-      return;
-    }
-  }
-
-  BabelBrowserGroup* group = selectedGroup_ ?: [self ensureGroupNamed:kDefaultGroupName];
-  [self selectGroup:group];
-
-  BabelBrowserTab* existingTab = [self tabWithURLString:internalURLString inGroup:group];
-  NSString* dataURLString = [self dataURLStringForHTML:html];
-  if (existingTab) {
-    existingTab.urlString = dataURLString;
-    existingTab.requestedURLString = internalURLString;
-    existingTab.title = title;
-    existingTab.tabItemView.title = [self compactTitleForString:title];
-    [self selectTab:existingTab];
-    if ([existingTab browser]) {
-      [existingTab browser]->GetMainFrame()->LoadURL(std::string(dataURLString.UTF8String));
-    }
-    [self showMainWindow];
-    [self saveGroupsState];
-    return;
-  }
-
-  BabelBrowserTab* tab = [self makeTabForURL:dataURLString identifier:nil title:title];
-  tab.requestedURLString = internalURLString;
-  [group.tabs addObject:tab];
-  [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
-  [self selectGroup:group];
-  [self selectTab:tab];
-  [self showMainWindow];
-  [self saveGroupsState];
+  [internalPageNavigator_ openInternalPageWithURLString:internalURLString
+                                                 title:title
+                                                  html:html
+                                               browser:browser];
 }
 
 - (NSString*)dataURLStringForHTML:(NSString*)html {

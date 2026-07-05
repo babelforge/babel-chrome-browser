@@ -50,6 +50,7 @@
 #import "Browser/InternalExtensionsNavigationHandler.h"
 #import "Browser/InternalPageAssetProvider.h"
 #import "Browser/InternalPageHTMLComposer.h"
+#import "Browser/InternalPageNavigator.h"
 #import "Browser/InternalPageRenderer.h"
 #import "Browser/InternalPageTabClassifier.h"
 #import "Browser/InternalSettingsNavigationHandler.h"
@@ -242,6 +243,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelInternalNavigationActionParser* internalNavigationActionParser_;
   BabelInternalPageAssetProvider* internalPageAssetProvider_;
   BabelInternalPageHTMLComposer* internalPageHTMLComposer_;
+  BabelInternalPageNavigator* internalPageNavigator_;
   BabelInternalPageRenderer* internalPageRenderer_;
   BabelInternalPageTabClassifier* internalPageTabClassifier_;
   BabelInternalSettingsNavigationHandler* internalSettingsNavigationHandler_;
@@ -667,6 +669,44 @@ enforceLiveBrowserLimitHandler:^{
     [extensionProfileStore_ clearPendingProfileExtensionRestartStates];
     window.delegate = self;
     [self buildInterface];
+    internalPageNavigator_ =
+        [[BabelInternalPageNavigator alloc]
+            initWithPagesPanel:pagesPanel_
+         tabContentViewAttacher:tabContentViewAttacher_
+             browserTabProvider:^BabelBrowserTab*(CefRefPtr<CefBrowser> browser) {
+               return [weakSelf tabForBrowser:browser];
+             }
+            defaultGroupProvider:^BabelBrowserGroup*{
+              BabelBrowserWindowController* strongSelf = weakSelf;
+              if (!strongSelf) {
+                return nil;
+              }
+              return strongSelf->selectedGroup_ ?: [strongSelf ensureGroupNamed:kDefaultGroupName];
+            }
+            existingTabProvider:^BabelBrowserTab*(NSString* urlString, BabelBrowserGroup* group) {
+              return [weakSelf tabWithURLString:urlString inGroup:group];
+            }
+                tabFactoryBlock:^BabelBrowserTab*(NSString* urlString, NSString* identifier, NSString* title) {
+                  return [weakSelf makeTabForURL:urlString identifier:identifier title:title];
+                }
+             dataURLBuilderBlock:^NSString*(NSString* html) {
+               return [weakSelf dataURLStringForHTML:html];
+             }
+               compactTitleBlock:^NSString*(NSString* title) {
+                 return [weakSelf compactTitleForString:title];
+               }
+               selectGroupHandler:^(BabelBrowserGroup* group) {
+                 [weakSelf selectGroup:group];
+               }
+                 selectTabHandler:^(BabelBrowserTab* tab) {
+                   [weakSelf selectTab:tab];
+                 }
+                showWindowHandler:^{
+                  [weakSelf showMainWindow];
+                }
+                 saveStateHandler:^{
+                   [weakSelf saveGroupsState];
+                 }];
     omniboxSuggestionsController_ =
         [[BabelOmniboxSuggestionsController alloc] initWithPanel:omniboxSuggestionsPanel_];
     [faviconStore_ restore];
