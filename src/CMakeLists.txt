@@ -16,6 +16,8 @@ set(BABEL_CHROME_SOURCES
   Browser/AddressFieldLayoutCalculator.mm
   Browser/AddressFieldNavigationResolver.h
   Browser/AddressFieldNavigationResolver.mm
+  Browser/AddressNavigationRequestResolver.h
+  Browser/AddressNavigationRequestResolver.mm
   Browser/AdjacentTabPreloadPlanner.h
   Browser/AdjacentTabPreloadPlanner.mm
   Browser/AppSettingsPageRenderer.h

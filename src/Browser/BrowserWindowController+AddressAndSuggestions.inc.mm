@@ -106,43 +106,26 @@
   urlTextField_.stringValue = @"";
 }
 
-- (NSString*)addressFieldNavigationString {
-  NSString* addressString = urlTextField_.stringValue ?: @"";
-  if (!selectedTab_) {
-    return addressString;
-  }
-
-  NSString* displayedURLString = [addressBarDisplayResolver_ displayURLStringForTab:selectedTab_];
-  NSString* actualURLString = selectedTab_.requestedURLString ?: selectedTab_.urlString ?: @"";
-  return [addressFieldNavigationResolver_ navigationStringForAddressString:addressString
-                                                        displayedURLString:displayedURLString
-                                                           actualURLString:actualURLString];
-}
 - (void)navigateFromAddressField:(id)sender {
   if (!selectedTab_) {
     return;
   }
 
   [self hideOmniboxSuggestions];
-  NSString* urlString =
-      [addressNavigationNormalizer_ navigationStringFromAddress:[self addressFieldNavigationString]
-                                               defaultURLString:BabelChromeConfiguration.defaultURLString];
-  NSString* requestedURLString = [self stableViewerURLStringForSupportedURLString:urlString] ?: urlString;
-  NSString* navigationURLString = [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
-  if (navigationURLString.length == 0) {
-    if ([stableViewerURLResolver_ isStableViewerURLString:requestedURLString] ||
-        [self stableViewerURLStringForSupportedURLString:urlString]) {
-      [self updateAddressBarForTab:selectedTab_];
-      return;
-    }
-    navigationURLString = urlString;
+  BabelAddressNavigationRequest* request =
+      [addressNavigationRequestResolver_ navigationRequestForAddressString:urlTextField_.stringValue
+                                                               selectedTab:selectedTab_];
+  if (request.shouldRestoreAddressBar) {
+    [self updateAddressBarForTab:selectedTab_];
+    return;
   }
-  selectedTab_.urlString = navigationURLString;
-  selectedTab_.requestedURLString = requestedURLString;
+
+  selectedTab_.urlString = request.navigationURLString;
+  selectedTab_.requestedURLString = request.requestedURLString;
   [self updateAddressBarForTab:selectedTab_];
 
   if ([selectedTab_ browser]) {
-    [selectedTab_ browser]->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
+    [selectedTab_ browser]->GetMainFrame()->LoadURL(std::string(request.navigationURLString.UTF8String));
     [self saveGroupsState];
     return;
   }

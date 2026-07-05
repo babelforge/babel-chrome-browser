@@ -3,6 +3,7 @@
 #import "Browser/AddressBarDisplayResolver.h"
 #import "Browser/AddressFieldLayoutCalculator.h"
 #import "Browser/AddressFieldNavigationResolver.h"
+#import "Browser/AddressNavigationRequestResolver.h"
 #import "Browser/AddressNavigationNormalizer.h"
 #import "Browser/AdjacentTabPreloadPlanner.h"
 #import "Browser/AppSettingsPageRenderer.h"
@@ -186,6 +187,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   NSMutableArray<BabelBrowserGroup*>* groups_;
   BabelAddressFieldLayoutCalculator* addressFieldLayoutCalculator_;
   BabelAddressFieldNavigationResolver* addressFieldNavigationResolver_;
+  BabelAddressNavigationRequestResolver* addressNavigationRequestResolver_;
   BabelAddressNavigationNormalizer* addressNavigationNormalizer_;
   BabelAddressBarDisplayResolver* addressBarDisplayResolver_;
   BabelAdjacentTabPreloadPlanner* adjacentTabPreloadPlanner_;
@@ -541,6 +543,21 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
                     internalPageTabPredicate:^BOOL(BabelBrowserTab* tab) {
                       return [weakSelf isInternalPageTab:tab];
                     }];
+    addressNavigationRequestResolver_ =
+        [[BabelAddressNavigationRequestResolver alloc]
+            initWithDefaultURLString:BabelChromeConfiguration.defaultURLString
+                 navigationNormalizer:addressNavigationNormalizer_
+              fieldNavigationResolver:addressFieldNavigationResolver_
+            addressBarDisplayResolver:addressBarDisplayResolver_
+              stableViewerURLResolver:stableViewerURLResolver_
+           supportedViewerURLResolver:^NSString*(NSString* urlString) {
+             BabelBrowserWindowController* strongSelf = weakSelf;
+             return strongSelf ? [strongSelf stableViewerURLStringForSupportedURLString:urlString] : nil;
+           }
+        stableNavigationURLResolver:^NSString*(NSString* urlString) {
+          BabelBrowserWindowController* strongSelf = weakSelf;
+          return strongSelf ? [strongSelf navigationURLStringForStableBabelChromeURLString:urlString] : nil;
+        }];
     tabContentViewAttacher_ = [[BabelTabContentViewAttacher alloc] init];
     tabDragCoordinator_ = [[BabelTabDragCoordinator alloc] init];
     tabDragHoverScheduler_ = [[BabelTabDragHoverScheduler alloc] init];
