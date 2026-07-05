@@ -1,48 +1,11 @@
 // This file is included by BrowserWindowController.mm.
 // It remains in the same translation unit so private Objective-C++ ivars stay accessible.
 - (void)restoreSessionGroupsFromState:(NSDictionary*)state {
-  BabelBrowserGroup* defaultGroup = [self groupWithIdentifier:kDefaultGroupIdentifier];
-  if (!defaultGroup) {
-    defaultGroup = [self createGroupWithName:kDefaultGroupName identifier:kDefaultGroupIdentifier];
-  }
-
-  NSString* selectedGroupIdentifier =
-      [groupSessionStore_ selectedGroupIdentifierFromState:state
-                                        fallbackIdentifier:kDefaultGroupIdentifier];
-  BabelBrowserGroup* groupToSelect = [self groupWithIdentifier:selectedGroupIdentifier] ?: defaultGroup;
-  [self selectGroup:groupToSelect];
-  [self saveGroupsState];
+  [browserSessionRestorationCoordinator_ restoreSelectedGroupFromState:state];
 }
 
 - (void)restoreGroupsFromState:(NSDictionary*)state {
-  for (BabelRestoredGroupState* groupState in [groupSessionStore_ restoredGroupStatesFromState:state]) {
-    BabelBrowserGroup* group = [self createGroupWithName:groupState.name identifier:groupState.identifier];
-    group.selectedTabIdentifier = groupState.selectedTabIdentifier;
-
-    for (BabelRestoredTabState* tabState in groupState.tabs) {
-      NSString* urlString = tabState.urlString;
-      NSString* requestedURLString = tabState.requestedURLString;
-      NSString* restoredNavigationURLString =
-          [self navigationURLStringForStableBabelChromeURLString:requestedURLString];
-      if (restoredNavigationURLString.length > 0) {
-        urlString = restoredNavigationURLString;
-      } else if ([self isStableBabelChromeURLString:requestedURLString]) {
-        urlString = requestedURLString;
-      }
-      if ([self tabWithURLString:requestedURLString inGroup:group] ||
-          [self tabWithURLString:urlString inGroup:group]) {
-        continue;
-      }
-
-      BabelBrowserTab* tab = [self makeTabForURL:urlString
-                                      identifier:tabState.identifier
-                                           title:tabState.title];
-      tab.requestedURLString = requestedURLString;
-      tab.parentTabIdentifier = tabState.parentTabIdentifier;
-      [group.tabs addObject:tab];
-      [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
-    }
-  }
+  [browserSessionRestorationCoordinator_ restoreGroupsFromState:state];
 }
 
 - (BabelBrowserGroup*)createGroupWithName:(NSString*)name identifier:(NSString*)identifier {

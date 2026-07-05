@@ -36,6 +36,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserPageLifecycleController.mm
   Browser/BrowserGroupCollection.h
   Browser/BrowserGroupCollection.mm
+  Browser/BrowserSessionRestorationCoordinator.h
+  Browser/BrowserSessionRestorationCoordinator.mm
   Browser/BrowserGroupFactory.h
   Browser/BrowserGroupFactory.mm
   Browser/BrowserGroupManager.h
