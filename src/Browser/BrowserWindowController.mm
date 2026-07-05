@@ -90,6 +90,7 @@
 #import "Browser/BrowserTheme.h"
 #import "Browser/BrowserViews.h"
 #import "Browser/ViewerSourceResolver.h"
+#import "Browser/ViewerNavigationURLResolver.h"
 #import "Browser/WindowStateStore.h"
 #import "Configuration/Configuration.h"
 #import "LocalServices/LocalServiceHost.h"
@@ -259,6 +260,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelTabDragHoverScheduler* tabDragHoverScheduler_;
   BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
   BabelTabURLMatcher* tabURLMatcher_;
+  BabelViewerNavigationURLResolver* viewerNavigationURLResolver_;
   BabelViewerSourceResolver* viewerSourceResolver_;
   BabelWindowStateStore* windowStateStore_;
   BabelBrowserGroup* selectedGroup_;
@@ -503,6 +505,10 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
             initWithStableServerURLResolver:stableServerURLResolver_
                    localServiceURLClassifier:localServiceURLClassifier_];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
+    viewerNavigationURLResolver_ =
+        [[BabelViewerNavigationURLResolver alloc] initWithStableViewerURLResolver:stableViewerURLResolver_
+                                                             noViewerPageRenderer:noViewerPageRenderer_
+                                                               htmlDataURLBuilder:htmlDataURLBuilder_];
     addressBarDisplayResolver_ =
         [[BabelAddressBarDisplayResolver alloc]
             initWithStableViewerURLResolver:stableViewerURLResolver_
