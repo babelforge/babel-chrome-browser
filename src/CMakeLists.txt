@@ -32,6 +32,8 @@ set(BABEL_CHROME_SOURCES
   Browser/BrowserAttachmentCoordinator.mm
   Browser/BrowserCreationScheduler.h
   Browser/BrowserCreationScheduler.mm
+  Browser/BrowserPageLifecycleController.h
+  Browser/BrowserPageLifecycleController.mm
   Browser/BrowserGroupCollection.h
   Browser/BrowserGroupCollection.mm
   Browser/BrowserGroupFactory.h

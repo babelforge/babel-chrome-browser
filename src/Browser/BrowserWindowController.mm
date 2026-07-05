@@ -16,6 +16,7 @@
 #import "Browser/BrowserGroupManager.h"
 #import "Browser/BrowserGroupMoveCoordinator.h"
 #import "Browser/BrowserPasteboardWriter.h"
+#import "Browser/BrowserPageLifecycleController.h"
 #import "Browser/BrowserSettingsStore.h"
 #import "Browser/BrowserStringFormatter.h"
 #import "Browser/BrowserTabCollection.h"
@@ -224,6 +225,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserGroupManager* browserGroupManager_;
   BabelBrowserGroupMoveCoordinator* browserGroupMoveCoordinator_;
   BabelBrowserNavigationController* browserNavigationController_;
+  BabelBrowserPageLifecycleController* browserPageLifecycleController_;
   BabelBrowserPasteboardWriter* browserPasteboardWriter_;
   BabelBrowserPresentationFormatter* browserPresentationFormatter_;
   BabelBrowserTabCollection* browserTabCollection_;
@@ -314,7 +316,6 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BOOL isRestoringSession_;
   BOOL isBuildingInterface_;
   BOOL didApplyInitialSidebarRestore_;
-  BOOL needsInitialRestoredBrowserCreation_;
 }
 
 - (instancetype)init {
@@ -668,10 +669,33 @@ enforceLiveBrowserLimitHandler:^{
     isRestoringSession_ = NO;
     isBuildingInterface_ = NO;
     didApplyInitialSidebarRestore_ = NO;
-    needsInitialRestoredBrowserCreation_ = NO;
     [extensionProfileStore_ restoreProfileExtensionsMovedByOlderVersions];
     [extensionProfileStore_ clearPendingProfileExtensionRestartStates];
     window.delegate = self;
+    browserPageLifecycleController_ =
+        [[BabelBrowserPageLifecycleController alloc]
+                  initWithGroups:groups_
+                     pendingTabs:pendingTabs_
+                   browserClient:browserClient_
+               creationScheduler:browserCreationScheduler_
+        adjacentTabPreloadPlanner:adjacentTabPreloadPlanner_
+                  evictionPolicy:liveBrowserEvictionPolicy_
+         liveBrowserLimitEnforcer:liveBrowserLimitEnforcer_
+         keyboardDelayNanoseconds:kKeyboardTabSelectionBrowserCreationDelayNanoseconds
+  adjacentInitialDelayNanoseconds:kAdjacentTabPreloadInitialDelayNanoseconds
+     adjacentStepDelayNanoseconds:kAdjacentTabPreloadStepDelayNanoseconds
+             visibleTabsProvider:^NSArray<BabelBrowserTab*>*{
+               BabelBrowserWindowController* strongSelf = weakSelf;
+               return strongSelf ? strongSelf->tabs_ : @[];
+             }
+              selectedTabProvider:^BabelBrowserTab*{
+                BabelBrowserWindowController* strongSelf = weakSelf;
+                return strongSelf ? strongSelf->selectedTab_ : nil;
+              }
+              terminationProvider:^BOOL{
+                BabelBrowserWindowController* strongSelf = weakSelf;
+                return strongSelf ? strongSelf->isTerminating_ : YES;
+              }];
     [self buildInterface];
     browserGroupManager_ =
         [[BabelBrowserGroupManager alloc] initWithGroups:groups_

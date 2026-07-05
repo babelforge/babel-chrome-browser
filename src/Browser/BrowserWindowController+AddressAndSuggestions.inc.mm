@@ -35,7 +35,7 @@
   [self updateWindowTitleForSelectedTab];
   [self layoutTabItemsSelectingLastTab:NO];
   if (isRestoringSession_) {
-    needsInitialRestoredBrowserCreation_ = YES;
+    [browserPageLifecycleController_ markNeedsInitialRestoredBrowserCreation];
     [self saveGroupsState];
     return;
   }
@@ -44,7 +44,7 @@
     if (deferringBrowserCreation) {
       [self scheduleBrowserCreationAfterKeyboardNavigationForTab:tab];
     } else {
-      [browserCreationScheduler_ cancelKeyboardBrowserCreation];
+      [browserPageLifecycleController_ cancelKeyboardBrowserCreation];
       [self createBrowserForTabIfNeeded:tab];
       [self scheduleAdjacentTabPreloadForSelectedTab];
     }

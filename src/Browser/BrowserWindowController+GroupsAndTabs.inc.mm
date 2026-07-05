@@ -325,120 +325,35 @@
 }
 
 - (void)createBrowserForTabIfNeeded:(BabelBrowserTab*)tab {
-  if (!tab || ![tabs_ containsObject:tab] || [tab browser] || [pendingTabs_ containsObject:tab]) {
-    return;
-  }
-
-  [pendingTabs_ addObject:tab];
-  CefWindowInfo windowInfo;
-  NSRect bounds = tab.hostView.bounds;
-  windowInfo.SetAsChild((__bridge CefWindowHandle)tab.hostView,
-                        CefRect(0, 0, bounds.size.width, bounds.size.height));
-  windowInfo.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
-
-  CefBrowserSettings browserSettings;
-  CefBrowserHost::CreateBrowser(windowInfo,
-                                browserClient_,
-                                std::string(tab.urlString.UTF8String),
-                                browserSettings,
-                                nullptr,
-                                nullptr);
+  [browserPageLifecycleController_ createBrowserForTabIfNeeded:tab];
 }
 
 - (void)scheduleBrowserCreationAfterKeyboardNavigationForTab:(BabelBrowserTab*)tab {
-  if (!tab) {
-    return;
-  }
-
-  __weak BabelBrowserWindowController* weakSelf = self;
-  [browserCreationScheduler_ scheduleKeyboardBrowserCreationForTab:tab
-                                                 delayNanoseconds:kKeyboardTabSelectionBrowserCreationDelayNanoseconds
-                                              selectedTabProvider:^BabelBrowserTab* {
-                                                BabelBrowserWindowController* strongSelf = weakSelf;
-                                                return strongSelf ? strongSelf->selectedTab_ : nil;
-                                              }
-                                              terminationProvider:^BOOL {
-                                                BabelBrowserWindowController* strongSelf = weakSelf;
-                                                return strongSelf ? strongSelf->isTerminating_ : YES;
-                                              }
-                                                    createHandler:^(BabelBrowserTab* tabToCreate) {
-                                                      BabelBrowserWindowController* strongSelf = weakSelf;
-                                                      [strongSelf createBrowserForTabIfNeeded:tabToCreate];
-                                                    }
-                                                   preloadHandler:^{
-                                                     BabelBrowserWindowController* strongSelf = weakSelf;
-                                                     [strongSelf scheduleAdjacentTabPreloadForSelectedTab];
-                                                   }];
+  [browserPageLifecycleController_ scheduleBrowserCreationAfterKeyboardNavigationForTab:tab];
 }
 
 - (void)createInitialRestoredBrowserIfNeeded {
-  if (!needsInitialRestoredBrowserCreation_ || isTerminating_ || !selectedTab_) {
-    return;
-  }
-
-  needsInitialRestoredBrowserCreation_ = NO;
-  [browserCreationScheduler_ cancelKeyboardBrowserCreation];
-  [self createBrowserForTabIfNeeded:selectedTab_];
-  [self scheduleAdjacentTabPreloadForSelectedTab];
+  [browserPageLifecycleController_ createInitialRestoredBrowserIfNeeded];
 }
 
 - (void)scheduleAdjacentTabPreloadForSelectedTab {
-  if (isTerminating_ || !selectedTab_ || tabs_.count < 2) {
-    return;
-  }
-
-  BabelBrowserTab* anchorTab = selectedTab_;
-  NSArray<BabelBrowserTab*>* tabsToPreload = [self adjacentTabsToPreloadAroundTab:anchorTab];
-  __weak BabelBrowserWindowController* weakSelf = self;
-  [browserCreationScheduler_ scheduleAdjacentPreloadForTabs:tabsToPreload
-                                                  anchorTab:anchorTab
-                                    initialDelayNanoseconds:kAdjacentTabPreloadInitialDelayNanoseconds
-                                       stepDelayNanoseconds:kAdjacentTabPreloadStepDelayNanoseconds
-                                        selectedTabProvider:^BabelBrowserTab* {
-                                          BabelBrowserWindowController* strongSelf = weakSelf;
-                                          return strongSelf ? strongSelf->selectedTab_ : nil;
-                                        }
-                                        terminationProvider:^BOOL {
-                                          BabelBrowserWindowController* strongSelf = weakSelf;
-                                          return strongSelf ? strongSelf->isTerminating_ : YES;
-                                        }
-                                              createHandler:^(BabelBrowserTab* tabToPreload) {
-                                                BabelBrowserWindowController* strongSelf = weakSelf;
-                                                [strongSelf createBrowserForTabIfNeeded:tabToPreload];
-                                              }];
+  [browserPageLifecycleController_ scheduleAdjacentTabPreloadForSelectedTab];
 }
 
 - (NSArray<BabelBrowserTab*>*)adjacentTabsToPreloadAroundTab:(BabelBrowserTab*)tab {
-  return [adjacentTabPreloadPlanner_ adjacentTabsToPreloadAroundTab:tab tabs:tabs_];
+  return [browserPageLifecycleController_ adjacentTabsToPreloadAroundTab:tab];
 }
 
 - (void)touchRecentlyUsedTab:(BabelBrowserTab*)tab {
-  [liveBrowserEvictionPolicy_ touchTab:tab];
+  [browserPageLifecycleController_ touchRecentlyUsedTab:tab];
 }
 
 - (void)closeBrowserForTabKeepingNativeTab:(BabelBrowserTab*)tab {
-  CefRefPtr<CefBrowser> browser = [tab browser];
-  if (!browser || tab.identifier.length == 0) {
-    return;
-  }
-
-  [liveBrowserEvictionPolicy_ markTabEvicting:tab];
-  browser->GetHost()->CloseDevTools();
-  browser->GetHost()->CloseBrowser(true);
+  [browserPageLifecycleController_ closeBrowserForTabKeepingNativeTab:tab];
 }
 
 - (void)enforceLivePageBrowserLimit {
-  if (isTerminating_) {
-    return;
-  }
-
-  __weak BabelBrowserWindowController* weakSelf = self;
-  [liveBrowserLimitEnforcer_ enforceLiveBrowserLimitForGroups:groups_
-                                                  selectedTab:selectedTab_
-                                                  visibleTabs:tabs_
-                                                 closeHandler:^(BabelBrowserTab* tab) {
-                                                   [weakSelf closeBrowserForTabKeepingNativeTab:tab];
-                                                 }];
+  [browserPageLifecycleController_ enforceLivePageBrowserLimit];
 }
 - (void)selectTabFromItem:(BabelTabItemView*)tabItemView {
   for (BabelBrowserTab* tab in tabs_) {
