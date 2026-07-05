@@ -42,31 +42,15 @@
 }
 
 - (BOOL)canOpenViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser {
-  NSURL* sourceURL = [self viewerSourceFileURLForBrowser:browser];
-  return sourceURL && [NSFileManager.defaultManager fileExistsAtPath:sourceURL.path];
+  return [viewerSourceActionHandler_ canOpenViewerSourceForTab:[self tabForBrowser:browser]];
 }
 
 - (void)openViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser {
-  NSURL* sourceURL = [self viewerSourceFileURLForBrowser:browser];
-  if (!sourceURL) {
-    return;
-  }
-
-  [NSWorkspace.sharedWorkspace openURL:sourceURL];
+  [viewerSourceActionHandler_ openViewerSourceForTab:[self tabForBrowser:browser]];
 }
 
 - (void)revealViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser {
-  NSURL* sourceURL = [self viewerSourceFileURLForBrowser:browser];
-  if (!sourceURL) {
-    return;
-  }
-
-  [NSWorkspace.sharedWorkspace activateFileViewerSelectingURLs:@[ sourceURL ]];
-}
-
-- (NSURL*)viewerSourceFileURLForBrowser:(CefRefPtr<CefBrowser>)browser {
-  BabelBrowserTab* tab = [self tabForBrowser:browser];
-  return [viewerSourceResolver_ viewerSourceFileURLForTab:tab];
+  [viewerSourceActionHandler_ revealViewerSourceForTab:[self tabForBrowser:browser]];
 }
 
 - (void)closeDeveloperToolsFromButton:(NSButton*)sender {

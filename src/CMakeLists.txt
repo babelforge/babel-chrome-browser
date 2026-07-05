@@ -174,6 +174,8 @@ set(BABEL_CHROME_SOURCES
   Browser/TabURLMatcher.mm
   Browser/ViewerSourceResolver.h
   Browser/ViewerSourceResolver.mm
+  Browser/ViewerSourceActionHandler.h
+  Browser/ViewerSourceActionHandler.mm
   Browser/ViewerNavigationURLResolver.h
   Browser/ViewerNavigationURLResolver.mm
   Browser/WindowStateStore.h

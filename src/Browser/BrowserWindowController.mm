@@ -93,6 +93,7 @@
 #import "Browser/BrowserViews.h"
 #import "Browser/ViewerSourceResolver.h"
 #import "Browser/ViewerNavigationURLResolver.h"
+#import "Browser/ViewerSourceActionHandler.h"
 #import "Browser/WindowStateStore.h"
 #import "Configuration/Configuration.h"
 #import "LocalServices/LocalServiceHost.h"
@@ -265,6 +266,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelTabStripLayoutCalculator* tabStripLayoutCalculator_;
   BabelTabURLMatcher* tabURLMatcher_;
   BabelViewerNavigationURLResolver* viewerNavigationURLResolver_;
+  BabelViewerSourceActionHandler* viewerSourceActionHandler_;
   BabelViewerSourceResolver* viewerSourceResolver_;
   BabelWindowStateStore* windowStateStore_;
   BabelBrowserGroup* selectedGroup_;
@@ -535,6 +537,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
     tabURLMatcher_ = [[BabelTabURLMatcher alloc] init];
     viewerSourceResolver_ =
         [[BabelViewerSourceResolver alloc] initWithStableViewerURLResolver:stableViewerURLResolver_];
+    viewerSourceActionHandler_ =
+        [[BabelViewerSourceActionHandler alloc] initWithViewerSourceResolver:viewerSourceResolver_];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
     tabs_ = [NSMutableArray array];
     pendingTabs_ = [NSMutableArray array];
