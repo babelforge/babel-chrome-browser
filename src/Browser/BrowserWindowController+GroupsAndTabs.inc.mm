@@ -89,37 +89,7 @@
 }
 
 - (void)selectGroup:(BabelBrowserGroup*)group {
-  selectedGroup_ = group;
-  tabs_ = group.tabs;
-
-  for (BabelBrowserGroup* currentGroup in groups_) {
-    currentGroup.groupItemView.selected = currentGroup == group;
-    for (BabelBrowserTab* tab in currentGroup.tabs) {
-      if (tab != browserTabDragSessionController_.draggingTab) {
-        [tab.tabItemView removeFromSuperview];
-      }
-      tab.hostView.hidden = YES;
-      tab.developerToolsPanelView.hidden = YES;
-    }
-  }
-
-  for (BabelBrowserTab* tab in tabs_) {
-    if (tab.tabItemView.superview != tabsItemsPanel_) {
-      [tabsItemsPanel_ addSubview:tab.tabItemView];
-    }
-  }
-
-  BabelBrowserTab* tabToSelect = [self tabWithIdentifier:group.selectedTabIdentifier inGroup:group] ?:
-      tabs_.lastObject;
-  if (tabToSelect) {
-    [self selectTab:tabToSelect];
-  } else {
-    selectedTab_ = nil;
-    [self clearAddressBar];
-    [self updateWindowTitleForSelectedTab];
-    [self layoutTabItemsSelectingLastTab:NO];
-  }
-  [self layoutGroupItems];
+  [browserGroupSelectionController_ selectGroup:group];
 }
 
 - (void)deleteGroupFromMenu:(NSMenuItem*)menuItem {

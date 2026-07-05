@@ -16,6 +16,7 @@
 #import "Browser/BrowserGroupFactory.h"
 #import "Browser/BrowserGroupManager.h"
 #import "Browser/BrowserGroupMoveCoordinator.h"
+#import "Browser/BrowserGroupSelectionController.h"
 #import "Browser/BrowserPasteboardWriter.h"
 #import "Browser/BrowserPageLifecycleController.h"
 #import "Browser/BrowserSettingsStore.h"
@@ -228,6 +229,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelBrowserGroupFactory* browserGroupFactory_;
   BabelBrowserGroupManager* browserGroupManager_;
   BabelBrowserGroupMoveCoordinator* browserGroupMoveCoordinator_;
+  BabelBrowserGroupSelectionController* browserGroupSelectionController_;
   BabelBrowserNavigationController* browserNavigationController_;
   BabelBrowserPageLifecycleController* browserPageLifecycleController_;
   BabelBrowserPasteboardWriter* browserPasteboardWriter_;
@@ -758,6 +760,48 @@ enforceLiveBrowserLimitHandler:^{
                    [weakSelf saveGroupsState];
                  }
             hoverDelayNanoseconds:kTabDragGroupHoverDelayNanoseconds];
+    browserGroupSelectionController_ =
+        [[BabelBrowserGroupSelectionController alloc]
+                 initWithGroups:groups_
+                 tabsItemsPanel:tabsItemsPanel_
+                  tabCollection:browserTabCollection_
+            draggingTabProvider:^BabelBrowserTab*{
+              BabelBrowserWindowController* strongSelf = weakSelf;
+              return strongSelf ? strongSelf->browserTabDragSessionController_.draggingTab : nil;
+            }
+             visibleTabsHandler:^(NSMutableArray<BabelBrowserTab*>* visibleTabs) {
+               BabelBrowserWindowController* strongSelf = weakSelf;
+               if (strongSelf) {
+                 strongSelf->tabs_ = visibleTabs;
+               }
+             }
+           selectedGroupHandler:^(BabelBrowserGroup* group) {
+             BabelBrowserWindowController* strongSelf = weakSelf;
+             if (strongSelf) {
+               strongSelf->selectedGroup_ = group;
+             }
+           }
+             selectedTabHandler:^(BabelBrowserTab* tab) {
+               BabelBrowserWindowController* strongSelf = weakSelf;
+               if (strongSelf) {
+                 strongSelf->selectedTab_ = tab;
+               }
+             }
+               selectTabHandler:^(BabelBrowserTab* tab) {
+                 [weakSelf selectTab:tab];
+               }
+             clearAddressHandler:^{
+               [weakSelf clearAddressBar];
+             }
+        updateWindowTitleHandler:^{
+          [weakSelf updateWindowTitleForSelectedTab];
+        }
+              layoutTabsHandler:^{
+                [weakSelf layoutTabItemsSelectingLastTab:NO];
+              }
+             layoutGroupsHandler:^{
+               [weakSelf layoutGroupItems];
+             }];
     browserSessionRestorationCoordinator_ =
         [[BabelBrowserSessionRestorationCoordinator alloc]
             initWithGroupSessionStore:groupSessionStore_
