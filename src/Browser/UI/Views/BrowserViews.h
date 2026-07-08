@@ -25,6 +25,16 @@ void ConfigureIconButton(NSButton* button, NSString* resourceName, NSString* fal
 NSButton* BabelButton(NSString* title, id target, SEL action);
 
 /**
+ * Creates a button that dispatches its action as soon as it receives a mouse click.
+ *
+ * @param title The button title.
+ * @param target The action target.
+ * @param action The action selector.
+ * @return The configured button.
+ */
+NSButton* BabelImmediateActionButton(NSString* title, id target, SEL action);
+
+/**
  * Hosts the native CEF browser view and resizes it with AppKit layout.
  */
 @interface BabelBrowserHostView : NSView

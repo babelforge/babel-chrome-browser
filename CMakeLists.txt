@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(BabelChrome VERSION 0.2.1 LANGUAGES C CXX OBJC OBJCXX)
+project(BabelChrome VERSION 0.2.2 LANGUAGES C CXX OBJC OBJCXX)
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 set(CMAKE_CXX_STANDARD 20)

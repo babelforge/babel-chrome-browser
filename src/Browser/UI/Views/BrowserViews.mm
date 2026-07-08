@@ -67,6 +67,14 @@ void ConfigureIconButton(NSButton* button, NSString* resourceName, NSString* fal
 
 @implementation BabelHandCursorButton
 
+- (BOOL)acceptsFirstMouse:(NSEvent*)event {
+  return YES;
+}
+
+- (BOOL)mouseDownCanMoveWindow {
+  return NO;
+}
+
 - (void)resetCursorRects {
   [super resetCursorRects];
   [self addCursorRect:self.bounds cursor:NSCursor.pointingHandCursor];
@@ -74,8 +82,34 @@ void ConfigureIconButton(NSButton* button, NSString* resourceName, NSString* fal
 
 @end
 
+@interface BabelImmediateActionButtonView : BabelHandCursorButton
+
+@end
+
+@implementation BabelImmediateActionButtonView
+
+- (void)mouseDown:(NSEvent*)event {
+  if (!self.enabled) {
+    return;
+  }
+
+  [self highlight:YES];
+  [NSApp sendAction:self.action to:self.target from:self];
+  [self highlight:NO];
+}
+
+@end
+
 NSButton* BabelButton(NSString* title, id target, SEL action) {
   NSButton* button = [[BabelHandCursorButton alloc] initWithFrame:NSZeroRect];
+  button.title = title ?: @"";
+  button.target = target;
+  button.action = action;
+  return button;
+}
+
+NSButton* BabelImmediateActionButton(NSString* title, id target, SEL action) {
+  NSButton* button = [[BabelImmediateActionButtonView alloc] initWithFrame:NSZeroRect];
   button.title = title ?: @"";
   button.target = target;
   button.action = action;

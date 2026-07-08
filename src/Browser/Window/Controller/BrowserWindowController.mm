@@ -238,6 +238,8 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
         [[BabelInternalSettingsNavigationHandler alloc] initWithSettingsStore:browserSettingsStore_
                                                                  userDefaults:NSUserDefaults.standardUserDefaults];
     linkStatusBarController_ = [[BabelLinkStatusBarController alloc] init];
+    tabs_ = [NSMutableArray array];
+    pendingTabs_ = [NSMutableArray array];
     liveBrowserEvictionPolicy_ = [[BabelLiveBrowserEvictionPolicy alloc] init];
     liveBrowserLimitEnforcer_ =
         [[BabelLiveBrowserLimitEnforcer alloc]
@@ -429,8 +431,6 @@ enforceLiveBrowserLimitHandler:^{
     viewerSourceActionHandler_ =
         [[BabelViewerSourceActionHandler alloc] initWithViewerSourceResolver:viewerSourceResolver_];
     windowStateStore_ = [[BabelWindowStateStore alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
-    tabs_ = [NSMutableArray array];
-    pendingTabs_ = [NSMutableArray array];
     browserClient_ = new BabelBrowserClient(self);
     developerToolsDockMode_ = [self restoredDeveloperToolsDockMode];
     developerToolsSizeRatio_ = [self restoredDeveloperToolsSizeRatio];

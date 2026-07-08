@@ -115,7 +115,7 @@
   viewSet.tabAddButton.autoresizingMask = NSViewMinXMargin;
   [viewSet.tabsBarPanel addSubview:viewSet.tabAddButton];
 
-  viewSet.addressBarPanel = [[NSView alloc] initWithFrame:NSMakeRect(0, 736, 1040, toolbarHeight)];
+  viewSet.addressBarPanel = [[BabelNonMovableView alloc] initWithFrame:NSMakeRect(0, 736, 1040, toolbarHeight)];
   viewSet.addressBarPanel.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
   viewSet.addressBarPanel.wantsLayer = YES;
   [viewSet.rightView addSubview:viewSet.addressBarPanel];
@@ -125,7 +125,7 @@
   viewSet.addressLabel.alignment = NSTextAlignmentRight;
   [viewSet.addressBarPanel addSubview:viewSet.addressLabel];
 
-  viewSet.addressTextFieldContainer = [[NSView alloc] initWithFrame:NSMakeRect(50, 7, 978, 30)];
+  viewSet.addressTextFieldContainer = [[BabelNonMovableView alloc] initWithFrame:NSMakeRect(50, 7, 978, 30)];
   viewSet.addressTextFieldContainer.wantsLayer = YES;
   viewSet.addressTextFieldContainer.layer.borderWidth = 1.0;
   viewSet.addressTextFieldContainer.layer.cornerRadius = 6.0;
@@ -151,7 +151,7 @@
   viewSet.urlTextField.autoresizingMask = NSViewWidthSizable;
   [viewSet.addressTextFieldContainer addSubview:viewSet.urlTextField];
 
-  viewSet.reloadButton = BabelButton(@"", target, @selector(reloadSelectedTabFromButton:));
+  viewSet.reloadButton = BabelImmediateActionButton(@"", target, @selector(reloadSelectedTabFromButton:));
   viewSet.reloadButton.bezelStyle = NSBezelStyleTexturedRounded;
   viewSet.reloadButton.toolTip = @"Reload";
   viewSet.reloadButton.frame = NSMakeRect(1000, 8, 28, 28);

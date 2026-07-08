@@ -55,6 +55,35 @@ static NSString* BabelLocalFileReloadBaseURLString(BabelBrowserTab* tab, NSStrin
   return nil;
 }
 
+/**
+ * Returns the tab that should be reloaded by browser controls.
+ *
+ * @param owner The browser window controller that owns the tabs.
+ * @return The visible browser tab when available, otherwise the selected browser tab.
+ */
+static BabelBrowserTab* BabelReloadTargetTab(BabelBrowserWindowController* owner) {
+  if (!owner) {
+    return nil;
+  }
+
+  BabelBrowserTab* selectedTab = owner->selectedTab_;
+  if (selectedTab && [selectedTab browser] && !selectedTab.hostView.hidden) {
+    return selectedTab;
+  }
+
+  for (BabelBrowserTab* tab in owner->tabs_) {
+    if ([tab browser] && !tab.hostView.hidden) {
+      return tab;
+    }
+  }
+
+  if (selectedTab && [selectedTab browser]) {
+    return selectedTab;
+  }
+
+  return nil;
+}
+
 @implementation BabelBrowserWindowBrowserControlsActions {
   __weak BabelBrowserWindowController* owner_;
 }
@@ -239,20 +268,22 @@ static NSString* BabelLocalFileReloadBaseURLString(BabelBrowserTab* tab, NSStrin
 }
 
 - (void)reloadSelectedTabIgnoringCache:(BOOL)ignoringCache {
-  if (!owner_->selectedTab_ || ![owner_->selectedTab_ browser]) {
+  BabelBrowserTab* targetTab = BabelReloadTargetTab(owner_);
+  if (!targetTab) {
     return;
   }
 
-  CefRefPtr<CefBrowser> browser = [owner_->selectedTab_ browser];
+  owner_->selectedTab_ = targetTab;
+  CefRefPtr<CefBrowser> browser = [targetTab browser];
   CefRefPtr<CefFrame> mainFrame = browser->GetMainFrame();
   NSString* requestedURLString =
-      [owner_ stableServerReloadURLStringForTab:owner_->selectedTab_] ?: owner_->selectedTab_.requestedURLString;
+      [owner_ stableServerReloadURLStringForTab:targetTab] ?: targetTab.requestedURLString;
   if ([owner_ isStableBabelChromeURLString:requestedURLString]) {
     NSString* navigationURLString =
         [owner_ navigationURLStringForStableBabelChromeURLString:requestedURLString];
     if (navigationURLString.length > 0) {
-      owner_->selectedTab_.requestedURLString = requestedURLString;
-      owner_->selectedTab_.urlString = navigationURLString;
+      targetTab.requestedURLString = requestedURLString;
+      targetTab.urlString = navigationURLString;
       browser->GetMainFrame()->LoadURL(std::string(navigationURLString.UTF8String));
       [owner_ saveGroupsState];
       if (!ignoringCache) {
@@ -264,7 +295,7 @@ static NSString* BabelLocalFileReloadBaseURLString(BabelBrowserTab* tab, NSStrin
   std::string frameURLString = mainFrame ? mainFrame->GetURL().ToString() : "";
   NSString* nativeFrameURLString = [NSString stringWithUTF8String:frameURLString.c_str()];
   NSString* localFileURLString =
-      BabelLocalFileReloadBaseURLString(owner_->selectedTab_, nativeFrameURLString);
+      BabelLocalFileReloadBaseURLString(targetTab, nativeFrameURLString);
   if (localFileURLString.length > 0) {
     NSString* reloadURLString = BabelURLStringByAddingLocalFileReloadToken(localFileURLString);
     mainFrame->LoadURL(std::string(reloadURLString.UTF8String));
@@ -272,11 +303,11 @@ static NSString* BabelLocalFileReloadBaseURLString(BabelBrowserTab* tab, NSStrin
   }
 
   if (!ignoringCache) {
-    [owner_->browserNavigationController_ reloadTab:owner_->selectedTab_];
+    [owner_->browserNavigationController_ reloadTab:targetTab];
     return;
   }
 
-  [owner_->browserNavigationController_ reloadTabIgnoringCache:owner_->selectedTab_];
+  [owner_->browserNavigationController_ reloadTabIgnoringCache:targetTab];
 }
 
 - (void)reloadMarkdownViewerTabsUsingCurrentTheme {
