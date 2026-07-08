@@ -70,8 +70,8 @@ Markdown, OpenAPI, and JSON viewer modules share a common viewer header from the
 
 When installed, the Markdown viewer resolves Markdown links and assets according to the opened document:
 
-- relative links to Markdown-like files are exposed as stable `babelchrome://markdown/file/...` links and opened through the local Markdown viewer;
-- remote links to Markdown-like files are exposed as stable `babelchrome://markdown/url/...` links and opened through the local Markdown viewer;
+- relative links to Markdown-like files are exposed as stable viewer links and opened through the local Markdown viewer;
+- remote links to Markdown-like files are exposed as stable viewer links and opened through the local Markdown viewer;
 - URL fragments such as `README.md#section` are preserved;
 - regular non-Markdown links remain navigable as normal links;
 - local relative images are served through the local viewer service;
@@ -80,7 +80,7 @@ When installed, the Markdown viewer resolves Markdown links and assets according
 - four Markdown themes are available from Settings: GitHub Light, GitHub Dark, Reader, and Compact;
 - code blocks are highlighted with bundled local `highlight.js`.
 
-Markdown viewer tabs use stable app URLs such as `babelchrome://markdown/file/<encoded-path>` or `babelchrome://markdown/url/<encoded-url>`. BabelChrome converts those stable URLs to a temporary local service URL only when Chromium needs to load the rendered page. This avoids stale random ports after an application restart.
+Markdown viewer tabs use stable app URLs such as `babelchrome://viewer/file/<encoded-path>`, `babelchrome://viewer/url/<encoded-url>`, or module-owned `babelchrome://markdown/...` routes. BabelChrome converts those stable URLs to a temporary local service URL only when Chromium needs to load the rendered page. This avoids stale random ports after an application restart.
 
 When a local Markdown file changes on disk, the viewer checks the source timestamp and refreshes the rendered page automatically. A manual `Cmd+R` also rebuilds the viewer URL with the current Markdown theme.
 
@@ -99,7 +99,7 @@ open -a BabelChrome ./openapi.yaml
 
 OpenAPI rendering uses the Swagger UI frontend bundled inside the optional OpenAPI viewer module. The local viewer accepts JSON and YAML sources, validates that they expose the usual `openapi` or `swagger`, `info`, and `paths` root fields, resolves internal and relative `$ref` documents, and shows a visible local error page when the source cannot be parsed as a usable OpenAPI specification.
 
-OpenAPI viewer tabs use stable app URLs such as `babelchrome://openapi/file/<encoded-path>` or `babelchrome://openapi/url/<encoded-url>`. Local OpenAPI files auto-refresh when the source timestamp changes on disk, including local files loaded through relative `$ref` values.
+OpenAPI viewer tabs use stable app URLs such as `babelchrome://viewer/file/<encoded-path>`, `babelchrome://viewer/url/<encoded-url>`, or module-owned `babelchrome://openapi/...` routes. Local OpenAPI files auto-refresh when the source timestamp changes on disk, including local files loaded through relative `$ref` values.
 
 Example OpenAPI files are stored under:
 
@@ -115,7 +115,7 @@ No PHP module is bundled into BabelChrome for now. A module becomes available on
 
 Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. Their PHP entrypoint classes, document renderers, view models, error classes, Twig templates, source frontend assets, import map metadata, compiled public assets, and Composer dependencies live in their own module package.
 
-The native app asks the LocalServiceHost for the matching installed viewer module instead of duplicating Markdown/OpenAPI rules in native code. The historical stable URLs `babelchrome://markdown/...` and `babelchrome://openapi/...` remain compatible when the corresponding module is installed; internally, the legacy `/markdown` and `/openapi` service endpoints delegate to module entrypoints.
+The native app asks the LocalServiceHost for the matching installed viewer module instead of duplicating Markdown, OpenAPI, or JSON rules in native code. The generic `babelchrome://viewer/...` URLs are preferred for external integrations. Module-owned stable URLs such as `babelchrome://markdown/...`, `babelchrome://openapi/...`, and `babelchrome://json/...` remain compatible when the corresponding module is installed.
 
 The current Markdown/OpenAPI/JSON modules still reuse LocalServiceHost platform services for source loading and source registration. Viewer-specific PHP, Twig, source frontend assets, import maps, compiled public assets, and Composer vendors live in the modules.
 

@@ -62,35 +62,49 @@ The main window state, left panel state, Developer Tools dock settings, tab open
 7. `babelchrome://command/group:...::|::url:...` compact command URLs provide a shell-friendly alternative for grouped openings.
 8. CEF browser child views are created immediately for explicit selected tabs, while keyboard tab cycling and adjacent-tab preloading are delayed and cancellable.
 
-## Local Viewer Service
+## ExtensionHost And Viewers
 
-BabelChrome can route supported document URLs through a local loopback viewer service instead of sending them directly to CEF. The viewer support comes from installed and enabled PHP modules.
+BabelChrome can route supported document URLs through a local loopback ExtensionHost instead of sending them directly to CEF. Viewer support comes from installed and enabled PHP modules; the native app itself does not bundle Markdown, OpenAPI, or JSON rendering logic.
 
-The native shell starts the service on `127.0.0.1` with a random port and a per-process token. The service is an embedded Symfony 8 application bundled in the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, and source registrations are not written inside `/Applications/BabelChrome.app`.
+`LocalServiceHost` is the native process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, source registrations, and installed module state are not written inside `/Applications/BabelChrome.app`.
 
-Viewer-backed tabs are represented by stable BabelChrome URLs when the matching module is installed:
+Viewer-backed tabs are represented by stable BabelChrome URLs. External integrations should prefer the generic viewer dispatcher:
 
-- `babelchrome://markdown/file/<encoded-path>`;
-- `babelchrome://markdown/url/<encoded-url>`;
-- `babelchrome://openapi/file/<encoded-path>`;
-- `babelchrome://openapi/url/<encoded-url>`.
+```text
+babelchrome://viewer/file/<encoded-local-path>
+babelchrome://viewer/url/<encoded-source-url>
+```
 
-Those stable URLs are what BabelChrome stores in tab state and shows in the address bar. The loopback URL `http://127.0.0.1:<port>/...` is only a runtime navigation URL. It is regenerated from the stable source URL when the app starts or when the tab is opened, so a previous random port is never required after restart.
+BabelChrome resolves these URLs through enabled module manifests. If no enabled module handles the source, it displays a local `No viewer installed for this file type` page while preserving the stable address.
 
-The Markdown and OpenAPI viewers are regular PHP modules registered in the LocalServiceHost module registry after installation. The native shell asks the LocalServiceHost which enabled viewer module can handle a source URL through the module manifest capabilities instead of keeping hardcoded Markdown/OpenAPI extension lists in Objective-C++. The stable legacy routes `/markdown` and `/openapi` remain available when the corresponding module is installed, but they dispatch to `babelforge.markdown-viewer` and `babelforge.openapi-viewer` through the same module route dispatcher used by every installable module.
+Module-specific routes can also exist when a module declares them. The current viewer modules expose routes such as:
 
-The Markdown module renders server-side HTML with `league/commonmark`. The OpenAPI module parses JSON or YAML sources with Symfony components, resolves internal and relative `$ref` values before rendering, and renders the resulting contract through a bundled Swagger UI frontend. Viewer frontend code is written in TypeScript, compiled without Node through `sensiolabs/typescript-bundle`, and exposed through Symfony AssetMapper.
+```text
+babelchrome://markdown/file/<encoded-path>
+babelchrome://markdown/url/<encoded-url>
+babelchrome://openapi/file/<encoded-path>
+babelchrome://openapi/url/<encoded-url>
+babelchrome://json/file/<encoded-path>
+babelchrome://json/url/<encoded-url>
+```
+
+Those module-specific URLs are owned by the installed modules. They remain useful for direct module pages and backward compatibility, but the generic `babelchrome://viewer/...` form is the stable integration point for other applications.
+
+The loopback URL `http://127.0.0.1:<port>/...` is only a runtime navigation URL. It is regenerated from the stable source URL when the app starts or when the tab is opened, so a previous random port is never required after restart.
+
+The native shell asks `LocalServiceHost` which enabled viewer module can handle a source URL through manifest capabilities instead of keeping hardcoded Markdown, OpenAPI, or JSON extension lists in Objective-C++. Matching is driven by manifest fields such as `fileTypes`, `file-type-handler.fileTypes`, and `fileNameContains`.
 
 Example routing rules provided by the current viewer modules:
 
 - `file://.../*.md`, `file://.../*.markdown`, `file://.../*.mmd`, and `file://.../*.mermaid` open through the Markdown viewer;
-- `http://.../*.md`, `https://.../*.md`, and equivalent Markdown extensions also open through the Markdown viewer;
+- `http://.../*.md`, `https://.../*.md`, and equivalent Markdown extensions can open through the Markdown viewer;
 - `file://.../openapi.yaml`, `file://.../swagger.yaml`, and equivalent YAML, YML, or JSON OpenAPI names open through the OpenAPI viewer;
+- regular JSON files open through the JSON viewer when the JSON viewer module is installed and no more specific OpenAPI viewer match applies;
 - HTML files remain normal Chromium `file://` pages.
 
-Those rules come from installed module manifest fields such as `fileTypes` and `fileNameContains`. For example, the OpenAPI module declares YAML, YML, and JSON extensions, then constrains matching filenames to fragments such as `openapi` and `swagger` so regular YAML files are not captured.
+Viewer modules own their rendering implementation. The current Markdown viewer renders with `league/commonmark`, the OpenAPI viewer renders with bundled Swagger UI, and the JSON viewer renders with bundled `andypf/json-viewer`. The shared viewer header is provided by `babelforge/babel-chrome-viewer-kit`, not by the native browser.
 
-The viewer handles links according to their source. Relative links from a local Markdown file are resolved from the source file directory. Relative Markdown links are routed back through the Markdown viewer when that module is installed, while images and other local assets are served through the local asset endpoint. Relative links from a remote Markdown URL are resolved from the remote URL. Absolute HTTP and HTTPS links remain normal web navigations unless their extension is explicitly routed to an enabled viewer module.
+Viewer links are resolved according to their source. Relative links from a local Markdown file are resolved from the source file directory. Relative Markdown-like links are routed back through the installed viewer when supported, while images and other local assets are served through module or ExtensionHost asset endpoints. Relative links from a remote Markdown URL are resolved from the remote URL. Absolute HTTP and HTTPS links remain normal web navigations unless their extension is explicitly routed to an enabled viewer module.
 
 ## Browser Lifecycle
 
@@ -114,9 +128,9 @@ Window
 |   |__ Native traffic lights
 |   |__ Tabs Bar Panel
 |       |__ Selected Group Tabs
-    |       |__ Tab 1
-    |       |__ Tab 2
-    |       |__ New Tab Button
+|           |__ Tab 1
+|           |__ Tab 2
+|           |__ New Tab Button
 |__ Split Content Area
     |__ Left Panel
     |   |__ BabelForge placeholder
@@ -151,7 +165,8 @@ Internal pages are exposed through `babelchrome://` URLs:
 
 - `babelchrome://settings`;
 - `babelchrome://history`;
-- `babelchrome://extensions`.
+- `babelchrome://extensions`;
+- `babelchrome://modules`.
 
 These pages are rendered as generated HTML in normal browser tabs. They use internal navigation URLs for actions such as changing tab opening strategy, searching the Chrome Web Store, adding an unpacked extension folder, disabling an extension, enabling an extension, or removing an extension.
 
@@ -196,7 +211,7 @@ The panel supports:
 - `Cmd+;` opens extensions.
 - `Cmd+Option+J` opens Developer Tools.
 - Entering text in the address bar navigates the selected tab.
-- `Cmd+Q` requests an orderly CEF shutdown and exits the CEF message loop even if a browser close callback is delayed.
+- `Cmd+Q` requests an orderly CEF shutdown and exits the CEF message loop even if a browser close callback is delayed. When the long Cmd+Q setting is enabled, the shortcut must be held for 2 seconds before the quit request is accepted.
 
 ## Shell Helper
 

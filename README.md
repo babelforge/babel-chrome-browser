@@ -34,10 +34,10 @@ When the browser repository is checked out through the `babel-chrome` meta works
 That command produces installable archives such as:
 
 ```text
-zip/babelforge.markdown-viewer-1.0.0.zip
-zip/babelforge.openapi-viewer-1.0.0.zip
-zip/babelforge.json-viewer-1.0.0.zip
-zip/babelforge.project-launcher-1.0.0.zip
+zip/babelforge.markdown-viewer-<version>.zip
+zip/babelforge.openapi-viewer-<version>.zip
+zip/babelforge.json-viewer-<version>.zip
+zip/babelforge.project-launcher-<version>.zip
 ```
 
 See [doc/05-php-modules.md](doc/05-php-modules.md) for the full install workflow.

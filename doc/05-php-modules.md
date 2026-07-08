@@ -27,10 +27,10 @@ BabelChrome does not bundle Markdown, OpenAPI, JSON viewers, or the project laun
 If production zips already exist in the meta workspace, open BabelChrome and install the required files:
 
 ```text
-../zip/babelforge.markdown-viewer-1.0.0.zip
-../zip/babelforge.openapi-viewer-1.0.0.zip
-../zip/babelforge.json-viewer-1.0.0.zip
-../zip/babelforge.project-launcher-1.0.0.zip
+../zip/babelforge.markdown-viewer-<version>.zip
+../zip/babelforge.openapi-viewer-<version>.zip
+../zip/babelforge.json-viewer-<version>.zip
+../zip/babelforge.project-launcher-<version>.zip
 ```
 
 Manual install flow:
@@ -188,10 +188,12 @@ GET /internal/module-lifecycle?hook=<hook-name>
 `/internal/file-types` returns the enabled file extensions contributed by modules through `file-type-handler.fileTypes`. The native browser also injects those extensions into eligible HTTP and HTTPS requests with:
 
 ```text
-X-BabelChrome-File-Types: md,markdown,mdown,mkd,mmd,mermaid,yaml,yml,json
+X-BabelChrome-File-Types: md,markdown,mmd,mermaid,yaml,yml,json
 ```
 
 This header is updated when modules are installed, removed, enabled, or disabled. Web applications can combine this header with the `BabelChrome/1.0` User-Agent marker to emit `babelchrome://viewer/...` links only when BabelChrome can handle the target file type.
+
+`fileTypes` and `file-type-handler.fileTypes` can differ in a manifest. `fileTypes` participates in viewer source matching, while `file-type-handler.fileTypes` defines the extensions advertised to HTTP and HTTPS pages.
 
 ## Address Badges
 
