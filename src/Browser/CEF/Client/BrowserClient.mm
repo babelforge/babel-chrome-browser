@@ -313,7 +313,10 @@ bool IsReloadShortcutKeyEvent(const CefKeyEvent& event) {
     return false;
   }
 
-  if (event.windows_key_code != kReloadVirtualKeyCode) {
+  bool isReloadKey = event.windows_key_code == kReloadVirtualKeyCode ||
+                     event.unmodified_character == u'r' ||
+                     event.unmodified_character == u'R';
+  if (!isReloadKey) {
     return false;
   }
 

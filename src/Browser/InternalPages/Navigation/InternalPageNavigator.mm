@@ -95,6 +95,9 @@
   tab.requestedURLString = internalURLString;
   [group.tabs addObject:tab];
   [tabContentViewAttacher_ attachTab:tab toPagesPanel:pagesPanel_];
+  if (selectGroupHandler_) {
+    selectGroupHandler_(group);
+  }
   [self selectAndPersistTab:tab];
 }
 

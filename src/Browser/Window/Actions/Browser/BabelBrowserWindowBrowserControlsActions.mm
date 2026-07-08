@@ -175,6 +175,7 @@
   }
 
   CefRefPtr<CefBrowser> browser = [owner_->selectedTab_ browser];
+  CefRefPtr<CefFrame> mainFrame = browser->GetMainFrame();
   NSString* requestedURLString =
       [owner_ stableServerReloadURLStringForTab:owner_->selectedTab_] ?: owner_->selectedTab_.requestedURLString;
   if ([owner_ isStableBabelChromeURLString:requestedURLString]) {
@@ -189,6 +190,12 @@
         return;
       }
     }
+  }
+
+  std::string currentURLString = mainFrame ? mainFrame->GetURL().ToString() : "";
+  if (currentURLString.rfind("file://", 0) == 0) {
+    mainFrame->LoadURL(currentURLString);
+    return;
   }
 
   if (!ignoringCache) {
