@@ -100,6 +100,9 @@
 
   self = [super initWithWindow:window];
   if (self) {
+    ((BabelMainWindow*)window).browserShortcutTarget = self;
+    ((BabelMainWindow*)window).reloadAction = @selector(reloadSelectedTab);
+    ((BabelMainWindow*)window).reloadIgnoringCacheAction = @selector(reloadSelectedTabIgnoringCache);
     addressAndSuggestionsActions_ = [[BabelBrowserWindowAddressAndSuggestionsActions alloc] initWithOwner:self];
     browserAttachmentActions_ = [[BabelBrowserWindowBrowserAttachmentActions alloc] initWithOwner:self];
     browserControlsActions_ = [[BabelBrowserWindowBrowserControlsActions alloc] initWithOwner:self];
@@ -790,6 +793,32 @@ enforceLiveBrowserLimitHandler:^{
 
 - (void)navigateFromAddressField:(id)sender {
   [addressAndSuggestionsActions_ navigateFromAddressField:sender];
+}
+
+- (BOOL)submitAddressFieldIfEditing {
+  if (!urlTextField_) {
+    return NO;
+  }
+
+  NSResponder* firstResponder = self.window.firstResponder;
+  NSResponder* currentEditor = [urlTextField_ currentEditor];
+  NSResponder* fieldEditor = [self.window fieldEditor:NO forObject:urlTextField_];
+  BOOL fieldEditorIsEditingURL = NO;
+  if ([firstResponder isKindOfClass:NSTextView.class]) {
+    NSTextView* textView = (NSTextView*)firstResponder;
+    id textViewDelegate = textView.delegate;
+    fieldEditorIsEditingURL = textViewDelegate == (id)urlTextField_ ||
+                              textViewDelegate == (id)self ||
+                              currentEditor == firstResponder ||
+                              fieldEditor == firstResponder;
+  }
+
+  if (firstResponder != urlTextField_ && !fieldEditorIsEditingURL) {
+    return NO;
+  }
+
+  [self navigateFromAddressField:urlTextField_];
+  return YES;
 }
 
 - (void)controlTextDidEndEditing:(NSNotification*)notification {

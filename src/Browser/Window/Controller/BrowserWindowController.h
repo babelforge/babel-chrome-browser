@@ -172,6 +172,13 @@
 - (void)reloadBrowser:(CefRefPtr<CefBrowser>)browser ignoringCache:(BOOL)ignoringCache;
 
 /**
+ * Submits the address field when it is currently being edited.
+ *
+ * @return YES when the address field owned the current edit session.
+ */
+- (BOOL)submitAddressFieldIfEditing;
+
+/**
  * Opens the BabelChrome history page.
  */
 - (void)openHistoryPage;

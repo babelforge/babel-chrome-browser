@@ -42,6 +42,13 @@
 - (void)quitApplication:(id)sender;
 
 /**
+ * Shows the BabelChrome about window.
+ *
+ * @param sender The action sender.
+ */
+- (void)showAbout:(id)sender;
+
+/**
  * Opens a new browser tab from a menu or keyboard shortcut.
  *
  * @param sender The action sender.

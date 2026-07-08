@@ -51,6 +51,13 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
 @end
 
 /**
+ * Address text field that submits reliably on Return and Enter.
+ */
+@interface BabelAddressTextField : NSTextField
+
+@end
+
+/**
  * Root view that forwards appearance changes to a target action.
  */
 @interface BabelThemeRootView : NSView
@@ -86,6 +93,21 @@ class BabelReloadIgnoreCacheCallback final : public CefCompletionCallback {
  * Main application window that avoids unwanted off-screen constraints.
  */
 @interface BabelMainWindow : NSWindow
+
+/**
+ * Receives browser-level keyboard shortcuts intercepted by the window.
+ */
+@property(nonatomic, weak) id browserShortcutTarget;
+
+/**
+ * Action used for Command+R.
+ */
+@property(nonatomic, assign) SEL reloadAction;
+
+/**
+ * Action used for Shift+Command+R.
+ */
+@property(nonatomic, assign) SEL reloadIgnoringCacheAction;
 
 @end
 

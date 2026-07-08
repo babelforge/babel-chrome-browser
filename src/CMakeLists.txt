@@ -294,6 +294,12 @@ endif()
 
 set(EXECUTABLE_NAME "${BABEL_CHROME_TARGET}")
 set(PRODUCT_NAME "${BABEL_CHROME_TARGET}")
+set(_main_info_plist "${CMAKE_CURRENT_BINARY_DIR}/Info.plist")
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Info.plist.in" _main_plist_contents)
+string(REPLACE "\${EXECUTABLE_NAME}" "${EXECUTABLE_NAME}" _main_plist_contents ${_main_plist_contents})
+string(REPLACE "\${PRODUCT_NAME}" "${PRODUCT_NAME}" _main_plist_contents ${_main_plist_contents})
+string(REPLACE "@PROJECT_VERSION@" "${PROJECT_VERSION}" _main_plist_contents ${_main_plist_contents})
+file(WRITE ${_main_info_plist} ${_main_plist_contents})
 
 add_executable(${BABEL_CHROME_TARGET} MACOSX_BUNDLE ${BABEL_CHROME_RESOURCES} ${BABEL_CHROME_SOURCES})
 SET_EXECUTABLE_TARGET_PROPERTIES(${BABEL_CHROME_TARGET})
@@ -301,9 +307,14 @@ add_dependencies(${BABEL_CHROME_TARGET} libcef_dll_wrapper)
 target_link_libraries(${BABEL_CHROME_TARGET} libcef_dll_wrapper ${CEF_STANDARD_LIBS})
 target_include_directories(${BABEL_CHROME_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CEF_ROOT})
 set_target_properties(${BABEL_CHROME_TARGET} PROPERTIES
-  MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Resources/Info.plist.in
+  MACOSX_BUNDLE_INFO_PLIST ${_main_info_plist}
   RESOURCE "${BABEL_CHROME_RESOURCES}"
+  MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+  MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+  XCODE_ATTRIBUTE_CURRENT_PROJECT_VERSION "${PROJECT_VERSION}"
+  XCODE_ATTRIBUTE_MARKETING_VERSION "${PROJECT_VERSION}"
   XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "fr.babelforge.babel-chrome"
+  XCODE_ATTRIBUTE_VERSION_SHORT "${PROJECT_VERSION}"
 )
 
 COPY_MAC_FRAMEWORK("${BABEL_CHROME_TARGET}" "${CEF_BINARY_DIR}" "${BABEL_CHROME_APP}")
@@ -342,6 +353,8 @@ foreach(_suffix_list ${CEF_HELPER_APP_SUFFIXES})
   string(REPLACE "\${EXECUTABLE_NAME}" "${_helper_output_name}" _plist_contents ${_plist_contents})
   string(REPLACE "\${PRODUCT_NAME}" "${_helper_output_name}" _plist_contents ${_plist_contents})
   string(REPLACE "\${BUNDLE_ID_SUFFIX}" "${_plist_suffix}" _plist_contents ${_plist_contents})
+  string(REPLACE "\${VERSION_SHORT}" "${PROJECT_VERSION}" _plist_contents ${_plist_contents})
+  string(REPLACE "@PROJECT_VERSION@" "${PROJECT_VERSION}" _plist_contents ${_plist_contents})
   file(WRITE ${_helper_info_plist} ${_plist_contents})
 
   add_executable(${_helper_target} MACOSX_BUNDLE ${BABEL_CHROME_HELPER_SOURCES})
@@ -352,7 +365,12 @@ foreach(_suffix_list ${CEF_HELPER_APP_SUFFIXES})
   set_target_properties(${_helper_target} PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST ${_helper_info_plist}
     OUTPUT_NAME ${_helper_output_name}
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+    MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+    XCODE_ATTRIBUTE_CURRENT_PROJECT_VERSION "${PROJECT_VERSION}"
+    XCODE_ATTRIBUTE_MARKETING_VERSION "${PROJECT_VERSION}"
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "fr.babelforge.babel-chrome.helper${_plist_suffix}"
+    XCODE_ATTRIBUTE_VERSION_SHORT "${PROJECT_VERSION}"
   )
 
   add_dependencies(${BABEL_CHROME_TARGET} "${_helper_target}")

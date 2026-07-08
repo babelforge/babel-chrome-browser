@@ -19,7 +19,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>${VERSION_SHORT}</string>
+	<string>@PROJECT_VERSION@</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleDocumentTypes</key>
@@ -135,7 +135,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>${VERSION_SHORT}</string>
+	<string>@PROJECT_VERSION@</string>
 	<key>LSEnvironment</key>
 	<dict>
 		<key>MallocNanoZone</key>

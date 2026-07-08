@@ -345,7 +345,7 @@ bool ShouldExposeBabelChromeHeadersToURL(const std::string& urlString,
  * @return True when the key event is Command+R or Shift+Command+R.
  */
 bool IsReloadShortcutKeyEvent(const CefKeyEvent& event) {
-  if (event.type != KEYEVENT_RAWKEYDOWN) {
+  if (event.type != KEYEVENT_RAWKEYDOWN && event.type != KEYEVENT_KEYDOWN) {
     return false;
   }
 

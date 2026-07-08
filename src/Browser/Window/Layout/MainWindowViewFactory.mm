@@ -138,7 +138,7 @@
   viewSet.viewerBadgeLabel.settingsAction = @selector(openAddressBadgeSettingsFromMenu:);
   [viewSet.addressTextFieldContainer addSubview:viewSet.viewerBadgeLabel];
 
-  viewSet.urlTextField = [[NSTextField alloc] initWithFrame:NSMakeRect(8, 4, 962, 22)];
+  viewSet.urlTextField = [[BabelAddressTextField alloc] initWithFrame:NSMakeRect(8, 4, 962, 22)];
   viewSet.urlTextField.delegate = target;
   viewSet.urlTextField.target = target;
   viewSet.urlTextField.action = @selector(navigateFromAddressField:);
@@ -146,6 +146,7 @@
   viewSet.urlTextField.font = [NSFont systemFontOfSize:14];
   viewSet.urlTextField.bezeled = NO;
   viewSet.urlTextField.drawsBackground = NO;
+  viewSet.urlTextField.usesSingleLineMode = YES;
   viewSet.urlTextField.focusRingType = NSFocusRingTypeNone;
   viewSet.urlTextField.autoresizingMask = NSViewWidthSizable;
   [viewSet.addressTextFieldContainer addSubview:viewSet.urlTextField];

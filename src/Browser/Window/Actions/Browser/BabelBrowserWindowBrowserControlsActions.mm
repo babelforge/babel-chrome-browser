@@ -31,6 +31,30 @@ static NSString* BabelURLStringByAddingLocalFileReloadToken(NSString* urlString)
   return components.URL.absoluteString ?: urlString;
 }
 
+/**
+ * Returns the local file URL that should be used as the reload base for a tab.
+ *
+ * @param tab The tab to inspect.
+ * @param frameURLString The current CEF frame URL.
+ * @return A local file URL string, or nil when the tab is not showing a local file.
+ */
+static NSString* BabelLocalFileReloadBaseURLString(BabelBrowserTab* tab, NSString* frameURLString) {
+  NSArray<NSString*>* candidates = @[
+    tab.requestedURLString ?: @"",
+    tab.urlString ?: @"",
+    frameURLString ?: @""
+  ];
+
+  for (NSString* candidate in candidates) {
+    NSURLComponents* components = [NSURLComponents componentsWithString:candidate];
+    if ([components.scheme.lowercaseString isEqualToString:@"file"]) {
+      return candidate;
+    }
+  }
+
+  return nil;
+}
+
 @implementation BabelBrowserWindowBrowserControlsActions {
   __weak BabelBrowserWindowController* owner_;
 }
@@ -237,10 +261,12 @@ static NSString* BabelURLStringByAddingLocalFileReloadToken(NSString* urlString)
     }
   }
 
-  std::string currentURLString = mainFrame ? mainFrame->GetURL().ToString() : "";
-  if (currentURLString.rfind("file://", 0) == 0) {
-    NSString* nativeCurrentURLString = [NSString stringWithUTF8String:currentURLString.c_str()];
-    NSString* reloadURLString = BabelURLStringByAddingLocalFileReloadToken(nativeCurrentURLString);
+  std::string frameURLString = mainFrame ? mainFrame->GetURL().ToString() : "";
+  NSString* nativeFrameURLString = [NSString stringWithUTF8String:frameURLString.c_str()];
+  NSString* localFileURLString =
+      BabelLocalFileReloadBaseURLString(owner_->selectedTab_, nativeFrameURLString);
+  if (localFileURLString.length > 0) {
+    NSString* reloadURLString = BabelURLStringByAddingLocalFileReloadToken(localFileURLString);
     mainFrame->LoadURL(std::string(reloadURLString.UTF8String));
     return;
   }

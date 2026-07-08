@@ -2,6 +2,31 @@
 
 #import "Browser/UI/Theme/BrowserTheme.h"
 
+static const unsigned short kBabelReloadKeyCode = 15;
+
+/**
+ * Reports whether an AppKit event is a browser reload shortcut.
+ *
+ * @param event The keyboard event to inspect.
+ * @return YES when the event is Command+R or Shift+Command+R.
+ */
+static BOOL BabelEventIsBrowserReloadShortcut(NSEvent* event) {
+  if (!event || event.type != NSEventTypeKeyDown) {
+    return NO;
+  }
+
+  NSEventModifierFlags flags = event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
+  if ((flags & NSEventModifierFlagCommand) == 0) {
+    return NO;
+  }
+  if ((flags & (NSEventModifierFlagControl | NSEventModifierFlagOption)) != 0) {
+    return NO;
+  }
+
+  NSString* key = event.charactersIgnoringModifiers.lowercaseString ?: @"";
+  return [key isEqualToString:@"r"] || event.keyCode == kBabelReloadKeyCode;
+}
+
 BabelReloadIgnoreCacheCallback::BabelReloadIgnoreCacheCallback(CefRefPtr<CefBrowser> browser)
     : browser_(browser) {}
 
@@ -79,6 +104,36 @@ void BabelReloadIgnoreCacheCallback::OnComplete() {
 - (void)resetCursorRects {
   [super resetCursorRects];
   [self addCursorRect:self.bounds cursor:NSCursor.pointingHandCursor];
+}
+
+@end
+
+@implementation BabelAddressTextField
+
+/**
+ * Handles Return and Enter before AppKit can leave the edit session without submitting.
+ *
+ * @param event The keyboard event to inspect.
+ */
+- (void)keyDown:(NSEvent*)event {
+  if (event.keyCode != 36 && event.keyCode != 76) {
+    [super keyDown:event];
+    return;
+  }
+
+  id delegate = self.delegate;
+  NSText* editor = [self currentEditor];
+  if ([editor isKindOfClass:NSTextView.class] &&
+      [delegate respondsToSelector:@selector(control:textView:doCommandBySelector:)]) {
+    BOOL handled = [delegate control:self
+                             textView:(NSTextView*)editor
+                    doCommandBySelector:@selector(insertNewline:)];
+    if (handled) {
+      return;
+    }
+  }
+
+  [self sendAction:self.action to:self.target];
 }
 
 @end
@@ -179,6 +234,42 @@ void BabelReloadIgnoreCacheCallback::OnComplete() {
 @end
 
 @implementation BabelMainWindow
+
+@synthesize browserShortcutTarget;
+@synthesize reloadAction;
+@synthesize reloadIgnoringCacheAction;
+
+- (BOOL)performBrowserShortcutForEvent:(NSEvent*)event {
+  if (!BabelEventIsBrowserReloadShortcut(event)) {
+    return NO;
+  }
+
+  SEL action = ((event.modifierFlags & NSEventModifierFlagShift) != 0)
+      ? self.reloadIgnoringCacheAction
+      : self.reloadAction;
+  if (!self.browserShortcutTarget || !action) {
+    return NO;
+  }
+
+  [NSApp sendAction:action to:self.browserShortcutTarget from:self];
+  return YES;
+}
+
+- (BOOL)performKeyEquivalent:(NSEvent*)event {
+  if ([self performBrowserShortcutForEvent:event]) {
+    return YES;
+  }
+
+  return [super performKeyEquivalent:event];
+}
+
+- (void)keyDown:(NSEvent*)event {
+  if ([self performBrowserShortcutForEvent:event]) {
+    return;
+  }
+
+  [super keyDown:event];
+}
 
 - (NSRect)constrainFrameRect:(NSRect)frameRect toScreen:(NSScreen*)screen {
   for (NSScreen* availableScreen in NSScreen.screens) {

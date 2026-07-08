@@ -12,6 +12,13 @@
   [menuBar addItem:appMenuItem];
 
   NSMenu* appMenu = [[NSMenu alloc] initWithTitle:BabelChromeConfiguration.applicationName];
+  NSMenuItem* aboutItem = [[NSMenuItem alloc] initWithTitle:@"À propos"
+                                                     action:@selector(showAbout:)
+                                              keyEquivalent:@""];
+  aboutItem.target = target;
+  [appMenu addItem:aboutItem];
+  [appMenu addItem:[NSMenuItem separatorItem]];
+
   NSString* quitTitle =
       [NSString stringWithFormat:@"Quit %@", BabelChromeConfiguration.applicationName];
   NSMenuItem* quitItem = [[NSMenuItem alloc] initWithTitle:quitTitle
@@ -25,7 +32,7 @@
                                                  keyEquivalent:@","];
   settingsItem.target = target;
   settingsItem.keyEquivalentModifierMask = NSEventModifierFlagCommand;
-  [appMenu insertItem:settingsItem atIndex:0];
+  [appMenu insertItem:settingsItem atIndex:2];
   [appMenuItem setSubmenu:appMenu];
 
   [menuBar addItem:[self fileMenuItemWithTarget:target]];

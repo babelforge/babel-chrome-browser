@@ -8,6 +8,7 @@
   NSMutableArray<NSURL*>* pendingURLs_;
   NSTimer* startupCollectionTimer_;
   NSWindow* startupWindow_;
+  NSWindow* aboutWindow_;
   NSTimer* longQuitTimer_;
   id longQuitKeyUpMonitor_;
   BOOL didOpenInitialURL_;
@@ -17,6 +18,9 @@ static const NSTimeInterval kStartupInitialCollectionDuration = 2.0;
 static const NSTimeInterval kStartupURLQuietDuration = 6.0;
 static const NSTimeInterval kStartupWindowMinimumDisplayDuration = 2.5;
 static const NSTimeInterval kLongQuitShortcutDuration = 2.0;
+static const unsigned short kReloadKeyCode = 15;
+static const unsigned short kReturnKeyCode = 36;
+static const unsigned short kKeypadEnterKeyCode = 76;
 static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutEnabled";
 
 - (instancetype)init {
@@ -25,6 +29,7 @@ static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutE
     pendingURLs_ = [NSMutableArray array];
     startupCollectionTimer_ = nil;
     startupWindow_ = nil;
+    aboutWindow_ = nil;
     longQuitTimer_ = nil;
     longQuitKeyUpMonitor_ = nil;
     didOpenInitialURL_ = NO;
@@ -61,6 +66,64 @@ static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutE
   if (iconImage) {
     NSApp.applicationIconImage = iconImage;
   }
+}
+
+- (void)showAbout:(id)sender {
+  if (aboutWindow_) {
+    [aboutWindow_ makeKeyAndOrderFront:nil];
+    [NSApp activateIgnoringOtherApps:YES];
+    return;
+  }
+
+  NSRect windowFrame = NSMakeRect(0.0, 0.0, 440.0, 380.0);
+  aboutWindow_ = [[NSWindow alloc] initWithContentRect:windowFrame
+                                             styleMask:NSWindowStyleMaskTitled |
+                                                       NSWindowStyleMaskClosable
+                                               backing:NSBackingStoreBuffered
+                                                 defer:NO];
+  aboutWindow_.title = @"À propos de BabelChrome";
+  aboutWindow_.releasedWhenClosed = NO;
+  aboutWindow_.backgroundColor = [NSColor colorWithCalibratedRed:0.955
+                                                           green:0.976
+                                                            blue:1.0
+                                                           alpha:1.0];
+
+  NSView* backgroundView = [[NSView alloc] initWithFrame:windowFrame];
+  backgroundView.wantsLayer = YES;
+  backgroundView.layer.backgroundColor = aboutWindow_.backgroundColor.CGColor;
+
+  NSImageView* logoView = [[NSImageView alloc] initWithFrame:NSMakeRect(120.0, 170.0, 200.0, 170.0)];
+  logoView.image = [NSImage imageNamed:@"BabelForgeIcon"];
+  logoView.imageScaling = NSImageScaleProportionallyUpOrDown;
+  [backgroundView addSubview:logoView];
+
+  NSTextField* titleLabel = [NSTextField labelWithString:@"BabelChrome"];
+  titleLabel.frame = NSMakeRect(30.0, 110.0, 380.0, 42.0);
+  titleLabel.alignment = NSTextAlignmentCenter;
+  titleLabel.font = [NSFont systemFontOfSize:34.0 weight:NSFontWeightBold];
+  titleLabel.textColor = [NSColor colorWithCalibratedRed:0.02 green:0.09 blue:0.23 alpha:1.0];
+  [backgroundView addSubview:titleLabel];
+
+  NSTextField* subtitleLabel = [NSTextField labelWithString:@"Software, Tools & AI"];
+  subtitleLabel.frame = NSMakeRect(30.0, 78.0, 380.0, 28.0);
+  subtitleLabel.alignment = NSTextAlignmentCenter;
+  subtitleLabel.font = [NSFont systemFontOfSize:18.0 weight:NSFontWeightSemibold];
+  subtitleLabel.textColor = [NSColor colorWithCalibratedRed:0.02 green:0.09 blue:0.23 alpha:0.88];
+  [backgroundView addSubview:subtitleLabel];
+
+  NSString* versionString = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"";
+  NSTextField* versionLabel =
+      [NSTextField labelWithString:[NSString stringWithFormat:@"Version %@", versionString]];
+  versionLabel.frame = NSMakeRect(30.0, 44.0, 380.0, 22.0);
+  versionLabel.alignment = NSTextAlignmentCenter;
+  versionLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightRegular];
+  versionLabel.textColor = NSColor.secondaryLabelColor;
+  [backgroundView addSubview:versionLabel];
+
+  aboutWindow_.contentView = backgroundView;
+  [aboutWindow_ center];
+  [aboutWindow_ makeKeyAndOrderFront:nil];
+  [NSApp activateIgnoringOtherApps:YES];
 }
 
 - (void)showStartupWindow {
@@ -303,14 +366,19 @@ static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutE
     return NO;
   }
 
+  if ([self isReturnOrEnterEvent:event] &&
+      [browserWindowController_ submitAddressFieldIfEditing]) {
+    return YES;
+  }
+
   NSEventModifierFlags flags = event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
   if ((flags & NSEventModifierFlagCommand) == 0) {
     return NO;
   }
 
   NSString* key = [event.charactersIgnoringModifiers lowercaseString];
-  if ([key isEqualToString:@"r"] &&
-      (flags & ~(NSEventModifierFlagCommand | NSEventModifierFlagShift)) == 0) {
+  if (([key isEqualToString:@"r"] || event.keyCode == kReloadKeyCode) &&
+      (flags & (NSEventModifierFlagControl | NSEventModifierFlagOption)) == 0) {
     if ((flags & NSEventModifierFlagShift) != 0) {
       [self reloadTabIgnoringCache:event];
       return YES;
@@ -326,6 +394,19 @@ static NSString* const kLongQuitShortcutEnabledDefaultsKey = @"LongQuitShortcutE
   }
 
   return NO;
+}
+
+- (BOOL)isReturnOrEnterEvent:(NSEvent*)event {
+  if (!event || event.type != NSEventTypeKeyDown) {
+    return NO;
+  }
+
+  if (event.keyCode == kReturnKeyCode || event.keyCode == kKeypadEnterKeyCode) {
+    return YES;
+  }
+
+  NSString* characters = event.charactersIgnoringModifiers ?: @"";
+  return [characters isEqualToString:@"\r"] || [characters isEqualToString:@"\n"];
 }
 
 - (void)completeLongQuitShortcut:(NSTimer*)timer {
