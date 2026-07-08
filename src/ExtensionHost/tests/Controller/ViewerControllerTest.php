@@ -6,11 +6,13 @@ namespace BabelForge\BabelChrome\LocalViewer\Tests\Controller;
 
 use BabelForge\BabelChrome\LocalViewer\Controller\ViewerController;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleAutoloadRegistrar;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleCommandRunner;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleHookRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleInstaller;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleReadinessChecker;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleSetupRunner;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleUrlResolver;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleWebRuntime;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeDispatcher;
@@ -165,6 +167,38 @@ final class ViewerControllerTest extends TestCase
         self::assertIsArray($decoded);
         self::assertSame(['md', 'markdown', 'mmd', 'mermaid', 'yaml', 'yml', 'json'], $decoded['fileTypes'] ?? null);
         self::assertSame('md,markdown,mmd,mermaid,yaml,yml,json', $decoded['headerValue'] ?? null);
+    }
+
+    /**
+     * Ensures internal module setup runs the declared setup command.
+     */
+    public function testInternalModulesSetupRunsDeclaredSetup(): void
+    {
+        $this->writeSetupModule();
+
+        $response = $this->controller()->internalModulesSetup(Request::create('/internal/modules/setup', 'GET', [
+            'token' => 'test-token',
+            'moduleId' => 'vendor.setup-module',
+        ]));
+
+        $decoded = json_decode($this->responseContent($response), true);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertIsArray($decoded);
+        self::assertTrue($decoded['ok'] ?? false);
+        self::assertSame('vendor.setup-module', $decoded['moduleId'] ?? null);
+
+        $setup = $decoded['setup'] ?? null;
+        $readinessStatus = $decoded['readinessStatus'] ?? null;
+        self::assertIsArray($setup);
+        self::assertIsArray($readinessStatus);
+        self::assertSame('completed', $setup['state'] ?? null);
+        self::assertTrue($setup['ok'] ?? false);
+
+        $stdout = $setup['stdout'] ?? null;
+        self::assertIsString($stdout);
+        self::assertStringContainsString('setup-output', $stdout);
+        self::assertSame('ready', $readinessStatus['state'] ?? null);
     }
 
     /**
@@ -604,7 +638,8 @@ final class ViewerControllerTest extends TestCase
             new ModuleHookRegistry($moduleRegistry),
             new ModuleInstaller($moduleRegistry),
             $moduleAutoloadRegistrar = new ModuleAutoloadRegistrar($moduleRegistry),
-            new ModuleReadinessChecker(),
+            new ModuleReadinessChecker($moduleCommandRunner = new ModuleCommandRunner()),
+            new ModuleSetupRunner($moduleCommandRunner),
             new ModuleRouteDispatcher(
                 $moduleRegistry,
                 new ModuleRuntimeDispatcher(
@@ -715,6 +750,35 @@ final class ViewerControllerTest extends TestCase
 
             return new Response('JSON viewer module route reached.');
             PHP);
+    }
+
+    /**
+     * Writes a setup-enabled module.
+     */
+    private function writeSetupModule(): void
+    {
+        $moduleDirectory = $this->stateDirectory.'/Modules/vendor.setup-module';
+        if (!mkdir($moduleDirectory, 0o775, true) && !is_dir($moduleDirectory)) {
+            self::fail('Unable to create setup module directory.');
+        }
+
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.setup-module',
+            'name' => 'Setup Module',
+            'version' => '1.0.0',
+            'requirements' => [
+                'php' => '>=8.4',
+            ],
+            'enabled' => true,
+            'readiness' => [
+                'type' => 'command',
+                'command' => escapeshellarg(PHP_BINARY).' -r '.escapeshellarg('echo json_encode(["ready" => true, "status" => "ready"]);'),
+            ],
+            'setup' => [
+                'type' => 'command',
+                'command' => escapeshellarg(PHP_BINARY).' -r '.escapeshellarg('echo "setup-output";'),
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
     /**

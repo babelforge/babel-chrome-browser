@@ -157,6 +157,15 @@
  */
 - (NSDictionary*)removeModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
 
+/**
+ * Runs a user-confirmed setup command for one installed module.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error Receives request or setup errors.
+ * @return A decoded JSON dictionary, otherwise nil.
+ */
+- (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
+
 @end
 
 #endif

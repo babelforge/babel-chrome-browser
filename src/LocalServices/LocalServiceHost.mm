@@ -307,6 +307,19 @@ static NSUInteger const kLegacyViewerCacheKeyLengthThreshold = 64;
                               error:error];
 }
 
+- (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  if (moduleIdentifier.length == 0) {
+    [self assignError:error message:@"Missing module identifier."];
+    return nil;
+  }
+
+  return [self internalJSONWithPath:@"/internal/modules/setup"
+                         queryItems:@[
+                           [NSURLQueryItem queryItemWithName:@"moduleId" value:moduleIdentifier]
+                         ]
+                              error:error];
+}
+
 - (NSString*)viewerRouteForURL:(NSURL*)url {
   NSDictionary* routeMetadata = [self viewerRouteMetadataForURL:url];
   NSString* route = [routeMetadata[@"route"] isKindOfClass:NSString.class] ? routeMetadata[@"route"] : nil;

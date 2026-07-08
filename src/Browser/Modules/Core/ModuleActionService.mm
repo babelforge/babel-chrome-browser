@@ -112,4 +112,8 @@
   return response != nil;
 }
 
+- (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  return [BabelLocalServiceHost.sharedHost setupModuleWithIdentifier:moduleIdentifier error:error];
+}
+
 @end

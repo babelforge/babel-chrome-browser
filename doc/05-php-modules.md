@@ -159,7 +159,20 @@ Modules may also declare a setup command:
 }
 ```
 
-Setup commands are never run automatically. They are declared so BabelChrome can expose a user-confirmed setup flow when the UI supports it.
+Setup commands are never run automatically. They are declared so BabelChrome can expose a user-confirmed setup flow from the module details page.
+When a module declares setup and its readiness state is not ready, the module details page shows a `Run Setup` action. BabelChrome asks for confirmation, runs the command from the installed module root, captures stdout and stderr, and refreshes readiness after the command exits.
+
+The command should prefer JSON stdout:
+
+```json
+{
+  "ok": true,
+  "status": "completed",
+  "messages": ["Setup completed"]
+}
+```
+
+If the command writes plain text instead, BabelChrome still displays stdout, stderr, timeout state, and exit code. Setup failure is diagnostic only; it does not crash BabelChrome, remove the module, or disable the module automatically.
 
 ## Viewer Routing
 

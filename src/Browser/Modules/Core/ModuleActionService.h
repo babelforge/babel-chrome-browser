@@ -70,6 +70,15 @@
  */
 - (BOOL)removeModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
 
+/**
+ * Runs a user-confirmed module setup command.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error The optional error pointer.
+ * @return The setup response, or nil on failure.
+ */
+- (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
+
 @end
 
 #endif

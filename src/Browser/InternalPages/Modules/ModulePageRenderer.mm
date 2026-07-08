@@ -155,6 +155,33 @@
   NSArray* routes = [selectedModule[@"routes"] isKindOfClass:NSArray.class] ? selectedModule[@"routes"] : @[];
   NSArray* fileTypes = [selectedModule[@"fileTypes"] isKindOfClass:NSArray.class] ? selectedModule[@"fileTypes"] : @[];
   NSArray* hooks = [selectedModule[@"hooks"] isKindOfClass:NSArray.class] ? selectedModule[@"hooks"] : @[];
+  NSDictionary* readinessStatus = [selectedModule[@"readinessStatus"] isKindOfClass:NSDictionary.class]
+      ? selectedModule[@"readinessStatus"]
+      : @{};
+  NSDictionary* setup = [selectedModule[@"setup"] isKindOfClass:NSDictionary.class] ? selectedModule[@"setup"] : nil;
+  NSString* readinessState = [readinessStatus[@"state"] isKindOfClass:NSString.class]
+      ? readinessStatus[@"state"]
+      : @"unknown";
+  NSNumber* ready = [readinessStatus[@"ready"] isKindOfClass:NSNumber.class] ? readinessStatus[@"ready"] : nil;
+  NSNumber* canSetup = [readinessStatus[@"canSetup"] isKindOfClass:NSNumber.class] ? readinessStatus[@"canSetup"] : nil;
+  BOOL canRunSetup = setup != nil && ![ready boolValue] && (!canSetup || [canSetup boolValue]);
+  NSString* setupActionHTML = canRunSetup
+      ? [NSString stringWithFormat:@"<a class='smallButton' href='babelchrome://modules?setup=%@'>Run Setup</a>",
+                                   [self queryEscapedString:moduleIdentifier ?: @""]]
+      : @"";
+
+  NSMutableString* readinessMessagesHTML = [NSMutableString string];
+  NSArray* readinessMessages = [readinessStatus[@"messages"] isKindOfClass:NSArray.class]
+      ? readinessStatus[@"messages"]
+      : @[];
+  for (NSString* message in readinessMessages) {
+    if ([message isKindOfClass:NSString.class] && message.length > 0) {
+      [readinessMessagesHTML appendFormat:@"<li>%@</li>", [self htmlEscapedString:message]];
+    }
+  }
+  NSString* readinessDetailsHTML = readinessMessagesHTML.length > 0
+      ? [NSString stringWithFormat:@"<section><h2>Readiness Details</h2><ul>%@</ul></section>", readinessMessagesHTML]
+      : @"";
 
   NSMutableString* routesHTML = [NSMutableString string];
   for (NSDictionary* route in routes) {
@@ -206,10 +233,13 @@
        "<dt>Version</dt><dd>%@</dd>"
        "<dt>Type</dt><dd>%@</dd>"
        "<dt>Status</dt><dd>%@</dd>"
+       "<dt>Readiness</dt><dd>%@</dd>"
        "<dt>PHP</dt><dd><code>%@</code></dd>"
        "<dt>Vendor</dt><dd>%@</dd>"
        "</dl>"
+       "%@"
        "</section>"
+       "%@"
        "<section><h2>Routes</h2><ul>%@</ul></section>"
        "<section><h2>Capabilities</h2><div class='routeList'>%@</div></section>"
        "<p><a class='smallButton' data-can-open-menu='true' href='babelchrome://modules'>Back to modules</a></p>",
@@ -219,8 +249,11 @@
       [self htmlEscapedString:moduleVersion],
       [self htmlEscapedString:moduleType],
       enabled ? @"Enabled" : @"Disabled",
+      [self htmlEscapedString:readinessState],
       [self htmlEscapedString:phpRequirement],
       hasIsolatedVendor ? @"Own vendor" : @"No module vendor",
+      setupActionHTML,
+      readinessDetailsHTML,
       routesHTML.length > 0 ? routesHTML : @"<li>No route declared.</li>",
       tagsHTML.length > 0 ? tagsHTML : @"<span class='empty'>No capability declared.</span>"];
 }

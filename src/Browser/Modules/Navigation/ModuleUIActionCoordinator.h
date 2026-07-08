@@ -46,6 +46,14 @@
 - (BOOL)removePHPModuleWithIdentifier:(NSString*)moduleIdentifier;
 
 /**
+ * Confirms and runs a module setup command.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @return YES when the setup command was executed.
+ */
+- (BOOL)setupModuleWithIdentifier:(NSString*)moduleIdentifier;
+
+/**
  * Prompts for the module update URL.
  */
 - (void)configureModuleUpdateURLFromPrompt;

@@ -94,6 +94,29 @@
   return YES;
 }
 
+- (BOOL)setupModuleWithIdentifier:(NSString*)moduleIdentifier {
+  NSAlert* confirmation = [[NSAlert alloc] init];
+  confirmation.messageText = @"Run Module Setup";
+  confirmation.informativeText =
+      [NSString stringWithFormat:@"Run setup for module \"%@\"?", moduleIdentifier ?: @""];
+  [confirmation addButtonWithTitle:@"Run Setup"];
+  [confirmation addButtonWithTitle:@"Cancel"];
+  confirmation.alertStyle = NSAlertStyleInformational;
+  if ([confirmation runModal] != NSAlertFirstButtonReturn) {
+    return NO;
+  }
+
+  NSError* error = nil;
+  NSDictionary* response = [moduleActionService_ setupModuleWithIdentifier:moduleIdentifier error:&error];
+  if (!response) {
+    [self showModuleActionAlertWithError:error];
+    return NO;
+  }
+
+  [self showModuleSetupResult:response moduleIdentifier:moduleIdentifier];
+  return YES;
+}
+
 - (void)configureModuleUpdateURLFromPrompt {
   NSAlert* alert = [[NSAlert alloc] init];
   alert.messageText = @"Module Update URL";
@@ -200,6 +223,40 @@
   alert.messageText = @"Unable to Manage PHP Module";
   alert.informativeText = error.localizedDescription ?: @"The module operation failed.";
   alert.alertStyle = NSAlertStyleWarning;
+  [alert runModal];
+}
+
+- (void)showModuleSetupResult:(NSDictionary*)response moduleIdentifier:(NSString*)moduleIdentifier {
+  NSDictionary* setup = [response[@"setup"] isKindOfClass:NSDictionary.class] ? response[@"setup"] : @{};
+  BOOL ok = [setup[@"ok"] boolValue];
+  NSString* state = [setup[@"state"] isKindOfClass:NSString.class] ? setup[@"state"] : @"unknown";
+  NSArray* messages = [setup[@"messages"] isKindOfClass:NSArray.class] ? setup[@"messages"] : @[];
+  NSString* stdoutText = [setup[@"stdout"] isKindOfClass:NSString.class] ? setup[@"stdout"] : @"";
+  NSString* stderrText = [setup[@"stderr"] isKindOfClass:NSString.class] ? setup[@"stderr"] : @"";
+  NSNumber* exitCode = [setup[@"exitCode"] isKindOfClass:NSNumber.class] ? setup[@"exitCode"] : nil;
+
+  NSMutableArray<NSString*>* lines = [NSMutableArray array];
+  [lines addObject:[NSString stringWithFormat:@"Module: %@", moduleIdentifier ?: @""]];
+  [lines addObject:[NSString stringWithFormat:@"State: %@", state]];
+  if (exitCode) {
+    [lines addObject:[NSString stringWithFormat:@"Exit code: %@", exitCode]];
+  }
+  for (id message in messages) {
+    if ([message isKindOfClass:NSString.class] && [message length] > 0) {
+      [lines addObject:message];
+    }
+  }
+  if (stdoutText.length > 0) {
+    [lines addObject:[NSString stringWithFormat:@"stdout:\n%@", stdoutText]];
+  }
+  if (stderrText.length > 0) {
+    [lines addObject:[NSString stringWithFormat:@"stderr:\n%@", stderrText]];
+  }
+
+  NSAlert* alert = [[NSAlert alloc] init];
+  alert.messageText = ok ? @"Module Setup Completed" : @"Module Setup Failed";
+  alert.informativeText = [lines componentsJoinedByString:@"\n\n"];
+  alert.alertStyle = ok ? NSAlertStyleInformational : NSAlertStyleWarning;
   [alert runModal];
 }
 

@@ -95,6 +95,15 @@ NSString* const BabelInternalModuleNavigationDestinationOpenModule = @"open-modu
     return [self modulesResultWithCapabilitiesDidChange:changed];
   }
 
+  if ([action.name isEqualToString:BabelInternalNavigationActionSetup]) {
+    [moduleUIActionCoordinator_ setupModuleWithIdentifier:action.value];
+    return [BabelInternalModuleNavigationResult
+        resultWithDestination:BabelInternalModuleNavigationDestinationDetails
+        capabilitiesDidChange:NO
+              moduleIdentifier:action.value
+                          route:nil];
+  }
+
   if ([action.name isEqualToString:BabelInternalNavigationActionModuleDetails]) {
     return [BabelInternalModuleNavigationResult
         resultWithDestination:BabelInternalModuleNavigationDestinationDetails

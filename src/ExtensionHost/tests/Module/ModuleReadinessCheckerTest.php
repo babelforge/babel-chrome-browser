@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BabelForge\BabelChrome\LocalViewer\Tests\Module;
 
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleCommandDefinition;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleCommandRunner;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleManifest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleReadinessChecker;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -14,6 +15,7 @@ use PHPUnit\Framework\TestCase;
  * Verifies optional module readiness checks.
  */
 #[CoversClass(ModuleCommandDefinition::class)]
+#[CoversClass(ModuleCommandRunner::class)]
 #[CoversClass(ModuleManifest::class)]
 #[CoversClass(ModuleReadinessChecker::class)]
 final class ModuleReadinessCheckerTest extends TestCase
@@ -40,7 +42,7 @@ final class ModuleReadinessCheckerTest extends TestCase
     {
         $module = $this->module();
 
-        $status = new ModuleReadinessChecker()->status($module);
+        $status = $this->checker()->status($module);
 
         self::assertSame('unknown', $status['state'] ?? null);
         self::assertNull($status['ready'] ?? null);
@@ -60,7 +62,7 @@ final class ModuleReadinessCheckerTest extends TestCase
             ],
         ]);
 
-        $status = new ModuleReadinessChecker()->status($module);
+        $status = $this->checker()->status($module);
 
         self::assertSame('ready', $status['state'] ?? null);
         self::assertTrue($status['ready'] ?? false);
@@ -85,7 +87,7 @@ final class ModuleReadinessCheckerTest extends TestCase
             ],
         ]);
 
-        $status = new ModuleReadinessChecker()->status($module);
+        $status = $this->checker()->status($module);
 
         self::assertSame('invalid-output', $status['state'] ?? null);
         self::assertFalse($status['ready'] ?? true);
@@ -109,5 +111,15 @@ final class ModuleReadinessCheckerTest extends TestCase
                 'php' => '>=8.4',
             ],
         ], $extraData), $this->moduleDirectory);
+    }
+
+    /**
+     * Creates a readiness checker.
+     *
+     * @return ModuleReadinessChecker the checker
+     */
+    private function checker(): ModuleReadinessChecker
+    {
+        return new ModuleReadinessChecker(new ModuleCommandRunner());
     }
 }

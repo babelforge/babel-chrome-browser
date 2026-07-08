@@ -19,6 +19,7 @@ extern NSString* const BabelInternalNavigationActionInstallUpdate;
 extern NSString* const BabelInternalNavigationActionInstallSelectedUpdates;
 extern NSString* const BabelInternalNavigationActionEnable;
 extern NSString* const BabelInternalNavigationActionDisable;
+extern NSString* const BabelInternalNavigationActionSetup;
 extern NSString* const BabelInternalNavigationActionModuleDetails;
 extern NSString* const BabelInternalNavigationActionOpen;
 extern NSString* const BabelInternalNavigationActionReopen;

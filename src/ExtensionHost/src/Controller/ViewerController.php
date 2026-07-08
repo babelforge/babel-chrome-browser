@@ -13,6 +13,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleManifest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleReadinessChecker;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleSetupRunner;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleUrlResolver;
 use BabelForge\BabelChrome\LocalViewer\Service\OpenWithService;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceLoader;
@@ -35,6 +36,7 @@ final readonly class ViewerController
      * @param ModuleInstaller         $moduleInstaller         installs and manages user modules
      * @param ModuleAutoloadRegistrar $moduleAutoloadRegistrar registers module-local vendors
      * @param ModuleReadinessChecker  $moduleReadinessChecker  evaluates optional module readiness checks
+     * @param ModuleSetupRunner       $moduleSetupRunner       runs explicit setup commands
      * @param ModuleRouteDispatcher   $moduleRouteDispatcher   dispatches routable modules
      * @param ModuleUrlResolver       $moduleUrlResolver       resolves module metadata from URLs
      * @param OpenWithService         $openWithService         opens local files with macOS applications
@@ -48,11 +50,50 @@ final readonly class ViewerController
         private ModuleInstaller $moduleInstaller,
         private ModuleAutoloadRegistrar $moduleAutoloadRegistrar,
         private ModuleReadinessChecker $moduleReadinessChecker,
+        private ModuleSetupRunner $moduleSetupRunner,
         private ModuleRouteDispatcher $moduleRouteDispatcher,
         private ModuleUrlResolver $moduleUrlResolver,
         private OpenWithService $openWithService,
         private Environment $twig,
     ) {
+    }
+
+    /**
+     * Runs one user-confirmed module setup command.
+     *
+     * @param Request $request the current request
+     *
+     * @return JsonResponse the setup response
+     */
+    #[Route('/internal/modules/setup', name: 'internal_modules_setup', methods: ['GET'])]
+    public function internalModulesSetup(Request $request): JsonResponse
+    {
+        if (!$this->hasValidToken($request)) {
+            return new JsonResponse(['error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $moduleId = $this->queryString($request, 'moduleId');
+        if ('' === $moduleId) {
+            return new JsonResponse(['ok' => false, 'error' => 'Missing module id.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $module = $this->moduleRegistry->find($moduleId);
+        if (null === $module) {
+            return new JsonResponse(['ok' => false, 'error' => 'Module not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (null === $module->setup) {
+            return new JsonResponse(['ok' => false, 'error' => 'Module does not declare setup.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $setupResult = $this->moduleSetupRunner->run($module);
+
+        return new JsonResponse([
+            'ok' => true,
+            'moduleId' => $module->id,
+            'setup' => $setupResult,
+            'readinessStatus' => $this->moduleReadinessChecker->status($module),
+        ]);
     }
 
     /**

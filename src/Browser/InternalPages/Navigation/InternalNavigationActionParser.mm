@@ -16,6 +16,7 @@ NSString* const BabelInternalNavigationActionInstallUpdate = @"installUpdate";
 NSString* const BabelInternalNavigationActionInstallSelectedUpdates = @"installSelectedUpdates";
 NSString* const BabelInternalNavigationActionEnable = @"enable";
 NSString* const BabelInternalNavigationActionDisable = @"disable";
+NSString* const BabelInternalNavigationActionSetup = @"setup";
 NSString* const BabelInternalNavigationActionModuleDetails = @"module";
 NSString* const BabelInternalNavigationActionOpen = @"open";
 NSString* const BabelInternalNavigationActionReopen = @"reopen";
@@ -114,6 +115,10 @@ NSString* const BabelInternalNavigationActionReopen = @"reopen";
 
     if ([item.name isEqualToString:BabelInternalNavigationActionDisable] && item.value.length > 0) {
       return [self actionWithName:BabelInternalNavigationActionDisable value:item.value];
+    }
+
+    if ([item.name isEqualToString:BabelInternalNavigationActionSetup] && item.value.length > 0) {
+      return [self actionWithName:BabelInternalNavigationActionSetup value:item.value];
     }
 
     if ([item.name isEqualToString:BabelInternalNavigationActionRemove] && item.value.length > 0) {
