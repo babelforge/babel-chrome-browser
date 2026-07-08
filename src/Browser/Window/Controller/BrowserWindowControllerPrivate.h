@@ -481,6 +481,8 @@ doCommandBySelector:(SEL)commandSelector;
 
 - (void)reloadSelectedTabIgnoringCache:(BOOL)ignoringCache;
 
+- (void)reloadBrowser:(CefRefPtr<CefBrowser>)browser ignoringCache:(BOOL)ignoringCache;
+
 - (void)reloadMarkdownViewerTabsUsingCurrentTheme;
 
 - (void)loadDeveloperToolsForTab:(BabelBrowserTab*)tab

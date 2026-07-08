@@ -22,6 +22,42 @@ const int kCopyLinkCommandId = MENU_ID_USER_FIRST + 5;
 const int kFaviconDownloadMaximumSize = 32;
 const int kReloadVirtualKeyCode = 0x52;
 const char kBabelChromeFileTypesHeaderName[] = "X-BabelChrome-File-Types";
+NSString* const kBabelChromeLocalFileReloadQueryItemName = @"__babelchrome_reload";
+
+/**
+ * Removes BabelChrome's local file reload token from the URL exposed to the UI.
+ *
+ * @param urlString The URL string reported by CEF.
+ * @return The visible URL string without internal reload metadata.
+ */
+NSString* URLStringByRemovingLocalFileReloadToken(NSString* urlString) {
+  NSURLComponents* components = [NSURLComponents componentsWithString:urlString];
+  if (!components || ![components.scheme.lowercaseString isEqualToString:@"file"]) {
+    return urlString;
+  }
+
+  NSArray<NSURLQueryItem*>* existingQueryItems = components.queryItems;
+  if (existingQueryItems.count == 0) {
+    return urlString;
+  }
+
+  BOOL removedReloadToken = NO;
+  NSMutableArray<NSURLQueryItem*>* queryItems = [NSMutableArray array];
+  for (NSURLQueryItem* queryItem in existingQueryItems) {
+    if ([queryItem.name isEqualToString:kBabelChromeLocalFileReloadQueryItemName]) {
+      removedReloadToken = YES;
+      continue;
+    }
+    [queryItems addObject:queryItem];
+  }
+
+  if (!removedReloadToken) {
+    return urlString;
+  }
+
+  components.queryItems = queryItems.count > 0 ? queryItems : nil;
+  return components.URL.absoluteString ?: urlString;
+}
 
 /**
  * Builds a comparable origin string from a URL.
@@ -481,12 +517,7 @@ bool BabelBrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
 
   const bool ignoringCache = 0 != (event.modifiers & EVENTFLAG_SHIFT_DOWN);
   dispatch_async(dispatch_get_main_queue(), ^{
-    if (ignoringCache) {
-      [controller_ reloadSelectedTabIgnoringCache];
-      return;
-    }
-
-    [controller_ reloadSelectedTab];
+    [controller_ reloadBrowser:browser ignoringCache:ignoringCache];
   });
   return true;
 }
@@ -510,7 +541,7 @@ void BabelBrowserClient::OnAddressChange(CefRefPtr<CefBrowser> browser,
   }
 
   std::string urlString(url);
-  NSString* nativeURLString = [NSString stringWithUTF8String:urlString.c_str()];
+  NSString* nativeURLString = URLStringByRemovingLocalFileReloadToken([NSString stringWithUTF8String:urlString.c_str()]);
   dispatch_async(dispatch_get_main_queue(), ^{
     [controller_ updateBrowser:browser urlString:nativeURLString];
   });

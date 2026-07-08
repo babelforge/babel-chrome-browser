@@ -164,6 +164,14 @@
 - (void)reloadSelectedTabIgnoringCache;
 
 /**
+ * Reloads a specific browser without changing the visible tab selection.
+ *
+ * @param browser The browser to reload.
+ * @param ignoringCache Whether cache should be bypassed when the browser supports it.
+ */
+- (void)reloadBrowser:(CefRefPtr<CefBrowser>)browser ignoringCache:(BOOL)ignoringCache;
+
+/**
  * Opens the BabelChrome history page.
  */
 - (void)openHistoryPage;

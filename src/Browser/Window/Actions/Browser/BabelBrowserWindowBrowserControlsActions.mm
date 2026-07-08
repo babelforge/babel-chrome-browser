@@ -2,6 +2,35 @@
 
 #import "Browser/Window/Controller/BrowserWindowControllerPrivate.h"
 
+static NSString* const kBabelChromeLocalFileReloadQueryItemName = @"__babelchrome_reload";
+
+/**
+ * Builds a local file URL that CEF must treat as a fresh navigation.
+ *
+ * @param urlString The current local file URL string.
+ * @return The URL string with an internal reload token, or the original URL when it cannot be parsed.
+ */
+static NSString* BabelURLStringByAddingLocalFileReloadToken(NSString* urlString) {
+  NSURLComponents* components = [NSURLComponents componentsWithString:urlString];
+  if (!components || ![components.scheme.lowercaseString isEqualToString:@"file"]) {
+    return urlString;
+  }
+
+  NSMutableArray<NSURLQueryItem*>* queryItems = [NSMutableArray array];
+  for (NSURLQueryItem* queryItem in components.queryItems ?: @[]) {
+    if (![queryItem.name isEqualToString:kBabelChromeLocalFileReloadQueryItemName]) {
+      [queryItems addObject:queryItem];
+    }
+  }
+
+  NSString* reloadToken = [NSString stringWithFormat:@"%.0f", [[NSDate date] timeIntervalSince1970] * 1000.0];
+  [queryItems addObject:[NSURLQueryItem queryItemWithName:kBabelChromeLocalFileReloadQueryItemName
+                                                    value:reloadToken]];
+  components.queryItems = queryItems;
+
+  return components.URL.absoluteString ?: urlString;
+}
+
 @implementation BabelBrowserWindowBrowserControlsActions {
   __weak BabelBrowserWindowController* owner_;
 }
@@ -169,6 +198,22 @@
   [owner_ reloadSelectedTabIgnoringCache:YES];
 }
 
+- (void)reloadBrowser:(CefRefPtr<CefBrowser>)browser ignoringCache:(BOOL)ignoringCache {
+  if (!browser) {
+    return;
+  }
+
+  BabelBrowserTab* tab = [owner_ tabForBrowser:browser];
+  if (!tab) {
+    return;
+  }
+
+  BabelBrowserTab* previousSelectedTab = owner_->selectedTab_;
+  owner_->selectedTab_ = tab;
+  [owner_ reloadSelectedTabIgnoringCache:ignoringCache];
+  owner_->selectedTab_ = previousSelectedTab;
+}
+
 - (void)reloadSelectedTabIgnoringCache:(BOOL)ignoringCache {
   if (!owner_->selectedTab_ || ![owner_->selectedTab_ browser]) {
     return;
@@ -194,7 +239,9 @@
 
   std::string currentURLString = mainFrame ? mainFrame->GetURL().ToString() : "";
   if (currentURLString.rfind("file://", 0) == 0) {
-    mainFrame->LoadURL(currentURLString);
+    NSString* nativeCurrentURLString = [NSString stringWithUTF8String:currentURLString.c_str()];
+    NSString* reloadURLString = BabelURLStringByAddingLocalFileReloadToken(nativeCurrentURLString);
+    mainFrame->LoadURL(std::string(reloadURLString.UTF8String));
     return;
   }
 
