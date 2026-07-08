@@ -2,7 +2,7 @@
 
 Navigation: [Previous: Features](04-features.md) | [README](README.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
 
-BabelChrome modules are installable extension packages. The currently implemented runtime handlers execute PHP modules. Installed modules live outside the application bundle and are discovered from:
+BabelChrome modules are installable extension packages. The currently implemented runtime handlers execute PHP modules and serve static web modules. Installed modules live outside the application bundle and are discovered from:
 
 ```text
 ~/Library/Application Support/BabelForge/BabelChrome/Modules
@@ -121,6 +121,26 @@ Framework modules that need strict Composer isolation can request process isolat
 ```
 
 The older PHP class runtime is explicit as `php-class`. Legacy manifests without a runtime, or with `runtime.type = "class"`, are normalized to `php-class`.
+
+A static web module can declare a static document root instead of PHP code:
+
+```json
+{
+  "runtime": {
+    "type": "static-web",
+    "documentRoot": "public",
+    "index": "index.html"
+  }
+}
+```
+
+`static-web` modules do not need a PHP entrypoint, `requirements.php`, `composer.json`, or a Composer `vendor/` directory. BabelChrome serves the declared index file through the module route, and module assets still come from the module `public/` directory through tokenized `/module/<id>/assets/...` URLs.
+
+Static text files may use BabelChrome placeholders for request-scoped values:
+
+```html
+<script src="{{ BABELCHROME_MODULE_ASSET_BASE_URL }}/app.js{{ BABELCHROME_MODULE_ASSET_TOKEN_QUERY }}"></script>
+```
 
 ## Readiness And Setup
 
@@ -349,6 +369,6 @@ From the meta workspace, prefer:
 ./tools/dev2prod.sh
 ```
 
-The production shipper keeps module runtime files, Composer dependencies, compiled public assets, templates, and manifests. It excludes development-only files such as tests, source assets, caches, and `ai/`.
+The production shipper keeps module runtime files, compiled public assets, templates, manifests, and Composer production dependencies when the runtime needs Composer. It excludes development-only files such as tests, source assets, caches, and `ai/`.
 
 Navigation: [Previous: Features](04-features.md) | [README](README.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)

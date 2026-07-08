@@ -22,6 +22,8 @@ final readonly class ModuleManifest
      * @param string                       $entrypoint               the PHP entrypoint class or web front controller
      * @param string                       $runtimeType              the module runtime type
      * @param bool                         $processIsolation         whether the web runtime uses a dedicated PHP process
+     * @param string                       $documentRoot             the static web document root
+     * @param string                       $indexFile                the static web index file
      * @param string                       $phpRequirement           the required PHP version constraint
      * @param string                       $path                     the module root path
      * @param list<ModuleRoute>            $routes                   the module routes
@@ -48,6 +50,8 @@ final readonly class ModuleManifest
         public string $entrypoint,
         public string $runtimeType,
         public bool $processIsolation,
+        public string $documentRoot,
+        public string $indexFile,
         public string $phpRequirement,
         public string $path,
         public array $routes,
@@ -80,11 +84,11 @@ final readonly class ModuleManifest
             throw new ModuleManifestException(sprintf('Module "%s" version cannot be empty.', $this->id));
         }
 
-        if ('' === $this->phpRequirement) {
+        if (ModuleRuntimeType::requiresPhp($this->runtimeType) && '' === $this->phpRequirement) {
             throw new ModuleManifestException(sprintf('Module "%s" must declare requirements.php.', $this->id));
         }
 
-        if (!self::phpVersionSatisfies($this->currentPhpVersion, $this->phpRequirement)) {
+        if ('' !== $this->phpRequirement && !self::phpVersionSatisfies($this->currentPhpVersion, $this->phpRequirement)) {
             throw new ModuleManifestException(sprintf('Module "%s" requires PHP "%s"; current PHP is "%s".', $this->id, $this->phpRequirement, $this->currentPhpVersion));
         }
     }
@@ -99,6 +103,8 @@ final readonly class ModuleManifest
      */
     public static function fromArray(array $data, string $path): self
     {
+        $runtimeType = self::runtimeType($data);
+
         return new self(
             self::requiredString($data, 'id'),
             self::requiredString($data, 'name'),
@@ -107,9 +113,11 @@ final readonly class ModuleManifest
             self::optionalString($data, 'type', 'module'),
             self::optionalBool($data, 'enabled', true),
             self::entrypoint($data),
-            self::runtimeType($data),
+            $runtimeType,
             self::processIsolation($data),
-            self::phpRequirement($data),
+            self::documentRoot($data, $runtimeType),
+            self::indexFile($data, $runtimeType),
+            self::phpRequirement($data, $runtimeType),
             $path,
             self::routes($data),
             self::stringList($data, 'fileTypes'),
@@ -142,10 +150,8 @@ final readonly class ModuleManifest
             'enabled' => $this->enabled,
             'entrypoint' => $this->entrypoint,
             'runtimeType' => $this->runtimeType,
-            'runtime' => self::runtimeExport($this->runtimeType, $this->entrypoint, $this->processIsolation),
-            'requirements' => [
-                'php' => $this->phpRequirement,
-            ],
+            'runtime' => self::runtimeExport($this->runtimeType, $this->entrypoint, $this->processIsolation, $this->documentRoot, $this->indexFile),
+            'requirements' => self::requirementsExport($this->phpRequirement),
             'currentPhpVersion' => $this->currentPhpVersion,
             'path' => $this->path,
             'routes' => array_map(
@@ -200,6 +206,16 @@ final readonly class ModuleManifest
     public function usesProcessIsolation(): bool
     {
         return $this->usesWebRuntime() && $this->processIsolation;
+    }
+
+    /**
+     * Returns whether this module uses the static web runtime.
+     *
+     * @return bool true when the module uses static web runtime
+     */
+    public function usesStaticWebRuntime(): bool
+    {
+        return ModuleRuntimeType::isStaticWeb($this->runtimeType);
     }
 
     /**
@@ -321,21 +337,84 @@ final readonly class ModuleManifest
     }
 
     /**
+     * Reads the optional static web document root.
+     *
+     * @param array<string, mixed> $data        the source data
+     * @param string               $runtimeType the normalized runtime type
+     *
+     * @return string the static web document root
+     */
+    private static function documentRoot(array $data, string $runtimeType): string
+    {
+        if (!ModuleRuntimeType::isStaticWeb($runtimeType)) {
+            return '';
+        }
+
+        $runtime = $data['runtime'] ?? null;
+        if (!is_array($runtime)) {
+            return 'public';
+        }
+
+        $documentRoot = $runtime['documentRoot'] ?? $runtime['document-root'] ?? null;
+        if (!is_string($documentRoot) || '' === trim($documentRoot)) {
+            return 'public';
+        }
+
+        return trim($documentRoot);
+    }
+
+    /**
+     * Reads the optional static web index file.
+     *
+     * @param array<string, mixed> $data        the source data
+     * @param string               $runtimeType the normalized runtime type
+     *
+     * @return string the static web index file
+     */
+    private static function indexFile(array $data, string $runtimeType): string
+    {
+        if (!ModuleRuntimeType::isStaticWeb($runtimeType)) {
+            return '';
+        }
+
+        $runtime = $data['runtime'] ?? null;
+        if (!is_array($runtime)) {
+            return 'index.html';
+        }
+
+        $indexFile = $runtime['index'] ?? $runtime['indexFile'] ?? null;
+        if (!is_string($indexFile) || '' === trim($indexFile)) {
+            return 'index.html';
+        }
+
+        return trim($indexFile);
+    }
+
+    /**
      * Reads the required PHP version constraint.
      *
-     * @param array<string, mixed> $data the source data
+     * @param array<string, mixed> $data        the source data
+     * @param string               $runtimeType the normalized runtime type
      *
      * @return string the required PHP version constraint
      */
-    private static function phpRequirement(array $data): string
+    private static function phpRequirement(array $data, string $runtimeType): string
     {
         $requirements = $data['requirements'] ?? null;
         if (!is_array($requirements)) {
+            if (!ModuleRuntimeType::requiresPhp($runtimeType)) {
+                return '';
+            }
+
             throw new ModuleManifestException('Manifest field "requirements.php" is required.');
         }
 
         $phpRequirement = $requirements['php'] ?? null;
         if (!is_string($phpRequirement) || '' === trim($phpRequirement)) {
+            if (!ModuleRuntimeType::requiresPhp($runtimeType)) {
+                return '';
+            }
+
             throw new ModuleManifestException('Manifest field "requirements.php" is required.');
         }
 
@@ -398,21 +477,49 @@ final readonly class ModuleManifest
      * @param string $runtimeType      the runtime type
      * @param string $entrypoint       the entrypoint
      * @param bool   $processIsolation whether the runtime uses process isolation
+     * @param string $documentRoot     the static web document root
+     * @param string $indexFile        the static web index file
      *
-     * @return array{type: string, entrypoint: string, processIsolation?: true} the runtime declaration
+     * @return array<string, mixed> the runtime declaration
      */
-    private static function runtimeExport(string $runtimeType, string $entrypoint, bool $processIsolation): array
+    private static function runtimeExport(string $runtimeType, string $entrypoint, bool $processIsolation, string $documentRoot, string $indexFile): array
     {
         $runtime = [
             'type' => $runtimeType,
-            'entrypoint' => $entrypoint,
         ];
+
+        if (ModuleRuntimeType::isStaticWeb($runtimeType)) {
+            $runtime['documentRoot'] = '' !== $documentRoot ? $documentRoot : 'public';
+            $runtime['index'] = '' !== $indexFile ? $indexFile : 'index.html';
+
+            return $runtime;
+        }
+
+        $runtime['entrypoint'] = $entrypoint;
 
         if ($processIsolation) {
             $runtime['processIsolation'] = true;
         }
 
         return $runtime;
+    }
+
+    /**
+     * Exports module requirements.
+     *
+     * @param string $phpRequirement the PHP requirement when declared
+     *
+     * @return array<string, string> the requirements declaration
+     */
+    private static function requirementsExport(string $phpRequirement): array
+    {
+        if ('' === $phpRequirement) {
+            return [];
+        }
+
+        return [
+            'php' => $phpRequirement,
+        ];
     }
 
     /**

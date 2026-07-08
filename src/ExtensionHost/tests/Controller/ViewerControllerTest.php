@@ -18,6 +18,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleWebRuntime;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpClassRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpWebRuntimeHandler;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\StaticWebRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Service\OpenWithService;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceLoader;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceRegistry;
@@ -644,6 +645,7 @@ final class ViewerControllerTest extends TestCase
                 $moduleRegistry,
                 new ModuleRuntimeDispatcher(
                     new PhpWebRuntimeHandler(new ModuleWebRuntime()),
+                    new StaticWebRuntimeHandler(),
                     new PhpClassRuntimeHandler($moduleAutoloadRegistrar),
                 ),
             ),

@@ -13,6 +13,8 @@ final class ModuleRuntimeType
 
     public const PHP_CLASS = 'php-class';
 
+    public const STATIC_WEB = 'static-web';
+
     private const LEGACY_WEB = 'web';
 
     private const LEGACY_CLASS = 'class';
@@ -55,5 +57,29 @@ final class ModuleRuntimeType
     public static function isPhpClass(string $runtimeType): bool
     {
         return self::PHP_CLASS === self::normalize($runtimeType);
+    }
+
+    /**
+     * Returns whether a runtime type is the static web runtime.
+     *
+     * @param string $runtimeType the runtime type
+     *
+     * @return bool true when the runtime type is static web
+     */
+    public static function isStaticWeb(string $runtimeType): bool
+    {
+        return self::STATIC_WEB === self::normalize($runtimeType);
+    }
+
+    /**
+     * Returns whether a runtime type executes PHP module code.
+     *
+     * @param string $runtimeType the runtime type
+     *
+     * @return bool true when the runtime needs a PHP requirement
+     */
+    public static function requiresPhp(string $runtimeType): bool
+    {
+        return self::isPhpWeb($runtimeType) || self::isPhpClass($runtimeType);
     }
 }

@@ -175,6 +175,47 @@ final class ModuleRegistryTest extends TestCase
     }
 
     /**
+     * Ensures static web modules do not need PHP-specific requirements.
+     */
+    public function testStaticWebRuntimeDoesNotRequirePhp(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.static-web-module';
+        self::assertTrue(mkdir($moduleDirectory.'/public', 0o775, true));
+        file_put_contents($moduleDirectory.'/public/index.html', '<!doctype html><title>Static</title>');
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.static-web-module',
+            'name' => 'Static Web Module',
+            'version' => '1.0.0',
+            'runtime' => [
+                'type' => 'static-web',
+                'documentRoot' => 'public',
+                'index' => 'index.html',
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $registry = new ModuleRegistry($this->workspaceDirectory.'/Catalog', $this->workspaceDirectory.'/Modules');
+        $module = $registry->find('vendor.static-web-module');
+
+        self::assertNotNull($module);
+        self::assertSame(ModuleRuntimeType::STATIC_WEB, $module->runtimeType);
+        self::assertTrue($module->usesStaticWebRuntime());
+        self::assertSame('', $module->phpRequirement);
+        self::assertSame('public', $module->documentRoot);
+        self::assertSame('index.html', $module->indexFile);
+
+        $exportedModule = $module->toArray();
+        $requirements = $exportedModule['requirements'] ?? null;
+        $runtime = $exportedModule['runtime'] ?? null;
+
+        self::assertSame([], $requirements);
+        self::assertIsArray($runtime);
+        self::assertSame(ModuleRuntimeType::STATIC_WEB, $runtime['type'] ?? null);
+        self::assertSame('public', $runtime['documentRoot'] ?? null);
+        self::assertSame('index.html', $runtime['index'] ?? null);
+        self::assertArrayNotHasKey('entrypoint', $runtime);
+    }
+
+    /**
      * Ensures backup directories are ignored during module discovery.
      */
     public function testBackupModuleDirectoriesAreIgnored(): void

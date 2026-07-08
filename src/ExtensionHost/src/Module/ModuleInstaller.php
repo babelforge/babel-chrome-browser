@@ -7,7 +7,7 @@ namespace BabelForge\BabelChrome\LocalViewer\Module;
 use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleInstallationException;
 
 /**
- * Installs and manages user PHP modules.
+ * Installs and manages user modules.
  */
 final readonly class ModuleInstaller
 {

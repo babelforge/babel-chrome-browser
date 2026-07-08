@@ -11,7 +11,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Verifies user PHP module installation.
+ * Verifies user module installation.
  */
 #[CoversClass(ModuleInstaller::class)]
 final class ModuleInstallerTest extends TestCase
@@ -82,6 +82,24 @@ final class ModuleInstallerTest extends TestCase
         self::assertSame('2.0.0', $module->version);
         self::assertFalse($module->enabled);
         self::assertNotNull($registry->find('vendor.updatable-module'));
+    }
+
+    /**
+     * Ensures a static web module zip can be installed without Composer files.
+     */
+    public function testInstallZipInstallsStaticWebModule(): void
+    {
+        $zipPath = $this->staticWebModuleZip('vendor.static-web-module', 'Static Web Module');
+        $registry = $this->registry();
+        $installer = new ModuleInstaller($registry);
+
+        $module = $installer->installZip($zipPath);
+
+        self::assertSame('vendor.static-web-module', $module->id);
+        self::assertSame('static-web', $module->runtimeType);
+        self::assertSame('', $module->phpRequirement);
+        self::assertFileExists($this->workspaceDirectory.'/Modules/vendor.static-web-module/public/index.html');
+        self::assertNotNull($registry->find('vendor.static-web-module'));
     }
 
     /**
@@ -162,6 +180,40 @@ final class ModuleInstallerTest extends TestCase
         $zip->addFile($sourceDirectory.'/manifest.json', 'manifest.json');
         $zip->addFile($sourceDirectory.'/composer.json', 'composer.json');
         $zip->addFile($sourceDirectory.'/vendor/autoload.php', 'vendor/autoload.php');
+        $zip->close();
+
+        return $zipPath;
+    }
+
+    /**
+     * Creates a test static web module zip.
+     *
+     * @param string $moduleId the module id
+     * @param string $name     the module name
+     *
+     * @return string the zip path
+     */
+    private function staticWebModuleZip(string $moduleId, string $name): string
+    {
+        $sourceDirectory = $this->workspaceDirectory.'/source-'.$moduleId;
+        self::assertTrue(mkdir($sourceDirectory.'/public', 0o775, true));
+        file_put_contents($sourceDirectory.'/manifest.json', json_encode([
+            'id' => $moduleId,
+            'name' => $name,
+            'version' => '1.0.0',
+            'runtime' => [
+                'type' => 'static-web',
+                'documentRoot' => 'public',
+                'index' => 'index.html',
+            ],
+        ], JSON_THROW_ON_ERROR));
+        file_put_contents($sourceDirectory.'/public/index.html', '<!doctype html><title>Static</title>');
+
+        $zipPath = $this->workspaceDirectory.'/'.$moduleId.'-1.0.0.zip';
+        $zip = new \ZipArchive();
+        self::assertTrue($zip->open($zipPath, \ZipArchive::CREATE));
+        $zip->addFile($sourceDirectory.'/manifest.json', 'manifest.json');
+        $zip->addFile($sourceDirectory.'/public/index.html', 'public/index.html');
         $zip->close();
 
         return $zipPath;

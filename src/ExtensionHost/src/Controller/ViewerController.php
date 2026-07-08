@@ -325,7 +325,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Dispatches a route to an installed PHP module.
+     * Dispatches a route to an installed module.
      *
      * @param Request $request  the current request
      * @param string  $moduleId the module identifier
@@ -352,8 +352,8 @@ final readonly class ViewerController
         } catch (ModuleDispatchException $exception) {
             return $this->errorResponse(
                 'Unable to Run Module',
-                'PHP module route failed',
-                'The requested PHP module route could not be executed.',
+                'Module route failed',
+                'The requested module route could not be executed.',
                 $exception->getMessage(),
                 Response::HTTP_UNPROCESSABLE_ENTITY,
             );
@@ -361,7 +361,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Serves a public asset from an installed PHP module.
+     * Serves a public asset from an installed module.
      *
      * @param Request $request  the current request
      * @param string  $moduleId the module identifier
@@ -397,7 +397,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Returns registered PHP modules for the native shell.
+     * Returns registered modules for the native shell.
      *
      * @param Request $request the current request
      *

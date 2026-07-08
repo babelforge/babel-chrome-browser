@@ -72,11 +72,11 @@ final class ModulePackageShipper
         }
 
         $manifest = $this->manifest($manifestPath);
-        if (!is_file($resolvedSourceDirectory.'/composer.json')) {
+        if ($this->requiresComposerPackage($manifest['runtimeType']) && !is_file($resolvedSourceDirectory.'/composer.json')) {
             throw new ModuleShippingException('Missing composer.json.');
         }
 
-        if (!is_dir($resolvedSourceDirectory.'/vendor')) {
+        if ($this->requiresComposerPackage($manifest['runtimeType']) && !is_dir($resolvedSourceDirectory.'/vendor')) {
             throw new ModuleShippingException('Missing module vendor directory. Run composer install --no-dev inside the module before shipping.');
         }
 
@@ -108,7 +108,7 @@ final class ModulePackageShipper
      *
      * @param string $manifestPath the manifest path
      *
-     * @return array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, phpRequirement: string} the decoded manifest
+     * @return array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string} the decoded manifest
      *
      * @throws ModuleShippingException when the manifest cannot be read
      */
@@ -137,14 +137,17 @@ final class ModulePackageShipper
             }
         }
 
-        $phpRequirement = $this->phpRequirement($manifestData);
+        $runtimeType = $this->runtimeType($manifestData);
+        $phpRequirement = $this->phpRequirement($manifestData, $runtimeType);
 
         return [
             'id' => $manifestData['id'],
             'name' => $manifestData['name'],
             'version' => $manifestData['version'],
-            'runtimeType' => $this->runtimeType($manifestData),
+            'runtimeType' => $runtimeType,
             'entrypoint' => $this->entrypoint($manifestData),
+            'documentRoot' => $this->documentRoot($manifestData, $runtimeType),
+            'indexFile' => $this->indexFile($manifestData, $runtimeType),
             'phpRequirement' => $phpRequirement,
         ];
     }
@@ -152,8 +155,8 @@ final class ModulePackageShipper
     /**
      * Validates the runtime-specific module layout.
      *
-     * @param string                                                                                                            $sourceDirectory the module source directory
-     * @param array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, phpRequirement: string} $manifest        the module manifest
+     * @param string                                                                                                                                                     $sourceDirectory the module source directory
+     * @param array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string} $manifest        the module manifest
      *
      * @throws ModuleShippingException when the runtime layout is invalid
      */
@@ -162,6 +165,20 @@ final class ModulePackageShipper
         if (ModuleRuntimeType::isPhpWeb($manifest['runtimeType'])) {
             if ('' === $manifest['entrypoint'] || !is_file($sourceDirectory.'/'.$manifest['entrypoint'])) {
                 throw new ModuleShippingException('Missing PHP web module entrypoint.');
+            }
+
+            return;
+        }
+
+        if (ModuleRuntimeType::isStaticWeb($manifest['runtimeType'])) {
+            $documentRoot = realpath($sourceDirectory.'/'.ltrim($manifest['documentRoot'], '/'));
+            if (false === $documentRoot || !is_dir($documentRoot)) {
+                throw new ModuleShippingException('Missing static web document root.');
+            }
+
+            $indexPath = realpath($documentRoot.'/'.ltrim($manifest['indexFile'], '/'));
+            if (false === $indexPath || !is_file($indexPath) || !str_starts_with($indexPath, rtrim($documentRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+                throw new ModuleShippingException('Missing static web index file.');
             }
 
             return;
@@ -181,15 +198,23 @@ final class ModulePackageShipper
      *
      * @throws ModuleShippingException when the PHP requirement is missing
      */
-    private function phpRequirement(array $manifest): string
+    private function phpRequirement(array $manifest, string $runtimeType): string
     {
         $requirements = $manifest['requirements'] ?? null;
         if (!is_array($requirements)) {
+            if (!ModuleRuntimeType::requiresPhp($runtimeType)) {
+                return '';
+            }
+
             throw new ModuleShippingException('Manifest field "requirements.php" is required.');
         }
 
         $phpRequirement = $requirements['php'] ?? null;
         if (!is_string($phpRequirement) || '' === trim($phpRequirement)) {
+            if (!ModuleRuntimeType::requiresPhp($runtimeType)) {
+                return '';
+            }
+
             throw new ModuleShippingException('Manifest field "requirements.php" is required.');
         }
 
@@ -240,16 +265,76 @@ final class ModulePackageShipper
     }
 
     /**
+     * Reads the static web document root.
+     *
+     * @param array<string, mixed> $manifest    the decoded manifest
+     * @param string               $runtimeType the module runtime type
+     *
+     * @return string the static web document root
+     */
+    private function documentRoot(array $manifest, string $runtimeType): string
+    {
+        if (!ModuleRuntimeType::isStaticWeb($runtimeType)) {
+            return '';
+        }
+
+        $runtime = $manifest['runtime'] ?? null;
+        if (!is_array($runtime)) {
+            return 'public';
+        }
+
+        $documentRoot = $runtime['documentRoot'] ?? $runtime['document-root'] ?? null;
+
+        return is_string($documentRoot) && '' !== trim($documentRoot) ? trim($documentRoot) : 'public';
+    }
+
+    /**
+     * Reads the static web index file.
+     *
+     * @param array<string, mixed> $manifest    the decoded manifest
+     * @param string               $runtimeType the module runtime type
+     *
+     * @return string the static web index file
+     */
+    private function indexFile(array $manifest, string $runtimeType): string
+    {
+        if (!ModuleRuntimeType::isStaticWeb($runtimeType)) {
+            return '';
+        }
+
+        $runtime = $manifest['runtime'] ?? null;
+        if (!is_array($runtime)) {
+            return 'index.html';
+        }
+
+        $indexFile = $runtime['index'] ?? $runtime['indexFile'] ?? null;
+
+        return is_string($indexFile) && '' !== trim($indexFile) ? trim($indexFile) : 'index.html';
+    }
+
+    /**
      * Builds the default target path.
      *
-     * @param string                                                                                                            $sourceDirectory the module source directory
-     * @param array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, phpRequirement: string} $manifest        the module manifest
+     * @param string                                                                                                                                                     $sourceDirectory the module source directory
+     * @param array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string} $manifest        the module manifest
      *
      * @return string the target zip path
      */
     private function defaultTargetPath(string $sourceDirectory, array $manifest): string
     {
         return dirname($sourceDirectory).'/'.$manifest['id'].'-'.$manifest['version'].'.zip';
+    }
+
+    /**
+     * Returns whether a runtime needs a Composer production package.
+     *
+     * @param string $runtimeType the module runtime type
+     *
+     * @return bool true when Composer files are required for shipping
+     */
+    private function requiresComposerPackage(string $runtimeType): bool
+    {
+        return ModuleRuntimeType::requiresPhp($runtimeType);
     }
 
     /**

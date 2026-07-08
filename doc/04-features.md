@@ -161,6 +161,8 @@ BABELCHROME_SOURCE_URL
 
 The older PHP class-entrypoint runtime remains available as `php-class`. Legacy `web` and `class` values are accepted and normalized, but new PHP web modules should use `runtime.type = "php-web"`.
 
+BabelChrome also supports `static-web` modules. A static web module declares a module-owned document root and index file, needs no PHP entrypoint or Composer vendor directory, and can use request-scoped `BABELCHROME_*` placeholders in text assets. Public CSS, JavaScript, image, and JSON files are still served from the module `public/` directory through the tokenized module asset endpoint.
+
 When this browser repository is checked out through the `babel-chrome` meta workspace, editable BabelChrome module source packages live outside the app source tree, in the sibling workspace:
 
 ```text

@@ -97,6 +97,38 @@ final class ModulePackageShipperTest extends TestCase
     }
 
     /**
+     * Ensures static web modules can be shipped without Composer files.
+     */
+    public function testShipSupportsStaticWebRuntimeWithoutComposer(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/vendor.static-web-module';
+        self::assertTrue(mkdir($moduleDirectory.'/public/styles', 0o775, true));
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.static-web-module',
+            'name' => 'Static Web Module',
+            'version' => '1.0.0',
+            'runtime' => [
+                'type' => 'static-web',
+                'documentRoot' => 'public',
+                'index' => 'index.html',
+            ],
+        ], JSON_THROW_ON_ERROR));
+        file_put_contents($moduleDirectory.'/public/index.html', '<!doctype html><title>Static</title>');
+        file_put_contents($moduleDirectory.'/public/styles/app.css', '.static {}');
+        $targetPath = $this->workspaceDirectory.'/dist/static-web-module.zip';
+
+        $result = new ModulePackageShipper()->ship($moduleDirectory, $targetPath);
+
+        self::assertSame($targetPath, $result);
+        self::assertFileExists($targetPath);
+        self::assertZipContains($targetPath, 'manifest.json');
+        self::assertZipContains($targetPath, 'public/index.html');
+        self::assertZipContains($targetPath, 'public/styles/app.css');
+        self::assertZipNotContains($targetPath, 'composer.json');
+        self::assertZipNotContains($targetPath, 'vendor/autoload.php');
+    }
+
+    /**
      * Ensures a module without vendor cannot be shipped.
      */
     public function testShipRejectsMissingVendor(): void

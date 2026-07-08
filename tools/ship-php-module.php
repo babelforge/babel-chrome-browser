@@ -17,11 +17,11 @@ function babelchrome_shipper_usage(): void
 Usage:
   php tools/ship-php-module.php <module-directory> [target.zip]
 
-The module directory must contain:
+Every module directory must contain:
   manifest.json
-  composer.json
-  vendor/
-  src/
+
+PHP runtimes also need their runtime files and production Composer dependencies.
+Static web runtimes need the declared document root and index file.
 
 The produced zip excludes dev-only directories such as tests, var, ai, .git, build, coverage, and node_modules.
 
