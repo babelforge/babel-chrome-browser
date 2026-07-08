@@ -9,6 +9,73 @@
 #import "Browser/Window/Actions/DragDrop/BabelBrowserWindowLocalDropActions.h"
 #import "Browser/Window/Actions/Navigation/BabelBrowserWindowURLRoutingActions.h"
 
+@interface BabelBrowserWindowAddressAndSuggestionsActions (BabelBrowserWindowControllerRouting)
+- (void)selectTabWithOffset:(NSInteger)offset;
+- (void)selectTab:(BabelBrowserTab*)tab;
+- (void)selectTab:(BabelBrowserTab*)tab deferringBrowserCreation:(BOOL)deferringBrowserCreation;
+- (void)navigateFromAddressField:(id)sender;
+- (void)closeSelectedTab;
+- (void)controlTextDidEndEditing:(NSNotification*)notification;
+- (void)controlTextDidChange:(NSNotification*)notification;
+- (BOOL)control:(NSControl*)control textView:(NSTextView*)textView doCommandBySelector:(SEL)commandSelector;
+- (BOOL)shouldPropagateBrowserClose;
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser title:(NSString*)title;
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser urlString:(NSString*)urlString;
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser statusText:(NSString*)statusText;
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser faviconImage:(NSImage*)faviconImage;
+- (void)copyURLStringToPasteboard:(NSString*)urlString;
+@end
+
+@interface BabelBrowserWindowBrowserAttachmentActions (BabelBrowserWindowControllerRouting)
+- (void)attachCreatedBrowser:(CefRefPtr<CefBrowser>)browser;
+- (void)detachClosedBrowser:(CefRefPtr<CefBrowser>)browser;
+@end
+
+@interface BabelBrowserWindowBrowserControlsActions (BabelBrowserWindowControllerRouting)
+- (void)openDeveloperToolsForSelectedTab;
+- (void)openDeveloperToolsForBrowser:(CefRefPtr<CefBrowser>)browser x:(int)x y:(int)y;
+- (BOOL)canOpenDeveloperToolsForSelectedTab;
+- (BOOL)canOpenDeveloperToolsForBrowser:(CefRefPtr<CefBrowser>)browser;
+- (BOOL)canOpenViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser;
+- (void)openViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser;
+- (void)revealViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser;
+- (void)navigateSelectedTabBack;
+- (void)navigateSelectedTabForward;
+- (void)reloadSelectedTab;
+- (void)reloadSelectedTabFromButton:(id)sender;
+- (void)reloadSelectedTabIgnoringCache;
+- (void)reloadSelectedTabIgnoringCache:(BOOL)ignoringCache;
+- (void)reloadBrowser:(CefRefPtr<CefBrowser>)browser ignoringCache:(BOOL)ignoringCache;
+@end
+
+@interface BabelBrowserWindowGroupsAndTabsActions (BabelBrowserWindowControllerRouting)
+- (void)reopenLastClosedTab;
+- (void)selectNextTab;
+- (void)selectPreviousTab;
+- (void)openURLStringInNewTab:(NSString*)urlString;
+- (void)openURLStringInNewTab:(NSString*)urlString openerBrowser:(CefRefPtr<CefBrowser>)browser;
+@end
+
+@interface BabelBrowserWindowInternalPagesActions (BabelBrowserWindowControllerRouting)
+- (void)openHistoryPage;
+- (void)openSettingsPage;
+- (void)openSettingsPageForBrowser:(CefRefPtr<CefBrowser>)browser;
+- (void)openExtensionsPage;
+- (void)openExtensionsPageForBrowser:(CefRefPtr<CefBrowser>)browser;
+@end
+
+@interface BabelBrowserWindowLifecycleActions (BabelBrowserWindowControllerRouting)
+- (void)requestApplicationTermination;
+- (void)saveMainWindowState;
+@end
+
+@interface BabelBrowserWindowURLRoutingActions (BabelBrowserWindowControllerRouting)
+- (void)openURLs:(NSArray<NSURL*>*)urls;
+- (void)openNewTab;
+- (void)openAdjacentNewTab;
+- (void)openNewTabFromButton:(id)sender;
+@end
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincomplete-implementation"
 
@@ -675,6 +742,194 @@ enforceLiveBrowserLimitHandler:^{
     [self restoreSessionByPriority];
   }
   return self;
+}
+
+- (void)openURLs:(NSArray<NSURL*>*)urls {
+  [urlRoutingActions_ openURLs:urls];
+}
+
+- (void)openNewTab {
+  [urlRoutingActions_ openNewTab];
+}
+
+- (void)openAdjacentNewTab {
+  [urlRoutingActions_ openAdjacentNewTab];
+}
+
+- (void)openNewTabFromButton:(id)sender {
+  [urlRoutingActions_ openNewTabFromButton:sender];
+}
+
+- (void)closeSelectedTab {
+  [addressAndSuggestionsActions_ closeSelectedTab];
+}
+
+- (void)reopenLastClosedTab {
+  [groupsAndTabsActions_ reopenLastClosedTab];
+}
+
+- (void)selectNextTab {
+  [groupsAndTabsActions_ selectNextTab];
+}
+
+- (void)selectPreviousTab {
+  [groupsAndTabsActions_ selectPreviousTab];
+}
+
+- (void)selectTabWithOffset:(NSInteger)offset {
+  [addressAndSuggestionsActions_ selectTabWithOffset:offset];
+}
+
+- (void)selectTab:(BabelBrowserTab*)tab {
+  [addressAndSuggestionsActions_ selectTab:tab];
+}
+
+- (void)selectTab:(BabelBrowserTab*)tab deferringBrowserCreation:(BOOL)deferringBrowserCreation {
+  [addressAndSuggestionsActions_ selectTab:tab deferringBrowserCreation:deferringBrowserCreation];
+}
+
+- (void)navigateFromAddressField:(id)sender {
+  [addressAndSuggestionsActions_ navigateFromAddressField:sender];
+}
+
+- (void)controlTextDidEndEditing:(NSNotification*)notification {
+  [addressAndSuggestionsActions_ controlTextDidEndEditing:notification];
+}
+
+- (void)controlTextDidChange:(NSNotification*)notification {
+  [addressAndSuggestionsActions_ controlTextDidChange:notification];
+}
+
+- (BOOL)control:(NSControl*)control
+       textView:(NSTextView*)textView
+doCommandBySelector:(SEL)commandSelector {
+  return [addressAndSuggestionsActions_ control:control
+                                       textView:textView
+                            doCommandBySelector:commandSelector];
+}
+
+- (void)openDeveloperToolsForSelectedTab {
+  [browserControlsActions_ openDeveloperToolsForSelectedTab];
+}
+
+- (void)openDeveloperToolsForBrowser:(CefRefPtr<CefBrowser>)browser x:(int)x y:(int)y {
+  [browserControlsActions_ openDeveloperToolsForBrowser:browser x:x y:y];
+}
+
+- (BOOL)canOpenDeveloperToolsForSelectedTab {
+  return [browserControlsActions_ canOpenDeveloperToolsForSelectedTab];
+}
+
+- (BOOL)canOpenDeveloperToolsForBrowser:(CefRefPtr<CefBrowser>)browser {
+  return [browserControlsActions_ canOpenDeveloperToolsForBrowser:browser];
+}
+
+- (BOOL)canOpenViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser {
+  return [browserControlsActions_ canOpenViewerSourceForBrowser:browser];
+}
+
+- (void)openViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser {
+  [browserControlsActions_ openViewerSourceForBrowser:browser];
+}
+
+- (void)revealViewerSourceForBrowser:(CefRefPtr<CefBrowser>)browser {
+  [browserControlsActions_ revealViewerSourceForBrowser:browser];
+}
+
+- (void)navigateSelectedTabBack {
+  [browserControlsActions_ navigateSelectedTabBack];
+}
+
+- (void)navigateSelectedTabForward {
+  [browserControlsActions_ navigateSelectedTabForward];
+}
+
+- (void)reloadSelectedTab {
+  [browserControlsActions_ reloadSelectedTab];
+}
+
+- (void)reloadSelectedTabFromButton:(id)sender {
+  [browserControlsActions_ reloadSelectedTabFromButton:sender];
+}
+
+- (void)reloadSelectedTabIgnoringCache {
+  [browserControlsActions_ reloadSelectedTabIgnoringCache];
+}
+
+- (void)reloadSelectedTabIgnoringCache:(BOOL)ignoringCache {
+  [browserControlsActions_ reloadSelectedTabIgnoringCache:ignoringCache];
+}
+
+- (void)reloadBrowser:(CefRefPtr<CefBrowser>)browser ignoringCache:(BOOL)ignoringCache {
+  [browserControlsActions_ reloadBrowser:browser ignoringCache:ignoringCache];
+}
+
+- (void)openHistoryPage {
+  [internalPagesActions_ openHistoryPage];
+}
+
+- (void)openSettingsPage {
+  [internalPagesActions_ openSettingsPage];
+}
+
+- (void)openSettingsPageForBrowser:(CefRefPtr<CefBrowser>)browser {
+  [internalPagesActions_ openSettingsPageForBrowser:browser];
+}
+
+- (void)openExtensionsPage {
+  [internalPagesActions_ openExtensionsPage];
+}
+
+- (void)openExtensionsPageForBrowser:(CefRefPtr<CefBrowser>)browser {
+  [internalPagesActions_ openExtensionsPageForBrowser:browser];
+}
+
+- (void)openURLStringInNewTab:(NSString*)urlString {
+  [groupsAndTabsActions_ openURLStringInNewTab:urlString];
+}
+
+- (void)openURLStringInNewTab:(NSString*)urlString openerBrowser:(CefRefPtr<CefBrowser>)browser {
+  [groupsAndTabsActions_ openURLStringInNewTab:urlString openerBrowser:browser];
+}
+
+- (void)attachCreatedBrowser:(CefRefPtr<CefBrowser>)browser {
+  [browserAttachmentActions_ attachCreatedBrowser:browser];
+}
+
+- (void)detachClosedBrowser:(CefRefPtr<CefBrowser>)browser {
+  [browserAttachmentActions_ detachClosedBrowser:browser];
+}
+
+- (BOOL)shouldPropagateBrowserClose {
+  return [addressAndSuggestionsActions_ shouldPropagateBrowserClose];
+}
+
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser title:(NSString*)title {
+  [addressAndSuggestionsActions_ updateBrowser:browser title:title];
+}
+
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser urlString:(NSString*)urlString {
+  [addressAndSuggestionsActions_ updateBrowser:browser urlString:urlString];
+}
+
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser statusText:(NSString*)statusText {
+  [addressAndSuggestionsActions_ updateBrowser:browser statusText:statusText];
+}
+
+- (void)updateBrowser:(CefRefPtr<CefBrowser>)browser faviconImage:(NSImage*)faviconImage {
+  [addressAndSuggestionsActions_ updateBrowser:browser faviconImage:faviconImage];
+}
+
+- (void)copyURLStringToPasteboard:(NSString*)urlString {
+  [addressAndSuggestionsActions_ copyURLStringToPasteboard:urlString];
+}
+
+- (void)requestApplicationTermination {
+  [lifecycleActions_ requestApplicationTermination];
+}
+
+- (void)saveMainWindowState {
+  [lifecycleActions_ saveMainWindowState];
 }
 
 - (NSArray<id>*)browserWindowActionTargets {
