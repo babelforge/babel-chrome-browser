@@ -49,6 +49,10 @@
                 <dt>PHP</dt>
                 <dd>{{ module.requirements.php }}</dd>
               </div>
+              <div>
+                <dt>Readiness</dt>
+                <dd>{{ module.readinessStatus.state|default('unknown') }}</dd>
+              </div>
             </dl>
             {% if module.fileTypes is not empty %}
               <div class="module-tags" aria-label="File types">

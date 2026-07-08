@@ -2,7 +2,7 @@
 
 Navigation: [Previous: Features](04-features.md) | [README](README.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
 
-BabelChrome modules are installable PHP packages. They live outside the application bundle after installation and are discovered from:
+BabelChrome modules are installable extension packages. The currently implemented runtime handlers execute PHP modules. Installed modules live outside the application bundle and are discovered from:
 
 ```text
 ~/Library/Application Support/BabelForge/BabelChrome/Modules
@@ -84,7 +84,7 @@ The browser app build does not rebuild these zips automatically. Module packagin
 Every module has a root `manifest.json`. The host reads this manifest to discover:
 
 - module identity, version, description, and PHP requirement;
-- runtime entrypoint;
+- runtime type and entrypoint;
 - custom `babelchrome://` routes;
 - file type handlers;
 - badges;
@@ -100,24 +100,66 @@ A web module declares a front controller:
 ```json
 {
   "runtime": {
-    "type": "web",
+    "type": "php-web",
     "entrypoint": "public/index.php"
-  },
-  "entrypoint": "public/index.php"
+  }
 }
 ```
+
+Legacy `runtime.type = "web"` is still accepted and normalized to `php-web`.
 
 Framework modules that need strict Composer isolation can request process isolation:
 
 ```json
 {
   "runtime": {
-    "type": "web",
+    "type": "php-web",
     "entrypoint": "public/index.php",
     "processIsolation": true
   }
 }
 ```
+
+The older PHP class runtime is explicit as `php-class`. Legacy manifests without a runtime, or with `runtime.type = "class"`, are normalized to `php-class`.
+
+## Readiness And Setup
+
+Modules may declare a read-only readiness command:
+
+```json
+{
+  "readiness": {
+    "type": "command",
+    "command": "./bin/babelchrome-ready",
+    "timeoutMs": 5000
+  }
+}
+```
+
+The command runs from the module root and should return JSON:
+
+```json
+{
+  "ready": true,
+  "status": "ready",
+  "messages": []
+}
+```
+
+Modules may also declare a setup command:
+
+```json
+{
+  "setup": {
+    "type": "command",
+    "command": "./bin/babelchrome-setup",
+    "timeoutMs": 600000,
+    "requiresConfirmation": true
+  }
+}
+```
+
+Setup commands are never run automatically. They are declared so BabelChrome can expose a user-confirmed setup flow when the UI supports it.
 
 ## Viewer Routing
 

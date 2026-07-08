@@ -10,6 +10,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleAutoloadRegistrar;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleHookRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleInstaller;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleManifest;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleReadinessChecker;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleUrlResolver;
@@ -33,6 +34,7 @@ final readonly class ViewerController
      * @param ModuleHookRegistry      $moduleHookRegistry      exposes module hooks
      * @param ModuleInstaller         $moduleInstaller         installs and manages user modules
      * @param ModuleAutoloadRegistrar $moduleAutoloadRegistrar registers module-local vendors
+     * @param ModuleReadinessChecker  $moduleReadinessChecker  evaluates optional module readiness checks
      * @param ModuleRouteDispatcher   $moduleRouteDispatcher   dispatches routable modules
      * @param ModuleUrlResolver       $moduleUrlResolver       resolves module metadata from URLs
      * @param OpenWithService         $openWithService         opens local files with macOS applications
@@ -45,6 +47,7 @@ final readonly class ViewerController
         private ModuleHookRegistry $moduleHookRegistry,
         private ModuleInstaller $moduleInstaller,
         private ModuleAutoloadRegistrar $moduleAutoloadRegistrar,
+        private ModuleReadinessChecker $moduleReadinessChecker,
         private ModuleRouteDispatcher $moduleRouteDispatcher,
         private ModuleUrlResolver $moduleUrlResolver,
         private OpenWithService $openWithService,
@@ -523,7 +526,9 @@ final readonly class ViewerController
     {
         $rows = [];
         foreach ($this->moduleRegistry->all() as $module) {
-            $rows[] = $module->toArray();
+            $row = $module->toArray();
+            $row['readinessStatus'] = $this->moduleReadinessChecker->status($module);
+            $rows[] = $row;
         }
 
         return $rows;

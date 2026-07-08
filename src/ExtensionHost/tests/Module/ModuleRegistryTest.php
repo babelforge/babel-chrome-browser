@@ -9,6 +9,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleAutoloadRegistrar;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleManifest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleMenuItem;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -19,6 +20,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(ModuleMenuItem::class)]
 #[CoversClass(ModuleAutoloadRegistrar::class)]
 #[CoversClass(ModuleRegistry::class)]
+#[CoversClass(ModuleRuntimeType::class)]
 final class ModuleRegistryTest extends TestCase
 {
     private string $workspaceDirectory;
@@ -94,15 +96,82 @@ final class ModuleRegistryTest extends TestCase
         self::assertSame(['example'], $module->menuItems[0]->contexts);
         self::assertSame('Cmd+E', $module->menuItems[0]->shortcut);
         self::assertSame('>=8.4', $module->phpRequirement);
+        self::assertSame(ModuleRuntimeType::PHP_CLASS, $module->runtimeType);
         self::assertSame(['txt', 'log'], $module->fileTypeHandlerFileTypes);
         $exportedModule = $module->toArray();
         $requirements = $exportedModule['requirements'] ?? null;
         $fileTypeHandler = $exportedModule['fileTypeHandler'] ?? null;
+        $runtime = $exportedModule['runtime'] ?? null;
 
         self::assertIsArray($requirements);
         self::assertSame('>=8.4', $requirements['php'] ?? null);
         self::assertIsArray($fileTypeHandler);
         self::assertSame(['txt', 'log'], $fileTypeHandler['fileTypes'] ?? null);
+        self::assertIsArray($runtime);
+        self::assertSame(ModuleRuntimeType::PHP_CLASS, $runtime['type'] ?? null);
+    }
+
+    /**
+     * Ensures readiness and setup declarations are exported.
+     */
+    public function testReadinessAndSetupDeclarationsAreExported(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.command-module';
+        self::assertTrue(mkdir($moduleDirectory, 0o775, true));
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.command-module',
+            'name' => 'Command Module',
+            'version' => '1.0.0',
+            'requirements' => [
+                'php' => '>=8.4',
+            ],
+            'readiness' => [
+                'type' => 'command',
+                'command' => './bin/ready',
+                'timeoutMs' => 1000,
+            ],
+            'setup' => [
+                'type' => 'command',
+                'command' => './bin/setup',
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $registry = new ModuleRegistry($this->workspaceDirectory.'/Catalog', $this->workspaceDirectory.'/Modules');
+        $module = $registry->find('vendor.command-module');
+
+        self::assertNotNull($module);
+        self::assertNotNull($module->readiness);
+        self::assertNotNull($module->setup);
+        self::assertSame(1000, $module->readiness->timeoutMs);
+        self::assertTrue($module->setup->requiresConfirmation);
+    }
+
+    /**
+     * Ensures legacy web runtime manifests are normalized to php-web.
+     */
+    public function testLegacyWebRuntimeIsNormalized(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.legacy-web-module';
+        self::assertTrue(mkdir($moduleDirectory, 0o775, true));
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.legacy-web-module',
+            'name' => 'Legacy Web Module',
+            'version' => '1.0.0',
+            'requirements' => [
+                'php' => '>=8.4',
+            ],
+            'runtime' => [
+                'type' => 'web',
+                'entrypoint' => 'public/index.php',
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $registry = new ModuleRegistry($this->workspaceDirectory.'/Catalog', $this->workspaceDirectory.'/Modules');
+        $module = $registry->find('vendor.legacy-web-module');
+
+        self::assertNotNull($module);
+        self::assertSame(ModuleRuntimeType::PHP_WEB, $module->runtimeType);
+        self::assertTrue($module->usesWebRuntime());
     }
 
     /**

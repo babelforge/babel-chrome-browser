@@ -8,10 +8,14 @@ use BabelForge\BabelChrome\LocalViewer\Controller\ViewerController;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleAutoloadRegistrar;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleHookRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleInstaller;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleReadinessChecker;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleUrlResolver;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleWebRuntime;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeDispatcher;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpClassRuntimeHandler;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpWebRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Service\OpenWithService;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceLoader;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceRegistry;
@@ -134,9 +138,16 @@ final class ViewerControllerTest extends TestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertIsArray($decoded);
         self::assertSame('per-module', $decoded['vendorIsolation'] ?? null);
-        self::assertIsArray($decoded['modules'] ?? null);
-        self::assertContains('babelforge.markdown-viewer', array_column($decoded['modules'], 'id'));
-        self::assertContains('babelforge.openapi-viewer', array_column($decoded['modules'], 'id'));
+        self::assertArrayHasKey('modules', $decoded);
+
+        $modules = $decoded['modules'];
+        self::assertIsArray($modules);
+        self::assertContains('babelforge.markdown-viewer', array_column($modules, 'id'));
+        self::assertContains('babelforge.openapi-viewer', array_column($modules, 'id'));
+
+        $firstModule = $modules[0] ?? null;
+        self::assertIsArray($firstModule);
+        self::assertIsArray($firstModule['readinessStatus'] ?? null);
     }
 
     /**
@@ -293,7 +304,7 @@ final class ViewerControllerTest extends TestCase
         self::assertSame('settings.section.register', $decoded['hook'] ?? null);
         self::assertIsArray($decoded['modules'] ?? null);
         self::assertContains('babelforge.markdown-viewer', array_column($decoded['modules'], 'id'));
-        self::assertContains('babelforge.openapi-viewer', array_column($decoded['modules'], 'id'));
+        self::assertNotContains('babelforge.openapi-viewer', array_column($decoded['modules'], 'id'));
     }
 
     /**
@@ -593,7 +604,14 @@ final class ViewerControllerTest extends TestCase
             new ModuleHookRegistry($moduleRegistry),
             new ModuleInstaller($moduleRegistry),
             $moduleAutoloadRegistrar = new ModuleAutoloadRegistrar($moduleRegistry),
-            new ModuleRouteDispatcher($moduleRegistry, $moduleAutoloadRegistrar, new ModuleWebRuntime()),
+            new ModuleReadinessChecker(),
+            new ModuleRouteDispatcher(
+                $moduleRegistry,
+                new ModuleRuntimeDispatcher(
+                    new PhpWebRuntimeHandler(new ModuleWebRuntime()),
+                    new PhpClassRuntimeHandler($moduleAutoloadRegistrar),
+                ),
+            ),
             new ModuleUrlResolver($moduleRegistry),
             new OpenWithService(),
             new Environment(new FilesystemLoader(dirname(__DIR__, 2).'/templates')),

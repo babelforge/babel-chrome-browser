@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace BabelForge\BabelChrome\LocalViewer\Module;
 
 use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleShippingException;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
 
 /**
- * Packages a BabelChrome PHP module into an installable production zip.
+ * Packages a BabelChrome module into an installable production zip.
  */
 final class ModulePackageShipper
 {
@@ -158,9 +159,9 @@ final class ModulePackageShipper
      */
     private function validateRuntimeLayout(string $sourceDirectory, array $manifest): void
     {
-        if ('web' === $manifest['runtimeType']) {
+        if (ModuleRuntimeType::isPhpWeb($manifest['runtimeType'])) {
             if ('' === $manifest['entrypoint'] || !is_file($sourceDirectory.'/'.$manifest['entrypoint'])) {
-                throw new ModuleShippingException('Missing web module entrypoint.');
+                throw new ModuleShippingException('Missing PHP web module entrypoint.');
             }
 
             return;
@@ -208,10 +209,10 @@ final class ModulePackageShipper
         if (is_array($runtime)) {
             $type = $runtime['type'] ?? null;
 
-            return is_string($type) && '' !== $type ? $type : 'class';
+            return is_string($type) && '' !== $type ? ModuleRuntimeType::normalize($type) : ModuleRuntimeType::PHP_CLASS;
         }
 
-        return is_string($runtime) && '' !== $runtime ? $runtime : 'class';
+        return is_string($runtime) && '' !== $runtime ? ModuleRuntimeType::normalize($runtime) : ModuleRuntimeType::PHP_CLASS;
     }
 
     /**
@@ -341,7 +342,7 @@ final class ModulePackageShipper
     {
         $relativePath = substr($path, strlen($sourceDirectory) + 1);
         $excludedRootPaths = self::EXCLUDED_ROOT_PATHS;
-        if ('web' !== $runtimeType) {
+        if (!ModuleRuntimeType::isPhpWeb($runtimeType)) {
             $excludedRootPaths = array_merge($excludedRootPaths, self::CLASS_RUNTIME_EXCLUDED_ROOT_PATHS);
         }
 

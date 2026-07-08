@@ -23,7 +23,7 @@ It behaves like a separate Chrome-like application: it has its own profile, grou
 
 BabelChrome itself is the native browser shell: CEF, tabs, groups, address bar, profile isolation, extension management, internal pages, and the local ExtensionHost runtime.
 
-Document viewers are not built into the browser bundle. Markdown, Mermaid, OpenAPI, JSON, and project-launcher behavior come from installable PHP modules. A file type is handled only when a matching module is installed and enabled from `babelchrome://modules`.
+Document viewers are not built into the browser bundle. Markdown, Mermaid, OpenAPI, JSON, and project-launcher behavior come from installable modules. The current modules use the PHP runtimes implemented by ExtensionHost. A file type is handled only when a matching module is installed and enabled from `babelchrome://modules`.
 
 When the browser repository is checked out through the `babel-chrome` meta workspace, common module sources live under the sibling `modules/` directory. Before installation, build production zip files from the meta workspace root:
 

@@ -11,6 +11,10 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleRequest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRuntimeContext;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleWebRuntime;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeDispatcher;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpClassRuntimeHandler;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpWebRuntimeHandler;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,6 +27,10 @@ use Symfony\Component\HttpFoundation\Response;
 #[CoversClass(ModuleRequest::class)]
 #[CoversClass(ModuleRuntimeContext::class)]
 #[CoversClass(ModuleWebRuntime::class)]
+#[CoversClass(ModuleRuntimeDispatcher::class)]
+#[CoversClass(ModuleRuntimeType::class)]
+#[CoversClass(PhpClassRuntimeHandler::class)]
+#[CoversClass(PhpWebRuntimeHandler::class)]
 final class ModuleRouteDispatcherTest extends TestCase
 {
     private string $workspaceDirectory;
@@ -45,6 +53,7 @@ final class ModuleRouteDispatcherTest extends TestCase
 
         $this->writeRoutableModule();
         $this->writeWebModule();
+        $this->writeExplicitPhpWebModule();
         $this->writeProcessIsolatedWebModule();
     }
 
@@ -122,6 +131,29 @@ final class ModuleRouteDispatcherTest extends TestCase
     }
 
     /**
+     * Ensures an explicit php-web runtime module is dispatched through its front controller.
+     */
+    public function testDispatchesExplicitPhpWebRuntimeModuleRoute(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $response = $dispatcher->dispatch(
+            'vendor.php-web-module',
+            'index',
+            Request::create('http://127.0.0.1:49152/module/vendor.php-web-module/index', 'GET', [
+                'token' => 'test-token',
+                'sourceUrl' => 'https://example.com/php-web-source',
+            ]),
+        );
+
+        $content = $response->getContent();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertIsString($content);
+        self::assertStringContainsString('vendor.php-web-module:index', $content);
+        self::assertStringContainsString('https://example.com/php-web-source', $content);
+    }
+
+    /**
      * Ensures a process-isolated web runtime module is dispatched through a dedicated PHP process.
      */
     public function testDispatchesProcessIsolatedWebRuntimeModuleRoute(): void
@@ -152,11 +184,14 @@ final class ModuleRouteDispatcherTest extends TestCase
     private function dispatcher(): ModuleRouteDispatcher
     {
         $moduleRegistry = new ModuleRegistry($this->workspaceDirectory.'/Catalog', $this->workspaceDirectory.'/Modules');
+        $moduleAutoloadRegistrar = new ModuleAutoloadRegistrar($moduleRegistry);
 
         return new ModuleRouteDispatcher(
             $moduleRegistry,
-            new ModuleAutoloadRegistrar($moduleRegistry),
-            new ModuleWebRuntime(),
+            new ModuleRuntimeDispatcher(
+                new PhpWebRuntimeHandler(new ModuleWebRuntime()),
+                new PhpClassRuntimeHandler($moduleAutoloadRegistrar),
+            ),
         );
     }
 
@@ -285,6 +320,49 @@ final class ModuleRouteDispatcherTest extends TestCase
                 $_SERVER['BABELCHROME_MODULE_ASSET_BASE_URL'].':'.
                 $_SERVER['BABELCHROME_MODULE_ASSET_TOKEN_QUERY']
             );
+            PHP);
+    }
+
+    /**
+     * Writes a small explicit php-web runtime module to the test workspace.
+     */
+    private function writeExplicitPhpWebModule(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.php-web-module';
+        if (!mkdir($moduleDirectory.'/public', 0o775, true) && !is_dir($moduleDirectory.'/public')) {
+            self::fail('Unable to create test explicit php-web module directory.');
+        }
+
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.php-web-module',
+            'name' => 'Explicit PHP Web Module',
+            'version' => '1.0.0',
+            'requirements' => [
+                'php' => '>=8.4',
+            ],
+            'enabled' => true,
+            'runtime' => [
+                'type' => 'php-web',
+                'entrypoint' => 'public/index.php',
+            ],
+            'routes' => [
+                [
+                    'scheme' => 'babelchrome',
+                    'host' => 'php-web',
+                    'handler' => 'index',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        file_put_contents($moduleDirectory.'/public/index.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            return
+                $_SERVER['BABELCHROME_MODULE_ID'].':'.
+                $_SERVER['BABELCHROME_MODULE_ROUTE'].':'.
+                $_SERVER['BABELCHROME_SOURCE_URL'];
             PHP);
     }
 

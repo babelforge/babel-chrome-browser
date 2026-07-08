@@ -5,23 +5,22 @@ declare(strict_types=1);
 namespace BabelForge\BabelChrome\LocalViewer\Module;
 
 use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleDispatchException;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Dispatches local HTTP requests to installed PHP modules.
+ * Dispatches local HTTP requests to installed modules.
  */
 final readonly class ModuleRouteDispatcher
 {
     /**
      * @param ModuleRegistry          $moduleRegistry          exposes registered modules
-     * @param ModuleAutoloadRegistrar $moduleAutoloadRegistrar registers module-local vendors
-     * @param ModuleWebRuntime        $moduleWebRuntime        runs generic web modules
+     * @param ModuleRuntimeDispatcher $moduleRuntimeDispatcher dispatches requests to runtime handlers
      */
     public function __construct(
         private ModuleRegistry $moduleRegistry,
-        private ModuleAutoloadRegistrar $moduleAutoloadRegistrar,
-        private ModuleWebRuntime $moduleWebRuntime,
+        private ModuleRuntimeDispatcher $moduleRuntimeDispatcher,
     ) {
     }
 
@@ -51,31 +50,7 @@ final readonly class ModuleRouteDispatcher
             throw new ModuleDispatchException(sprintf('Module "%s" does not declare route "%s".', $moduleId, $route));
         }
 
-        if ($module->usesWebRuntime()) {
-            return $this->moduleWebRuntime->dispatch($module, $route, $request);
-        }
-
-        if ('' === $module->entrypoint) {
-            throw new ModuleDispatchException(sprintf('Module "%s" has no PHP entrypoint.', $moduleId));
-        }
-
-        $this->moduleAutoloadRegistrar->registerEnabledModuleAutoloaders();
-
-        if (!class_exists($module->entrypoint)) {
-            throw new ModuleDispatchException(sprintf('Module entrypoint "%s" was not found. Check the module vendor autoloader.', $module->entrypoint));
-        }
-
-        $handler = new $module->entrypoint();
-        if (!$handler instanceof BabelChromeModuleInterface) {
-            throw new ModuleDispatchException(sprintf('Module entrypoint "%s" must implement %s.', $module->entrypoint, BabelChromeModuleInterface::class));
-        }
-
-        return $handler->handle(new ModuleRequest(
-            $module,
-            $route,
-            $request,
-            ModuleRuntimeContext::fromRequest($request),
-        ));
+        return $this->moduleRuntimeDispatcher->dispatch($module, $route, $request);
     }
 
     /**

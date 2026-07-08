@@ -181,7 +181,10 @@ final class MarkdownDocumentRendererTest extends TestCase
     {
         $view = $this->renderMarkdown('[Section](#section)');
 
-        self::assertStringContainsString('href="#section"', $view->bodyHtml);
+        self::assertStringContainsString(
+            'href="babelchrome://viewer/file/'.rawurlencode($this->workspaceDirectory.'/doc/main.md').'#section"',
+            $view->bodyHtml,
+        );
     }
 
     /**

@@ -5,35 +5,38 @@ declare(strict_types=1);
 namespace BabelForge\BabelChrome\LocalViewer\Module;
 
 use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleManifestException;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
 
 /**
- * Describes an installed BabelChrome PHP module.
+ * Describes an installed BabelChrome module.
  */
 final readonly class ModuleManifest
 {
     /**
-     * @param string               $id                       the stable module identifier
-     * @param string               $name                     the display name
-     * @param string               $version                  the semantic module version
-     * @param string               $description              the human-readable description
-     * @param string               $type                     the module type
-     * @param bool                 $enabled                  whether this module is enabled
-     * @param string               $entrypoint               the PHP entrypoint class or web front controller
-     * @param string               $runtimeType              the module runtime type
-     * @param bool                 $processIsolation         whether the web runtime uses a dedicated PHP process
-     * @param string               $phpRequirement           the required PHP version constraint
-     * @param string               $path                     the module root path
-     * @param list<ModuleRoute>    $routes                   the module routes
-     * @param list<string>         $fileTypes                the file extensions handled by the viewer router
-     * @param list<string>         $fileNameContains         lowercase filename fragments required by the module
-     * @param list<string>         $fileTypeHandlerFileTypes the file extensions advertised to web pages
-     * @param list<string>         $hooks                    the hooks implemented by the module
-     * @param list<string>         $permissions              the requested permissions
-     * @param list<ModuleMenuItem> $menuItems                the menu items contributed by the module
-     * @param ModuleBadge|null     $badge                    the optional address badge
-     * @param string|null          $settingsRoute            the optional settings route
-     * @param string|null          $defaultGroup             the optional preferred browser group
-     * @param string               $currentPhpVersion        the PHP version used to validate this manifest
+     * @param string                       $id                       the stable module identifier
+     * @param string                       $name                     the display name
+     * @param string                       $version                  the semantic module version
+     * @param string                       $description              the human-readable description
+     * @param string                       $type                     the module type
+     * @param bool                         $enabled                  whether this module is enabled
+     * @param string                       $entrypoint               the PHP entrypoint class or web front controller
+     * @param string                       $runtimeType              the module runtime type
+     * @param bool                         $processIsolation         whether the web runtime uses a dedicated PHP process
+     * @param string                       $phpRequirement           the required PHP version constraint
+     * @param string                       $path                     the module root path
+     * @param list<ModuleRoute>            $routes                   the module routes
+     * @param list<string>                 $fileTypes                the file extensions handled by the viewer router
+     * @param list<string>                 $fileNameContains         lowercase filename fragments required by the module
+     * @param list<string>                 $fileTypeHandlerFileTypes the file extensions advertised to web pages
+     * @param list<string>                 $hooks                    the hooks implemented by the module
+     * @param list<string>                 $permissions              the requested permissions
+     * @param list<ModuleMenuItem>         $menuItems                the menu items contributed by the module
+     * @param ModuleBadge|null             $badge                    the optional address badge
+     * @param string|null                  $settingsRoute            the optional settings route
+     * @param string|null                  $defaultGroup             the optional preferred browser group
+     * @param ModuleCommandDefinition|null $readiness                the optional readiness command
+     * @param ModuleCommandDefinition|null $setup                    the optional setup command
+     * @param string                       $currentPhpVersion        the PHP version used to validate this manifest
      */
     public function __construct(
         public string $id,
@@ -57,6 +60,8 @@ final readonly class ModuleManifest
         public ?ModuleBadge $badge,
         public ?string $settingsRoute,
         public ?string $defaultGroup,
+        public ?ModuleCommandDefinition $readiness,
+        public ?ModuleCommandDefinition $setup,
         public string $currentPhpVersion = PHP_VERSION,
     ) {
         if ('' === $this->id) {
@@ -116,6 +121,8 @@ final readonly class ModuleManifest
             self::badge($data),
             self::settingsRoute($data),
             self::defaultGroup($data),
+            self::readiness($data),
+            self::setup($data),
         );
     }
 
@@ -159,6 +166,8 @@ final readonly class ModuleManifest
             'badge' => $this->badge?->toArray(),
             'settingsRoute' => $this->settingsRoute,
             'defaultGroup' => $this->defaultGroup,
+            'readiness' => $this->readiness?->toArray(),
+            'setup' => $this->setup?->toArray(),
             'hasIsolatedVendor' => $this->hasIsolatedVendor(),
         ];
     }
@@ -180,7 +189,7 @@ final readonly class ModuleManifest
      */
     public function usesWebRuntime(): bool
     {
-        return 'web' === $this->runtimeType;
+        return ModuleRuntimeType::isPhpWeb($this->runtimeType);
     }
 
     /**
@@ -264,10 +273,10 @@ final readonly class ModuleManifest
         if (is_array($runtime)) {
             $type = $runtime['type'] ?? null;
 
-            return is_string($type) && '' !== $type ? $type : 'class';
+            return is_string($type) && '' !== $type ? ModuleRuntimeType::normalize($type) : ModuleRuntimeType::PHP_CLASS;
         }
 
-        return is_string($runtime) && '' !== $runtime ? $runtime : 'class';
+        return is_string($runtime) && '' !== $runtime ? ModuleRuntimeType::normalize($runtime) : ModuleRuntimeType::PHP_CLASS;
     }
 
     /**
@@ -285,6 +294,30 @@ final readonly class ModuleManifest
         }
 
         return true === ($runtime['processIsolation'] ?? false);
+    }
+
+    /**
+     * Reads the optional readiness command.
+     *
+     * @param array<string, mixed> $data the source data
+     *
+     * @return ModuleCommandDefinition|null the readiness command when declared
+     */
+    private static function readiness(array $data): ?ModuleCommandDefinition
+    {
+        return ModuleCommandDefinition::fromManifestValue($data['readiness'] ?? null, 5000, false);
+    }
+
+    /**
+     * Reads the optional setup command.
+     *
+     * @param array<string, mixed> $data the source data
+     *
+     * @return ModuleCommandDefinition|null the setup command when declared
+     */
+    private static function setup(array $data): ?ModuleCommandDefinition
+    {
+        return ModuleCommandDefinition::fromManifestValue($data['setup'] ?? null, 600000, true);
     }
 
     /**

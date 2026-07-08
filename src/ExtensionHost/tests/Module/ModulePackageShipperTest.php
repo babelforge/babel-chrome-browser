@@ -78,6 +78,25 @@ final class ModulePackageShipperTest extends TestCase
     }
 
     /**
+     * Ensures explicit php-web modules are validated as web modules.
+     */
+    public function testShipSupportsExplicitPhpWebRuntime(): void
+    {
+        $moduleDirectory = $this->moduleDirectory('vendor.php-web-shipped-module', '1.0.0', [
+            'type' => 'php-web',
+            'entrypoint' => 'public/index.php',
+        ]);
+        file_put_contents($moduleDirectory.'/public/index.php', '<?php return "";');
+        $targetPath = $this->workspaceDirectory.'/dist/php-web-module.zip';
+
+        $result = new ModulePackageShipper()->ship($moduleDirectory, $targetPath);
+
+        self::assertSame($targetPath, $result);
+        self::assertFileExists($targetPath);
+        self::assertZipContains($targetPath, 'public/index.php');
+    }
+
+    /**
      * Ensures a module without vendor cannot be shipped.
      */
     public function testShipRejectsMissingVendor(): void
@@ -94,12 +113,13 @@ final class ModulePackageShipperTest extends TestCase
     /**
      * Creates a sample module directory.
      *
-     * @param string $moduleId the module id
-     * @param string $version  the module version
+     * @param string                                       $moduleId the module id
+     * @param string                                       $version  the module version
+     * @param array{type: string, entrypoint: string}|null $runtime  the optional runtime declaration
      *
      * @return string the module directory
      */
-    private function moduleDirectory(string $moduleId, string $version): string
+    private function moduleDirectory(string $moduleId, string $version, ?array $runtime = null): string
     {
         $moduleDirectory = $this->workspaceDirectory.'/'.$moduleId;
         foreach ([
@@ -119,14 +139,19 @@ final class ModulePackageShipperTest extends TestCase
             }
         }
 
-        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+        $manifest = [
             'id' => $moduleId,
             'name' => 'Shipped Module',
             'version' => $version,
             'requirements' => [
                 'php' => '>=8.4',
             ],
-        ], JSON_THROW_ON_ERROR));
+        ];
+        if (null !== $runtime) {
+            $manifest['runtime'] = $runtime;
+        }
+
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
         file_put_contents($moduleDirectory.'/composer.json', '{}');
         file_put_contents($moduleDirectory.'/src/ShippedModule.php', '<?php');
         file_put_contents($moduleDirectory.'/assets/app/module.ts', 'export default true;');
