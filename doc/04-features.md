@@ -113,39 +113,28 @@ BabelChrome includes the LocalServiceHost module registry.
 
 No module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
 
-Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. PHP modules keep their entrypoints, document renderers, view models, error classes, Twig templates, source frontend assets, import map metadata, compiled public assets, and Composer dependencies inside their own module package. Static and process-backed modules keep the files required by their declared runtime.
+Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. Modules keep their document renderers, view models, error classes, frontend assets, import map metadata, compiled public assets, process commands, and dependencies inside their own module package. Static and process-backed modules keep the files required by their declared runtime.
 
 The native app asks the LocalServiceHost for the matching installed viewer module instead of duplicating Markdown, OpenAPI, or JSON rules in native code. The generic `babelchrome://viewer/...` URLs are preferred for external integrations. Module-owned stable URLs such as `babelchrome://markdown/...`, `babelchrome://openapi/...`, and `babelchrome://json/...` remain compatible when the corresponding module is installed.
 
-The current Markdown/OpenAPI/JSON modules still reuse LocalServiceHost platform services for source loading and source registration. Viewer-specific PHP, Twig, source frontend assets, import maps, compiled public assets, and Composer vendors live in the modules.
+The current Markdown/OpenAPI/JSON modules still reuse LocalServiceHost platform services for source loading and source registration. Viewer-specific PHP, Twig, source frontend assets, import maps, compiled public assets, and Composer vendors live in the modules and run behind the `process-web` contract.
 
-BabelChrome supports a framework-agnostic `php-web` module contract. A PHP web module declares a front controller in `manifest.json`:
-
-```json
-{
-  "runtime": {
-    "type": "php-web",
-    "entrypoint": "public/index.php"
-  },
-  "entrypoint": "public/index.php"
-}
-```
-
-The front controller belongs to the module. It may be plain PHP, Symfony, Laravel, or another PHP project layout. BabelChrome does not use framework-specific adapters. It prepares a standard request environment, exposes `BABELCHROME_*` runtime variables, and executes the declared front controller.
-
-By default, web modules run in the LocalServiceHost PHP process for compatibility with existing viewer modules. A module that needs strict Composer dependency isolation can request a dedicated PHP process:
+BabelChrome supports a framework-agnostic `process-web` module contract. A PHP web module declares a module-owned HTTP process in `manifest.json`:
 
 ```json
 {
   "runtime": {
-    "type": "php-web",
-    "entrypoint": "public/index.php",
-    "processIsolation": true
+    "type": "process-web",
+    "command": "php",
+    "args": ["-S", "127.0.0.1:{{ port }}", "-t", "public", "public/index.php"],
+    "cwd": ".",
+    "readyUrl": "http://127.0.0.1:{{ port }}/health",
+    "timeoutMs": 10000
   }
 }
 ```
 
-This is required for framework modules such as Laravel when their dependencies conflict with classes already loaded by the LocalServiceHost.
+The front controller belongs to the module. It may be plain PHP, Symfony, Laravel, or another PHP project layout. BabelChrome does not use framework-specific adapters and does not embed PHP as a module runtime. The module starts its own process, validates required executables through `readiness`, and receives BabelChrome context through headers and environment values.
 
 Important runtime variables include:
 
@@ -159,7 +148,7 @@ BABELCHROME_LOCAL_SERVICE_TOKEN
 BABELCHROME_SOURCE_URL
 ```
 
-The older PHP class-entrypoint runtime remains available as `php-class`. Legacy `web` and `class` values are accepted and normalized, but new PHP web modules should use `runtime.type = "php-web"`.
+Older `php-web`, `php-class`, `web`, and implicit-class manifests are not part of the fresh public contract and should be rebuilt as `process-web`, `process-runtime`, or `static-web`.
 
 BabelChrome also supports `static-web` modules. A static web module declares a module-owned document root and index file, needs no PHP entrypoint or Composer vendor directory, and can use request-scoped `BABELCHROME_*` placeholders in text assets. Public CSS, JavaScript, image, and JSON files are still served from the module `public/` directory through the tokenized module asset endpoint.
 

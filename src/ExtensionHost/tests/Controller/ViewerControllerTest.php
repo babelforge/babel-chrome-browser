@@ -562,7 +562,7 @@ final class ViewerControllerTest extends TestCase
         $content = $this->responseContent($response);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
-        self::assertStringContainsString('PHP Modules', $content);
+        self::assertStringContainsString('Modules', $content);
         self::assertStringContainsString('Markdown Viewer', $content);
         self::assertStringContainsString('OpenAPI Viewer', $content);
         self::assertStringContainsString('own Composer vendor directory', $content);

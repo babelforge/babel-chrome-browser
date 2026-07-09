@@ -7,7 +7,7 @@ namespace BabelForge\BabelChrome\LocalViewer\Module;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Carries the request context passed to a routed PHP module.
+ * Carries the request context passed to a routed module.
  */
 final readonly class ModuleRequest
 {

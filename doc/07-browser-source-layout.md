@@ -122,7 +122,7 @@ InternalPages
 
 - `Extensions`: extensions internal page data and rendering.
 - `History`: history internal page data and rendering.
-- `Modules`: PHP module internal page rendering and module settings pages.
+- `Modules`: module internal page rendering and module settings pages.
 - `Navigation`: internal page action parsing and internal navigation handlers.
 - `Rendering`: shared HTML shell, assets, escaping, and common rendering helpers.
 - `Settings`: main app settings page rendering.

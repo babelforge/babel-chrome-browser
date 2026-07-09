@@ -7,7 +7,7 @@ namespace BabelForge\BabelChrome\LocalViewer\Module;
 use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleManifestException;
 
 /**
- * Discovers and exposes BabelChrome PHP modules.
+ * Discovers and exposes BabelChrome modules.
  */
 final class ModuleRegistry
 {

@@ -1,6 +1,7 @@
 #import "Browser/Modules/Navigation/ModuleSettingsRouteResolver.h"
 
-#import "LocalServices/LocalServiceHost.h"
+#import "Browser/Modules/Registry/NativeModuleManifest.h"
+#import "Browser/Modules/Registry/NativeModuleRegistry.h"
 
 @implementation BabelModuleSettingsRouteResolver
 
@@ -37,26 +38,13 @@
 
 - (NSString*)moduleNameForIdentifier:(NSString*)moduleIdentifier {
   NSError* error = nil;
-  NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&error];
-  if (error) {
+  BabelNativeModuleRegistry* registry = [[BabelNativeModuleRegistry alloc] init];
+  BabelNativeModuleManifest* module = [registry moduleWithIdentifier:moduleIdentifier ?: @"" error:&error];
+  if (!module || error) {
     return nil;
   }
 
-  NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
-  for (NSDictionary* module in modules) {
-    if (![module isKindOfClass:NSDictionary.class]) {
-      continue;
-    }
-
-    NSString* currentIdentifier = [module[@"id"] isKindOfClass:NSString.class] ? module[@"id"] : @"";
-    if (![currentIdentifier isEqualToString:moduleIdentifier ?: @""]) {
-      continue;
-    }
-
-    return [module[@"name"] isKindOfClass:NSString.class] ? module[@"name"] : currentIdentifier;
-  }
-
-  return nil;
+  return module.name.length > 0 ? module.name : module.moduleIdentifier;
 }
 
 @end

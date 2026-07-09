@@ -146,6 +146,10 @@ set(BABEL_CHROME_SOURCES
   Browser/Navigation/StableURLs/LocalServiceURLClassifier.mm
   Browser/Modules/Core/ModuleActionService.h
   Browser/Modules/Core/ModuleActionService.mm
+  Browser/Modules/Registry/NativeModuleManifest.h
+  Browser/Modules/Registry/NativeModuleManifest.mm
+  Browser/Modules/Registry/NativeModuleRegistry.h
+  Browser/Modules/Registry/NativeModuleRegistry.mm
   Browser/InternalPages/Modules/ModuleInternalPageHTMLBuilder.h
   Browser/InternalPages/Modules/ModuleInternalPageHTMLBuilder.mm
   Browser/Modules/Lifecycle/ModuleLifecycleDispatcher.h

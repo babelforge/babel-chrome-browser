@@ -4,7 +4,7 @@
 #import <Foundation/Foundation.h>
 
 /**
- * Renders PHP module internal page bodies.
+ * Renders module internal page bodies.
  */
 @interface BabelModulePageRenderer : NSObject
 
@@ -18,7 +18,7 @@
 - (instancetype)initWithGearIconHTML:(NSString*)gearIconHTML trashIconHTML:(NSString*)trashIconHTML;
 
 /**
- * Renders the PHP modules page body.
+ * Renders the modules page body.
  *
  * @param modules The installed module dictionaries.
  * @param error The optional snapshot error.

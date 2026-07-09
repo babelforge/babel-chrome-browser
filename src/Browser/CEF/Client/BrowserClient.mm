@@ -1,7 +1,7 @@
 #import "Browser/CEF/Client/BrowserClient.h"
 
+#import "Browser/Modules/Registry/NativeModuleRegistry.h"
 #import "Browser/Window/Controller/BrowserWindowController.h"
-#import "LocalServices/LocalServiceHost.h"
 
 #include <array>
 #include <sstream>
@@ -364,14 +364,15 @@ bool IsReloadShortcutKeyEvent(const CefKeyEvent& event) {
 }
 
 /**
- * Returns the file type header value advertised by the local extension host.
+ * Returns the file type header value advertised by installed native module manifests.
  *
  * @return A comma-separated file type list, or an empty string when unavailable.
  */
-std::string FileTypesHeaderValueFromExtensionHost() {
+std::string FileTypesHeaderValueFromNativeModules() {
   @autoreleasepool {
     NSError* error = nil;
-    NSString* headerValue = [[BabelLocalServiceHost sharedHost] fileTypeHeaderValueWithError:&error];
+    BabelNativeModuleRegistry* registry = [[BabelNativeModuleRegistry alloc] init];
+    NSString* headerValue = [registry fileTypeHeaderValueWithError:&error];
     if (headerValue.length == 0) {
       return "";
     }
@@ -404,12 +405,12 @@ void OpenURLStringInNewTab(BabelBrowserWindowController* controller,
 
 BabelBrowserClient::BabelBrowserClient(BabelBrowserWindowController* controller)
     : controller_(controller),
-      fileTypesHeaderValue_(FileTypesHeaderValueFromExtensionHost()) {}
+      fileTypesHeaderValue_(FileTypesHeaderValueFromNativeModules()) {}
 
 BabelBrowserClient::~BabelBrowserClient() = default;
 
 void BabelBrowserClient::RefreshFileTypesHeaderValue() {
-  std::string refreshedHeaderValue = FileTypesHeaderValueFromExtensionHost();
+  std::string refreshedHeaderValue = FileTypesHeaderValueFromNativeModules();
   std::lock_guard<std::mutex> lock(fileTypesHeaderValueMutex_);
   fileTypesHeaderValue_ = refreshedHeaderValue;
 }
@@ -422,7 +423,7 @@ std::string BabelBrowserClient::FileTypesHeaderValue() {
     }
   }
 
-  std::string refreshedHeaderValue = FileTypesHeaderValueFromExtensionHost();
+  std::string refreshedHeaderValue = FileTypesHeaderValueFromNativeModules();
   std::lock_guard<std::mutex> lock(fileTypesHeaderValueMutex_);
   if (fileTypesHeaderValue_.empty()) {
     fileTypesHeaderValue_ = refreshedHeaderValue;

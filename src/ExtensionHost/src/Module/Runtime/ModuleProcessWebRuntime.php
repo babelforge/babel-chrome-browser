@@ -523,13 +523,14 @@ final class ModuleProcessWebRuntime
      */
     private function statusCode(array $headers): int
     {
+        $statusCode = Response::HTTP_BAD_GATEWAY;
         foreach ($headers as $header) {
             if (1 === preg_match('/^HTTP\/\S+\s+([0-9]{3})\b/', $header, $matches)) {
-                return (int) $matches[1];
+                $statusCode = (int) $matches[1];
             }
         }
 
-        return Response::HTTP_BAD_GATEWAY;
+        return $statusCode;
     }
 
     /**

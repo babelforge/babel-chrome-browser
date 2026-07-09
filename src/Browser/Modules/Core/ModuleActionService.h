@@ -4,7 +4,7 @@
 #import <Foundation/Foundation.h>
 
 /**
- * Executes PHP module registry actions through the local service host.
+ * Coordinates module registry actions and native manifest metadata.
  */
 @interface BabelModuleActionService : NSObject
 
@@ -43,7 +43,7 @@
 - (NSString*)defaultGroupNameForModuleIdentifier:(NSString*)moduleIdentifier;
 
 /**
- * Installs or updates a PHP module zip.
+ * Installs or updates a module zip.
  *
  * @param zipPath The module zip path.
  * @param error The optional error pointer.
@@ -52,7 +52,7 @@
 - (BOOL)installModuleZipAtPath:(NSString*)zipPath error:(NSError**)error;
 
 /**
- * Updates a PHP module enabled state.
+ * Updates a module enabled state.
  *
  * @param moduleIdentifier The module identifier.
  * @param enabled YES to enable the module.
@@ -62,7 +62,7 @@
 - (BOOL)setModuleWithIdentifier:(NSString*)moduleIdentifier enabled:(BOOL)enabled error:(NSError**)error;
 
 /**
- * Removes a PHP module.
+ * Removes a module.
  *
  * @param moduleIdentifier The module identifier.
  * @param error The optional error pointer.

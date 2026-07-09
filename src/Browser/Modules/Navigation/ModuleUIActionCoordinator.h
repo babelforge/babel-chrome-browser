@@ -7,7 +7,7 @@
 @class BabelModuleUpdateService;
 
 /**
- * Coordinates native UI actions for PHP module management.
+ * Coordinates native UI actions for module management.
  */
 @interface BabelModuleUIActionCoordinator : NSObject
 
@@ -29,7 +29,7 @@
 - (BOOL)installPHPModuleZipFromPanel;
 
 /**
- * Updates a PHP module enabled state.
+ * Updates a module enabled state.
  *
  * @param moduleIdentifier The module identifier.
  * @param enabled YES to enable the module.
@@ -38,7 +38,7 @@
 - (BOOL)setPHPModuleWithIdentifier:(NSString*)moduleIdentifier enabled:(BOOL)enabled;
 
 /**
- * Confirms and removes a PHP module.
+ * Confirms and removes a module.
  *
  * @param moduleIdentifier The module identifier.
  * @return YES when the module was removed.
@@ -88,7 +88,7 @@
 - (void)configureModuleUpdateLocalDirectoryFromPanel;
 
 /**
- * Installs a single PHP module update.
+ * Installs a single module update.
  *
  * @param moduleIdentifier The module identifier.
  * @return YES when at least one module was installed.
@@ -96,7 +96,7 @@
 - (BOOL)installPHPModuleUpdateWithIdentifier:(NSString*)moduleIdentifier;
 
 /**
- * Installs selected PHP module updates.
+ * Installs selected module updates.
  *
  * @param moduleIdentifiers The selected module identifiers.
  * @return YES when at least one module was installed.

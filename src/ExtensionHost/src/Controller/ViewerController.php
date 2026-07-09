@@ -34,7 +34,7 @@ final readonly class ViewerController
 {
     /**
      * @param SourceLoader            $sourceLoader            loads local and remote documents
-     * @param ModuleRegistry          $moduleRegistry          exposes registered PHP modules
+     * @param ModuleRegistry          $moduleRegistry          exposes registered modules
      * @param ModuleHookRegistry      $moduleHookRegistry      exposes module hooks
      * @param ModuleInstaller         $moduleInstaller         installs and manages user modules
      * @param ModuleAutoloadRegistrar $moduleAutoloadRegistrar registers module-local vendors
@@ -256,7 +256,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Installs a user PHP module from a zip archive.
+     * Installs a user module from a zip archive.
      *
      * @param Request $request the current request
      *
@@ -296,7 +296,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Enables a user PHP module.
+     * Enables a user module.
      *
      * @param Request $request the current request
      *
@@ -309,7 +309,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Disables a user PHP module.
+     * Disables a user module.
      *
      * @param Request $request the current request
      *
@@ -322,7 +322,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Removes a user PHP module.
+     * Removes a user module.
      *
      * @param Request $request the current request
      *
@@ -467,7 +467,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Renders the PHP modules management page.
+     * Renders the modules management page.
      *
      * @param Request $request the current request
      *
@@ -789,7 +789,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Returns hooks exposed by enabled PHP modules.
+     * Returns hooks exposed by enabled modules.
      *
      * @param Request $request the current request
      *
@@ -816,7 +816,7 @@ final readonly class ViewerController
     }
 
     /**
-     * Dispatches one application lifecycle hook to enabled PHP modules.
+     * Dispatches one application lifecycle hook to enabled modules.
      *
      * @param Request $request the current request
      *

@@ -1,0 +1,203 @@
+#import "Browser/Modules/Registry/NativeModuleRegistry.h"
+
+#import "Browser/Modules/Registry/NativeModuleManifest.h"
+
+static NSString* const kBabelNativeModuleRegistryErrorDomain = @"fr.babelforge.babel-chrome.native-module-registry";
+
+@implementation BabelNativeModuleRegistry {
+  NSString* modulesDirectoryPath_;
+  NSArray<BabelNativeModuleManifest*>* cachedModules_;
+}
+
+- (instancetype)init {
+  return [self initWithModulesDirectoryPath:nil];
+}
+
+- (instancetype)initWithModulesDirectoryPath:(NSString*)modulesDirectoryPath {
+  self = [super init];
+  if (self) {
+    modulesDirectoryPath_ = modulesDirectoryPath.length > 0 ? [modulesDirectoryPath copy] : [[self class] defaultModulesDirectoryPath];
+  }
+
+  return self;
+}
+
+- (NSString*)modulesDirectoryPath {
+  return modulesDirectoryPath_;
+}
+
+- (void)reload {
+  cachedModules_ = nil;
+}
+
+- (NSArray<BabelNativeModuleManifest*>*)allModulesWithError:(NSError**)error {
+  if (cachedModules_) {
+    return cachedModules_;
+  }
+
+  NSArray<NSString*>* manifestPaths = [self manifestPathsWithError:error];
+  if (!manifestPaths) {
+    return nil;
+  }
+
+  NSMutableArray<BabelNativeModuleManifest*>* modules = [NSMutableArray array];
+  for (NSString* manifestPath in manifestPaths) {
+    NSString* modulePath = [manifestPath stringByDeletingLastPathComponent];
+    NSData* data = [NSData dataWithContentsOfFile:manifestPath options:0 error:error];
+    if (!data) {
+      return nil;
+    }
+
+    id decoded = [NSJSONSerialization JSONObjectWithData:data options:0 error:error];
+    if (![decoded isKindOfClass:NSDictionary.class]) {
+      [self assignError:error
+            description:[NSString stringWithFormat:@"Module manifest is not a JSON object: %@", manifestPath]];
+      return nil;
+    }
+
+    BabelNativeModuleManifest* manifest =
+        [BabelNativeModuleManifest manifestWithDictionary:decoded modulePath:modulePath error:error];
+    if (!manifest) {
+      return nil;
+    }
+
+    [modules addObject:manifest];
+  }
+
+  cachedModules_ = [modules sortedArrayUsingComparator:^NSComparisonResult(BabelNativeModuleManifest* left,
+                                                                           BabelNativeModuleManifest* right) {
+    return [left.moduleIdentifier compare:right.moduleIdentifier];
+  }];
+
+  return cachedModules_;
+}
+
+- (NSArray<BabelNativeModuleManifest*>*)enabledModulesWithError:(NSError**)error {
+  NSArray<BabelNativeModuleManifest*>* modules = [self allModulesWithError:error];
+  if (!modules) {
+    return nil;
+  }
+
+  NSMutableArray<BabelNativeModuleManifest*>* enabledModules = [NSMutableArray array];
+  for (BabelNativeModuleManifest* module in modules) {
+    if (module.enabled) {
+      [enabledModules addObject:module];
+    }
+  }
+
+  return enabledModules;
+}
+
+- (BabelNativeModuleManifest*)moduleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  if (moduleIdentifier.length == 0) {
+    return nil;
+  }
+
+  NSArray<BabelNativeModuleManifest*>* modules = [self allModulesWithError:error];
+  if (!modules) {
+    return nil;
+  }
+
+  for (BabelNativeModuleManifest* module in modules) {
+    if ([module.moduleIdentifier isEqualToString:moduleIdentifier]) {
+      return module;
+    }
+  }
+
+  return nil;
+}
+
+- (NSDictionary*)modulesSnapshotWithError:(NSError**)error {
+  NSArray<BabelNativeModuleManifest*>* modules = [self allModulesWithError:error];
+  if (!modules) {
+    return nil;
+  }
+
+  NSMutableArray<NSDictionary*>* rows = [NSMutableArray array];
+  for (BabelNativeModuleManifest* module in modules) {
+    [rows addObject:[module dictionaryRepresentation]];
+  }
+
+  return @{
+    @"modules" : rows,
+    @"source" : @"native"
+  };
+}
+
+- (NSString*)fileTypeHeaderValueWithError:(NSError**)error {
+  NSArray<BabelNativeModuleManifest*>* modules = [self enabledModulesWithError:error];
+  if (!modules) {
+    return @"";
+  }
+
+  NSMutableOrderedSet<NSString*>* fileTypes = [NSMutableOrderedSet orderedSet];
+  for (BabelNativeModuleManifest* module in modules) {
+    for (NSString* fileType in module.fileTypeHandlerFileTypes) {
+      if (fileType.length > 0) {
+        [fileTypes addObject:fileType];
+      }
+    }
+  }
+
+  return [[fileTypes array] componentsJoinedByString:@","];
+}
+
+- (NSArray<NSString*>*)manifestPathsWithError:(NSError**)error {
+  NSFileManager* fileManager = NSFileManager.defaultManager;
+  BOOL isDirectory = NO;
+  if (![fileManager fileExistsAtPath:modulesDirectoryPath_ isDirectory:&isDirectory]) {
+    return @[];
+  }
+
+  if (!isDirectory) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Modules path is not a directory: %@", modulesDirectoryPath_]];
+    return nil;
+  }
+
+  NSArray<NSString*>* children = [fileManager contentsOfDirectoryAtPath:modulesDirectoryPath_ error:error];
+  if (!children) {
+    return nil;
+  }
+
+  NSMutableArray<NSString*>* manifestPaths = [NSMutableArray array];
+  for (NSString* child in children) {
+    if ([child containsString:@".backup"]) {
+      continue;
+    }
+
+    NSString* manifestPath = [[modulesDirectoryPath_ stringByAppendingPathComponent:child]
+        stringByAppendingPathComponent:@"manifest.json"];
+    BOOL manifestIsDirectory = NO;
+    if ([fileManager fileExistsAtPath:manifestPath isDirectory:&manifestIsDirectory] && !manifestIsDirectory) {
+      [manifestPaths addObject:manifestPath];
+    }
+  }
+
+  return [manifestPaths sortedArrayUsingSelector:@selector(compare:)];
+}
+
++ (NSString*)defaultModulesDirectoryPath {
+  NSArray<NSURL*>* applicationSupportURLs =
+      [NSFileManager.defaultManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
+  NSURL* applicationSupportURL = applicationSupportURLs.firstObject;
+  if (!applicationSupportURL) {
+    applicationSupportURL = [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES];
+  }
+
+  return [[[[applicationSupportURL URLByAppendingPathComponent:@"BabelForge" isDirectory:YES]
+      URLByAppendingPathComponent:@"BabelChrome" isDirectory:YES]
+      URLByAppendingPathComponent:@"Modules" isDirectory:YES] path];
+}
+
+- (void)assignError:(NSError**)error description:(NSString*)description {
+  if (!error) {
+    return;
+  }
+
+  *error = [NSError errorWithDomain:kBabelNativeModuleRegistryErrorDomain
+                               code:1
+                           userInfo:@{NSLocalizedDescriptionKey : description ?: @"Unable to load native module registry."}];
+}
+
+@end

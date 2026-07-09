@@ -8,7 +8,7 @@
 typedef void (^BabelModuleLifecycleRestoredProjectsHandler)(NSArray<NSString*>* projectIdentifiers);
 
 /**
- * Dispatches application lifecycle hooks to installed PHP modules.
+ * Dispatches application lifecycle hooks to installed modules.
  */
 @interface BabelModuleLifecycleDispatcher : NSObject
 

@@ -22,7 +22,7 @@
   return [NSString stringWithFormat:
       @"<h1>Settings</h1>"
        "<section><a class='primaryButton' data-can-open-menu='true' href='babelchrome://extensions'>Extensions</a>"
-       " <a class='primaryButton' data-can-open-menu='true' href='babelchrome://modules'>PHP Modules</a></section>"
+       " <a class='primaryButton' data-can-open-menu='true' href='babelchrome://modules'>Modules</a></section>"
        "<section>"
        "<h2>General</h2>"
        "<dl>"

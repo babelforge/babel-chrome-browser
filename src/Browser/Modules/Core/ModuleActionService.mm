@@ -1,16 +1,48 @@
 #import "Browser/Modules/Core/ModuleActionService.h"
 
+#import "Browser/Modules/Registry/NativeModuleRegistry.h"
 #import "LocalServices/LocalServiceHost.h"
 
-@implementation BabelModuleActionService
+@implementation BabelModuleActionService {
+  BabelNativeModuleRegistry* nativeModuleRegistry_;
+}
+
+- (instancetype)init {
+  self = [super init];
+  if (self) {
+    nativeModuleRegistry_ = [[BabelNativeModuleRegistry alloc] init];
+  }
+
+  return self;
+}
 
 - (NSDictionary*)modulesSnapshotWithError:(NSError**)error {
-  return [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:error];
+  NSError* nativeError = nil;
+  NSDictionary* nativeSnapshot = [nativeModuleRegistry_ modulesSnapshotWithError:&nativeError];
+  if (nativeSnapshot) {
+    return nativeSnapshot;
+  }
+
+  NSError* hostError = nil;
+  NSDictionary* hostSnapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&hostError];
+  if (hostSnapshot) {
+    return hostSnapshot;
+  }
+
+  if (error) {
+    *error = nativeError ?: hostError;
+  }
+  return nil;
 }
 
 - (NSDictionary*)moduleRouteForBabelChromeComponents:(NSURLComponents*)components
                                                error:(NSError**)error {
-  NSDictionary* snapshot = [self modulesSnapshotWithError:error];
+  NSError* nativeError = nil;
+  NSDictionary* snapshot = [nativeModuleRegistry_ modulesSnapshotWithError:&nativeError];
+  if (!snapshot) {
+    snapshot = [self modulesSnapshotWithError:error];
+  }
+
   if (!snapshot) {
     return nil;
   }
@@ -68,7 +100,12 @@
   }
 
   NSError* error = nil;
-  NSDictionary* snapshot = [self modulesSnapshotWithError:&error];
+  NSDictionary* snapshot = [nativeModuleRegistry_ modulesSnapshotWithError:&error];
+  if (!snapshot || error) {
+    error = nil;
+    snapshot = [self modulesSnapshotWithError:&error];
+  }
+
   if (!snapshot || error) {
     return nil;
   }
@@ -96,6 +133,9 @@
 - (BOOL)installModuleZipAtPath:(NSString*)zipPath error:(NSError**)error {
   NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:zipPath
                                                                               error:error];
+  if (response) {
+    [nativeModuleRegistry_ reload];
+  }
   return response != nil;
 }
 
@@ -103,12 +143,18 @@
   NSDictionary* response = [BabelLocalServiceHost.sharedHost setModuleWithIdentifier:moduleIdentifier
                                                                              enabled:enabled
                                                                                error:error];
+  if (response) {
+    [nativeModuleRegistry_ reload];
+  }
   return response != nil;
 }
 
 - (BOOL)removeModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
   NSDictionary* response = [BabelLocalServiceHost.sharedHost removeModuleWithIdentifier:moduleIdentifier
                                                                                   error:error];
+  if (response) {
+    [nativeModuleRegistry_ reload];
+  }
   return response != nil;
 }
 

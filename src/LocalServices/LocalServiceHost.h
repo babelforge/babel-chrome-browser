@@ -77,7 +77,7 @@
 - (NSURL*)viewerURLForFileURL:(NSURL*)fileURL;
 
 /**
- * Returns registered PHP modules from the local service.
+ * Returns registered modules from the local service.
  *
  * @param error Receives request or decoding errors.
  * @return A decoded JSON dictionary, otherwise nil.
@@ -93,7 +93,7 @@
 - (NSString*)fileTypeHeaderValueWithError:(NSError**)error;
 
 /**
- * Dispatches one application lifecycle hook to installed PHP modules.
+ * Dispatches one application lifecycle hook to installed modules.
  *
  * @param hook The lifecycle hook name.
  * @param error Receives request or decoding errors.
@@ -102,7 +102,7 @@
 - (NSDictionary*)dispatchModuleLifecycleHook:(NSString*)hook error:(NSError**)error;
 
 /**
- * Returns a local service URL for an installed PHP module route.
+ * Returns a local service URL for an installed module route.
  *
  * @param moduleIdentifier The module identifier.
  * @param route The module route.
@@ -114,7 +114,7 @@
                            error:(NSError**)error;
 
 /**
- * Returns a local service URL for an installed PHP module route and forwards the original URL.
+ * Returns a local service URL for an installed module route and forwards the original URL.
  *
  * @param moduleIdentifier The module identifier.
  * @param route The module route.
@@ -128,7 +128,7 @@
                            error:(NSError**)error;
 
 /**
- * Installs a PHP module zip through the local service.
+ * Installs a module zip through the local service.
  *
  * @param zipPath The local zip archive path.
  * @param error Receives request or install errors.
@@ -137,7 +137,7 @@
 - (NSDictionary*)installModuleZipAtPath:(NSString*)zipPath error:(NSError**)error;
 
 /**
- * Enables or disables a PHP module through the local service.
+ * Enables or disables a module through the local service.
  *
  * @param moduleIdentifier The module identifier.
  * @param enabled Whether the module should be enabled.
@@ -149,7 +149,7 @@
                                    error:(NSError**)error;
 
 /**
- * Removes a PHP module through the local service.
+ * Removes a module through the local service.
  *
  * @param moduleIdentifier The module identifier.
  * @param error Receives request or removal errors.

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace BabelForge\BabelChrome\LocalViewer\Module;
 
 /**
- * Describes one route exposed by a BabelChrome PHP module.
+ * Describes one route exposed by a BabelChrome module.
  */
 final readonly class ModuleRoute
 {

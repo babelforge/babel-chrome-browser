@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace BabelForge\BabelChrome\LocalViewer\Module;
 
 /**
- * Builds the hook index exposed by enabled PHP modules.
+ * Builds the hook index exposed by enabled modules.
  */
 final readonly class ModuleHookRegistry
 {

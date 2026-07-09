@@ -7,7 +7,7 @@ namespace BabelForge\BabelChrome\LocalViewer\Module;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Exposes BabelChrome runtime helpers to a PHP module.
+ * Exposes BabelChrome runtime helpers to a module.
  */
 final readonly class ModuleRuntimeContext
 {
@@ -32,11 +32,18 @@ final readonly class ModuleRuntimeContext
      */
     public static function fromRequest(Request $request): self
     {
-        $tokenValue = $request->query->get('token', '');
-        $sourceUrlValue = $request->query->get('sourceUrl', '');
+        $baseUrlHeaderValue = $request->headers->get('X-BabelChrome-Local-Service-Base-Url', '');
+        $tokenHeaderValue = $request->headers->get('X-BabelChrome-Local-Service-Token', '');
+        $sourceUrlHeaderValue = $request->headers->get('X-BabelChrome-Source-Url', '');
+        $baseUrlHeader = is_string($baseUrlHeaderValue) ? $baseUrlHeaderValue : '';
+        $tokenHeader = is_string($tokenHeaderValue) ? $tokenHeaderValue : '';
+        $sourceUrlHeader = is_string($sourceUrlHeaderValue) ? $sourceUrlHeaderValue : '';
+
+        $tokenValue = '' !== $tokenHeader ? $tokenHeader : $request->query->get('token', '');
+        $sourceUrlValue = '' !== $sourceUrlHeader ? $sourceUrlHeader : $request->query->get('sourceUrl', '');
 
         return new self(
-            rtrim($request->getSchemeAndHttpHost(), '/'),
+            '' !== $baseUrlHeader ? rtrim($baseUrlHeader, '/') : rtrim($request->getSchemeAndHttpHost(), '/'),
             is_string($tokenValue) ? $tokenValue : '',
             is_string($sourceUrlValue) ? $sourceUrlValue : '',
         );
