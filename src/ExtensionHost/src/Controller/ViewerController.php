@@ -15,6 +15,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleSetupRunner;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleUrlResolver;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessWebRuntime;
 use BabelForge\BabelChrome\LocalViewer\Service\OpenWithService;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceLoader;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceRegistry;
@@ -39,6 +40,7 @@ final readonly class ViewerController
      * @param ModuleSetupRunner       $moduleSetupRunner       runs explicit setup commands
      * @param ModuleRouteDispatcher   $moduleRouteDispatcher   dispatches routable modules
      * @param ModuleUrlResolver       $moduleUrlResolver       resolves module metadata from URLs
+     * @param ModuleProcessWebRuntime $moduleProcessWebRuntime manages process-web module processes
      * @param OpenWithService         $openWithService         opens local files with macOS applications
      * @param Environment             $twig                    renders viewer templates
      */
@@ -53,6 +55,7 @@ final readonly class ViewerController
         private ModuleSetupRunner $moduleSetupRunner,
         private ModuleRouteDispatcher $moduleRouteDispatcher,
         private ModuleUrlResolver $moduleUrlResolver,
+        private ModuleProcessWebRuntime $moduleProcessWebRuntime,
         private OpenWithService $openWithService,
         private Environment $twig,
     ) {
@@ -116,6 +119,11 @@ final readonly class ViewerController
         }
 
         try {
+            $existingModule = $this->moduleRegistry->find($this->moduleIdFromZip($zipPath));
+            if (null !== $existingModule) {
+                $this->moduleProcessWebRuntime->stopModule($existingModule->id);
+            }
+
             $module = $this->moduleInstaller->installZip($zipPath);
 
             return new JsonResponse([
@@ -176,6 +184,7 @@ final readonly class ViewerController
         }
 
         try {
+            $this->moduleProcessWebRuntime->stopModule($moduleId);
             $this->moduleInstaller->remove($moduleId);
 
             return new JsonResponse(['ok' => true]);
@@ -679,6 +688,10 @@ final readonly class ViewerController
             }
         }
 
+        if ('app.will-quit' === $hook) {
+            $this->moduleProcessWebRuntime->stopAll();
+        }
+
         return new JsonResponse([
             'ok' => true,
             'hook' => $hook,
@@ -1082,6 +1095,10 @@ final readonly class ViewerController
         }
 
         try {
+            if (!$enabled) {
+                $this->moduleProcessWebRuntime->stopModule($moduleId);
+            }
+
             $module = $this->moduleInstaller->setEnabled($moduleId, $enabled);
 
             return new JsonResponse([
@@ -1094,6 +1111,53 @@ final readonly class ViewerController
                 'error' => $exception->getMessage(),
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+    }
+
+    /**
+     * Reads a module id from a candidate module zip without validating the archive fully.
+     *
+     * @param string $zipPath the module zip path
+     *
+     * @return string the module id when it can be read
+     */
+    private function moduleIdFromZip(string $zipPath): string
+    {
+        if (!class_exists(\ZipArchive::class) || !is_file($zipPath)) {
+            return '';
+        }
+
+        $zip = new \ZipArchive();
+        if (true !== $zip->open($zipPath)) {
+            return '';
+        }
+
+        try {
+            $manifestContent = $zip->getFromName('manifest.json');
+            if (false === $manifestContent) {
+                for ($index = 0; $index < $zip->numFiles; ++$index) {
+                    $name = $zip->getNameIndex($index);
+                    if (is_string($name) && str_ends_with($name, '/manifest.json')) {
+                        $manifestContent = $zip->getFromName($name);
+                        break;
+                    }
+                }
+            }
+        } finally {
+            $zip->close();
+        }
+
+        if (!is_string($manifestContent)) {
+            return '';
+        }
+
+        $decoded = json_decode($manifestContent, true);
+        if (!is_array($decoded)) {
+            return '';
+        }
+
+        $id = $decoded['id'] ?? null;
+
+        return is_string($id) ? $id : '';
     }
 
     /**

@@ -11,10 +11,13 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleRequest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRuntimeContext;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleWebRuntime;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessWebInstance;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessWebRuntime;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpClassRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpWebRuntimeHandler;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ProcessWebRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\StaticWebRuntimeHandler;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -30,8 +33,11 @@ use Symfony\Component\HttpFoundation\Response;
 #[CoversClass(ModuleWebRuntime::class)]
 #[CoversClass(ModuleRuntimeDispatcher::class)]
 #[CoversClass(ModuleRuntimeType::class)]
+#[CoversClass(ModuleProcessWebInstance::class)]
+#[CoversClass(ModuleProcessWebRuntime::class)]
 #[CoversClass(PhpClassRuntimeHandler::class)]
 #[CoversClass(PhpWebRuntimeHandler::class)]
+#[CoversClass(ProcessWebRuntimeHandler::class)]
 #[CoversClass(StaticWebRuntimeHandler::class)]
 final class ModuleRouteDispatcherTest extends TestCase
 {
@@ -59,6 +65,7 @@ final class ModuleRouteDispatcherTest extends TestCase
         $this->writeProcessIsolatedWebModule();
         $this->writeStaticWebModule();
         $this->writeEscapingStaticWebModule();
+        $this->writeProcessWebModule();
     }
 
     /**
@@ -66,6 +73,8 @@ final class ModuleRouteDispatcherTest extends TestCase
      */
     protected function tearDown(): void
     {
+        new ModuleProcessWebRuntime()->stopAll();
+
         parent::tearDown();
     }
 
@@ -206,6 +215,29 @@ final class ModuleRouteDispatcherTest extends TestCase
     }
 
     /**
+     * Ensures a process-web module starts its HTTP process and receives a proxied route request.
+     */
+    public function testDispatchesProcessWebRuntimeModuleRoute(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $request = Request::create('http://127.0.0.1:49152/module/vendor.process-web-module/index', 'GET', [
+            'token' => 'test-token',
+            'sourceUrl' => 'https://example.com/process-source',
+        ]);
+        $request->attributes->set('babelChromeFileTypes', 'md,json');
+
+        $response = $dispatcher->dispatch('vendor.process-web-module', 'index', $request);
+        $content = $response->getContent();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertSame('text/plain; charset=utf-8', $response->headers->get('Content-Type'));
+        self::assertIsString($content);
+        self::assertStringContainsString('vendor.process-web-module:index', $content);
+        self::assertStringContainsString('sourceUrl=https://example.com/process-source', $content);
+        self::assertStringContainsString('fileTypes=md,json', $content);
+    }
+
+    /**
      * Ensures a static web module cannot serve an index outside its document root.
      */
     public function testStaticWebRuntimeRejectsIndexTraversal(): void
@@ -235,6 +267,7 @@ final class ModuleRouteDispatcherTest extends TestCase
         return new ModuleRouteDispatcher(
             $moduleRegistry,
             new ModuleRuntimeDispatcher(
+                new ProcessWebRuntimeHandler(new ModuleProcessWebRuntime()),
                 new PhpWebRuntimeHandler(new ModuleWebRuntime()),
                 new StaticWebRuntimeHandler(),
                 new PhpClassRuntimeHandler($moduleAutoloadRegistrar),
@@ -528,5 +561,72 @@ final class ModuleRouteDispatcherTest extends TestCase
             ],
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
         file_put_contents($moduleDirectory.'/public/index.html', '<!doctype html><title>Unused</title>');
+    }
+
+    /**
+     * Writes a small process-web runtime module to the test workspace.
+     */
+    private function writeProcessWebModule(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.process-web-module';
+        if (!mkdir($moduleDirectory.'/public', 0o775, true) && !is_dir($moduleDirectory.'/public')) {
+            self::fail('Unable to create test process-web module directory.');
+        }
+
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.process-web-module',
+            'name' => 'Process Web Module',
+            'version' => '1.0.0',
+            'enabled' => true,
+            'runtime' => [
+                'type' => 'process-web',
+                'command' => PHP_BINARY,
+                'args' => [
+                    '-S',
+                    '127.0.0.1:{{ port }}',
+                    '-t',
+                    'public',
+                    'public/router.php',
+                ],
+                'cwd' => '.',
+                'readyUrl' => 'http://127.0.0.1:{{ port }}/health',
+                'timeoutMs' => 5000,
+                'stop' => [
+                    'signal' => 'TERM',
+                    'timeoutMs' => 1000,
+                ],
+            ],
+            'routes' => [
+                [
+                    'scheme' => 'babelchrome',
+                    'host' => 'process-web',
+                    'handler' => 'index',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        file_put_contents($moduleDirectory.'/public/router.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+            if ('/health' === $path) {
+                http_response_code(204);
+
+                return true;
+            }
+
+            header('Content-Type: text/plain; charset=utf-8');
+            echo ($_SERVER['HTTP_X_BABELCHROME_MODULE_ID'] ?? '').
+                ':'.
+                ($_SERVER['HTTP_X_BABELCHROME_MODULE_ROUTE'] ?? '').
+                ':sourceUrl='.
+                ($_GET['sourceUrl'] ?? '').
+                ':fileTypes='.
+                ($_SERVER['HTTP_X_BABELCHROME_FILE_TYPES'] ?? '');
+
+            return true;
+            PHP);
     }
 }

@@ -108,7 +108,7 @@ final class ModulePackageShipper
      *
      * @param string $manifestPath the manifest path
      *
-     * @return array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string} the decoded manifest
+     * @return array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string, processWebCommand: string} the decoded manifest
      *
      * @throws ModuleShippingException when the manifest cannot be read
      */
@@ -149,14 +149,15 @@ final class ModulePackageShipper
             'documentRoot' => $this->documentRoot($manifestData, $runtimeType),
             'indexFile' => $this->indexFile($manifestData, $runtimeType),
             'phpRequirement' => $phpRequirement,
+            'processWebCommand' => $this->processWebCommand($manifestData, $runtimeType),
         ];
     }
 
     /**
      * Validates the runtime-specific module layout.
      *
-     * @param string                                                                                                                                                     $sourceDirectory the module source directory
-     * @param array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string} $manifest        the module manifest
+     * @param string                                                                                                                                                                                $sourceDirectory the module source directory
+     * @param array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string, processWebCommand: string} $manifest        the module manifest
      *
      * @throws ModuleShippingException when the runtime layout is invalid
      */
@@ -179,6 +180,14 @@ final class ModulePackageShipper
             $indexPath = realpath($documentRoot.'/'.ltrim($manifest['indexFile'], '/'));
             if (false === $indexPath || !is_file($indexPath) || !str_starts_with($indexPath, rtrim($documentRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
                 throw new ModuleShippingException('Missing static web index file.');
+            }
+
+            return;
+        }
+
+        if (ModuleRuntimeType::isProcessWeb($manifest['runtimeType'])) {
+            if ('' === $manifest['processWebCommand']) {
+                throw new ModuleShippingException('Missing process-web runtime command.');
             }
 
             return;
@@ -313,10 +322,34 @@ final class ModulePackageShipper
     }
 
     /**
+     * Reads the process web command.
+     *
+     * @param array<string, mixed> $manifest    the decoded manifest
+     * @param string               $runtimeType the module runtime type
+     *
+     * @return string the process web command
+     */
+    private function processWebCommand(array $manifest, string $runtimeType): string
+    {
+        if (!ModuleRuntimeType::isProcessWeb($runtimeType)) {
+            return '';
+        }
+
+        $runtime = $manifest['runtime'] ?? null;
+        if (!is_array($runtime)) {
+            return '';
+        }
+
+        $command = $runtime['command'] ?? null;
+
+        return is_string($command) ? trim($command) : '';
+    }
+
+    /**
      * Builds the default target path.
      *
-     * @param string                                                                                                                                                     $sourceDirectory the module source directory
-     * @param array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string} $manifest        the module manifest
+     * @param string                                                                                                                                                                                $sourceDirectory the module source directory
+     * @param array{id: string, name: string, version: string, runtimeType: string, entrypoint: string, documentRoot: string, indexFile: string, phpRequirement: string, processWebCommand: string} $manifest        the module manifest
      *
      * @return string the target zip path
      */
@@ -426,8 +459,8 @@ final class ModulePackageShipper
     private function isExcluded(string $sourceDirectory, string $path, string $runtimeType): bool
     {
         $relativePath = substr($path, strlen($sourceDirectory) + 1);
-        $excludedRootPaths = self::EXCLUDED_ROOT_PATHS;
-        if (!ModuleRuntimeType::isPhpWeb($runtimeType)) {
+        $excludedRootPaths = $this->excludedRootPaths($runtimeType);
+        if (!ModuleRuntimeType::isPhpWeb($runtimeType) && !ModuleRuntimeType::isProcessWeb($runtimeType)) {
             $excludedRootPaths = array_merge($excludedRootPaths, self::CLASS_RUNTIME_EXCLUDED_ROOT_PATHS);
         }
 
@@ -438,12 +471,52 @@ final class ModulePackageShipper
         }
 
         $parts = explode(DIRECTORY_SEPARATOR, $relativePath);
+        $excludedNames = $this->excludedNames($runtimeType);
         foreach ($parts as $part) {
-            if (in_array($part, self::EXCLUDED_NAMES, true)) {
+            if (in_array($part, $excludedNames, true)) {
                 return true;
             }
         }
 
         return str_ends_with($relativePath, '.zip');
+    }
+
+    /**
+     * Returns excluded root paths for one runtime.
+     *
+     * @param string $runtimeType the module runtime type
+     *
+     * @return list<string> the excluded root paths
+     */
+    private function excludedRootPaths(string $runtimeType): array
+    {
+        if (!ModuleRuntimeType::isProcessWeb($runtimeType)) {
+            return self::EXCLUDED_ROOT_PATHS;
+        }
+
+        return [
+            '.php-cs-fixer.dist.php',
+            'phpstan.neon',
+            'phpunit.xml.dist',
+        ];
+    }
+
+    /**
+     * Returns excluded path names for one runtime.
+     *
+     * @param string $runtimeType the module runtime type
+     *
+     * @return list<string> the excluded names
+     */
+    private function excludedNames(string $runtimeType): array
+    {
+        if (!ModuleRuntimeType::isProcessWeb($runtimeType)) {
+            return self::EXCLUDED_NAMES;
+        }
+
+        return array_values(array_filter(
+            self::EXCLUDED_NAMES,
+            static fn (string $name): bool => !in_array($name, ['node_modules', 'var'], true),
+        ));
     }
 }

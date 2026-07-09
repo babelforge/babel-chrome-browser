@@ -129,6 +129,44 @@ final class ModulePackageShipperTest extends TestCase
     }
 
     /**
+     * Ensures process web modules can ship their own non-PHP runtime files.
+     */
+    public function testShipSupportsProcessWebRuntimeWithoutComposer(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/vendor.process-web-module';
+        self::assertTrue(mkdir($moduleDirectory.'/server/bin', 0o775, true));
+        self::assertTrue(mkdir($moduleDirectory.'/node_modules/example', 0o775, true));
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.process-web-module',
+            'name' => 'Process Web Module',
+            'version' => '1.0.0',
+            'runtime' => [
+                'type' => 'process-web',
+                'command' => 'node',
+                'args' => [
+                    'server/index.js',
+                    '--port={{ port }}',
+                ],
+                'readyUrl' => 'http://127.0.0.1:{{ port }}/health',
+            ],
+        ], JSON_THROW_ON_ERROR));
+        file_put_contents($moduleDirectory.'/server/index.js', 'console.log("process-web");');
+        file_put_contents($moduleDirectory.'/server/bin/start', '#!/usr/bin/env node');
+        file_put_contents($moduleDirectory.'/node_modules/example/index.js', 'export default true;');
+        $targetPath = $this->workspaceDirectory.'/dist/process-web-module.zip';
+
+        $result = new ModulePackageShipper()->ship($moduleDirectory, $targetPath);
+
+        self::assertSame($targetPath, $result);
+        self::assertFileExists($targetPath);
+        self::assertZipContains($targetPath, 'manifest.json');
+        self::assertZipContains($targetPath, 'server/index.js');
+        self::assertZipContains($targetPath, 'server/bin/start');
+        self::assertZipContains($targetPath, 'node_modules/example/index.js');
+        self::assertZipNotContains($targetPath, 'composer.json');
+    }
+
+    /**
      * Ensures a module without vendor cannot be shipped.
      */
     public function testShipRejectsMissingVendor(): void

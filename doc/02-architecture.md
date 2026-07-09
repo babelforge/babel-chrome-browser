@@ -64,9 +64,11 @@ The main window state, left panel state, Developer Tools dock settings, tab open
 
 ## ExtensionHost And Viewers
 
-BabelChrome can route supported document URLs through a local loopback ExtensionHost instead of sending them directly to CEF. Viewer support comes from installed and enabled modules; the current viewer modules use the `php-web` runtime. The native app itself does not bundle Markdown, OpenAPI, or JSON rendering logic.
+BabelChrome can route supported document URLs through a local loopback ExtensionHost instead of sending them directly to CEF. Viewer support comes from installed and enabled modules; the current viewer modules use the `php-web` runtime. The ExtensionHost also supports `static-web` modules and `process-web` modules that start a module-owned local HTTP server behind a stable `babelchrome://` route. The native app itself does not bundle Markdown, OpenAPI, JSON rendering logic, or module-specific server logic.
 
 `LocalServiceHost` is the native process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, source registrations, and installed module state are not written inside `/Applications/BabelChrome.app`.
+
+For `process-web` modules, the ExtensionHost allocates a second local port, starts the module command from the installed module directory, waits for the declared readiness URL, and proxies declared module routes to that process. This keeps the user-facing URL stable while allowing the runtime port to change on each app launch.
 
 Viewer-backed tabs are represented by stable BabelChrome URLs. External integrations should prefer the generic viewer dispatcher:
 

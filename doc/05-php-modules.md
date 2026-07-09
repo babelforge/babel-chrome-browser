@@ -2,7 +2,7 @@
 
 Navigation: [Previous: Features](04-features.md) | [README](README.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
 
-BabelChrome modules are installable extension packages. The currently implemented runtime handlers execute PHP modules and serve static web modules. Installed modules live outside the application bundle and are discovered from:
+BabelChrome modules are installable extension packages. The currently implemented runtime handlers execute PHP modules, serve static web modules, and proxy module-owned local HTTP processes through `process-web`. Installed modules live outside the application bundle and are discovered from:
 
 ```text
 ~/Library/Application Support/BabelForge/BabelChrome/Modules
@@ -84,7 +84,7 @@ The browser app build does not rebuild these zips automatically. Module packagin
 Every module has a root `manifest.json`. The host reads this manifest to discover:
 
 - module identity, version, description, and PHP requirement;
-- runtime type and entrypoint;
+- runtime type and entrypoint or process command;
 - custom `babelchrome://` routes;
 - file type handlers;
 - badges;
@@ -141,6 +141,29 @@ Static text files may use BabelChrome placeholders for request-scoped values:
 ```html
 <script src="{{ BABELCHROME_MODULE_ASSET_BASE_URL }}/app.js{{ BABELCHROME_MODULE_ASSET_TOKEN_QUERY }}"></script>
 ```
+
+A process web module declares a command that starts a local HTTP server:
+
+```json
+{
+  "runtime": {
+    "type": "process-web",
+    "command": "node",
+    "args": ["server/index.js", "--port={{ port }}"],
+    "cwd": ".",
+    "readyUrl": "http://127.0.0.1:{{ port }}/health",
+    "timeoutMs": 10000,
+    "stop": {
+      "signal": "TERM",
+      "timeoutMs": 3000
+    }
+  }
+}
+```
+
+`process-web` modules do not need a PHP entrypoint, `requirements.php`, `composer.json`, or a Composer `vendor/` directory. BabelChrome assigns a local port, starts the process on first route access, waits for `readyUrl`, then proxies declared module routes to the process. Supported placeholders in `command`, `args`, `env`, and `readyUrl` are `{{ port }}`, `{{ moduleId }}`, and `{{ moduleDir }}`.
+
+The assigned port is never a stable browser URL. Users and integrations keep opening declared `babelchrome://` routes, and the ExtensionHost rebuilds the process URL after app restart. Running process-web instances are stopped when the module is disabled, removed, updated, or when BabelChrome dispatches `app.will-quit`.
 
 ## Readiness And Setup
 

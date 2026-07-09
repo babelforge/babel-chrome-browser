@@ -13,32 +13,33 @@ use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
 final readonly class ModuleManifest
 {
     /**
-     * @param string                       $id                       the stable module identifier
-     * @param string                       $name                     the display name
-     * @param string                       $version                  the semantic module version
-     * @param string                       $description              the human-readable description
-     * @param string                       $type                     the module type
-     * @param bool                         $enabled                  whether this module is enabled
-     * @param string                       $entrypoint               the PHP entrypoint class or web front controller
-     * @param string                       $runtimeType              the module runtime type
-     * @param bool                         $processIsolation         whether the web runtime uses a dedicated PHP process
-     * @param string                       $documentRoot             the static web document root
-     * @param string                       $indexFile                the static web index file
-     * @param string                       $phpRequirement           the required PHP version constraint
-     * @param string                       $path                     the module root path
-     * @param list<ModuleRoute>            $routes                   the module routes
-     * @param list<string>                 $fileTypes                the file extensions handled by the viewer router
-     * @param list<string>                 $fileNameContains         lowercase filename fragments required by the module
-     * @param list<string>                 $fileTypeHandlerFileTypes the file extensions advertised to web pages
-     * @param list<string>                 $hooks                    the hooks implemented by the module
-     * @param list<string>                 $permissions              the requested permissions
-     * @param list<ModuleMenuItem>         $menuItems                the menu items contributed by the module
-     * @param ModuleBadge|null             $badge                    the optional address badge
-     * @param string|null                  $settingsRoute            the optional settings route
-     * @param string|null                  $defaultGroup             the optional preferred browser group
-     * @param ModuleCommandDefinition|null $readiness                the optional readiness command
-     * @param ModuleCommandDefinition|null $setup                    the optional setup command
-     * @param string                       $currentPhpVersion        the PHP version used to validate this manifest
+     * @param string                          $id                       the stable module identifier
+     * @param string                          $name                     the display name
+     * @param string                          $version                  the semantic module version
+     * @param string                          $description              the human-readable description
+     * @param string                          $type                     the module type
+     * @param bool                            $enabled                  whether this module is enabled
+     * @param string                          $entrypoint               the PHP entrypoint class or web front controller
+     * @param string                          $runtimeType              the module runtime type
+     * @param bool                            $processIsolation         whether the web runtime uses a dedicated PHP process
+     * @param string                          $documentRoot             the static web document root
+     * @param string                          $indexFile                the static web index file
+     * @param string                          $phpRequirement           the required PHP version constraint
+     * @param string                          $path                     the module root path
+     * @param list<ModuleRoute>               $routes                   the module routes
+     * @param list<string>                    $fileTypes                the file extensions handled by the viewer router
+     * @param list<string>                    $fileNameContains         lowercase filename fragments required by the module
+     * @param list<string>                    $fileTypeHandlerFileTypes the file extensions advertised to web pages
+     * @param list<string>                    $hooks                    the hooks implemented by the module
+     * @param list<string>                    $permissions              the requested permissions
+     * @param list<ModuleMenuItem>            $menuItems                the menu items contributed by the module
+     * @param ModuleBadge|null                $badge                    the optional address badge
+     * @param string|null                     $settingsRoute            the optional settings route
+     * @param string|null                     $defaultGroup             the optional preferred browser group
+     * @param ModuleCommandDefinition|null    $readiness                the optional readiness command
+     * @param ModuleCommandDefinition|null    $setup                    the optional setup command
+     * @param ModuleProcessWebDefinition|null $processWeb               the optional process web runtime definition
+     * @param string                          $currentPhpVersion        the PHP version used to validate this manifest
      */
     public function __construct(
         public string $id,
@@ -66,6 +67,7 @@ final readonly class ModuleManifest
         public ?string $defaultGroup,
         public ?ModuleCommandDefinition $readiness,
         public ?ModuleCommandDefinition $setup,
+        public ?ModuleProcessWebDefinition $processWeb,
         public string $currentPhpVersion = PHP_VERSION,
     ) {
         if ('' === $this->id) {
@@ -90,6 +92,10 @@ final readonly class ModuleManifest
 
         if ('' !== $this->phpRequirement && !self::phpVersionSatisfies($this->currentPhpVersion, $this->phpRequirement)) {
             throw new ModuleManifestException(sprintf('Module "%s" requires PHP "%s"; current PHP is "%s".', $this->id, $this->phpRequirement, $this->currentPhpVersion));
+        }
+
+        if (ModuleRuntimeType::isProcessWeb($this->runtimeType) && null === $this->processWeb) {
+            throw new ModuleManifestException(sprintf('Module "%s" must declare runtime.command for process-web.', $this->id));
         }
     }
 
@@ -131,6 +137,7 @@ final readonly class ModuleManifest
             self::defaultGroup($data),
             self::readiness($data),
             self::setup($data),
+            self::processWeb($data, $runtimeType),
         );
     }
 
@@ -150,7 +157,7 @@ final readonly class ModuleManifest
             'enabled' => $this->enabled,
             'entrypoint' => $this->entrypoint,
             'runtimeType' => $this->runtimeType,
-            'runtime' => self::runtimeExport($this->runtimeType, $this->entrypoint, $this->processIsolation, $this->documentRoot, $this->indexFile),
+            'runtime' => self::runtimeExport($this->runtimeType, $this->entrypoint, $this->processIsolation, $this->documentRoot, $this->indexFile, $this->processWeb),
             'requirements' => self::requirementsExport($this->phpRequirement),
             'currentPhpVersion' => $this->currentPhpVersion,
             'path' => $this->path,
@@ -216,6 +223,16 @@ final readonly class ModuleManifest
     public function usesStaticWebRuntime(): bool
     {
         return ModuleRuntimeType::isStaticWeb($this->runtimeType);
+    }
+
+    /**
+     * Returns whether this module uses the process web runtime.
+     *
+     * @return bool true when the module uses process web runtime
+     */
+    public function usesProcessWebRuntime(): bool
+    {
+        return ModuleRuntimeType::isProcessWeb($this->runtimeType);
     }
 
     /**
@@ -334,6 +351,23 @@ final readonly class ModuleManifest
     private static function setup(array $data): ?ModuleCommandDefinition
     {
         return ModuleCommandDefinition::fromManifestValue($data['setup'] ?? null, 600000, true);
+    }
+
+    /**
+     * Reads the optional process web runtime definition.
+     *
+     * @param array<string, mixed> $data        the source data
+     * @param string               $runtimeType the normalized runtime type
+     *
+     * @return ModuleProcessWebDefinition|null the process web definition when declared
+     */
+    private static function processWeb(array $data, string $runtimeType): ?ModuleProcessWebDefinition
+    {
+        if (!ModuleRuntimeType::isProcessWeb($runtimeType)) {
+            return null;
+        }
+
+        return ModuleProcessWebDefinition::fromManifestRuntime($data['runtime'] ?? null);
     }
 
     /**
@@ -474,19 +508,30 @@ final readonly class ModuleManifest
     /**
      * Exports the module runtime declaration.
      *
-     * @param string $runtimeType      the runtime type
-     * @param string $entrypoint       the entrypoint
-     * @param bool   $processIsolation whether the runtime uses process isolation
-     * @param string $documentRoot     the static web document root
-     * @param string $indexFile        the static web index file
+     * @param string                          $runtimeType      the runtime type
+     * @param string                          $entrypoint       the entrypoint
+     * @param bool                            $processIsolation whether the runtime uses process isolation
+     * @param string                          $documentRoot     the static web document root
+     * @param string                          $indexFile        the static web index file
+     * @param ModuleProcessWebDefinition|null $processWeb       the process web runtime definition
      *
      * @return array<string, mixed> the runtime declaration
      */
-    private static function runtimeExport(string $runtimeType, string $entrypoint, bool $processIsolation, string $documentRoot, string $indexFile): array
-    {
+    private static function runtimeExport(
+        string $runtimeType,
+        string $entrypoint,
+        bool $processIsolation,
+        string $documentRoot,
+        string $indexFile,
+        ?ModuleProcessWebDefinition $processWeb,
+    ): array {
         $runtime = [
             'type' => $runtimeType,
         ];
+
+        if (ModuleRuntimeType::isProcessWeb($runtimeType)) {
+            return array_merge($runtime, null !== $processWeb ? $processWeb->toArray() : []);
+        }
 
         if (ModuleRuntimeType::isStaticWeb($runtimeType)) {
             $runtime['documentRoot'] = '' !== $documentRoot ? $documentRoot : 'public';

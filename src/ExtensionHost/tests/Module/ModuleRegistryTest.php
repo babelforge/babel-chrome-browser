@@ -8,6 +8,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleManifestException;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleAutoloadRegistrar;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleManifest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleMenuItem;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleProcessWebDefinition;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -18,6 +19,7 @@ use PHPUnit\Framework\TestCase;
  */
 #[CoversClass(ModuleManifest::class)]
 #[CoversClass(ModuleMenuItem::class)]
+#[CoversClass(ModuleProcessWebDefinition::class)]
 #[CoversClass(ModuleAutoloadRegistrar::class)]
 #[CoversClass(ModuleRegistry::class)]
 #[CoversClass(ModuleRuntimeType::class)]
@@ -213,6 +215,66 @@ final class ModuleRegistryTest extends TestCase
         self::assertSame('public', $runtime['documentRoot'] ?? null);
         self::assertSame('index.html', $runtime['index'] ?? null);
         self::assertArrayNotHasKey('entrypoint', $runtime);
+    }
+
+    /**
+     * Ensures process web modules do not need PHP-specific requirements.
+     */
+    public function testProcessWebRuntimeDoesNotRequirePhp(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.process-web-module';
+        self::assertTrue(mkdir($moduleDirectory, 0o775, true));
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.process-web-module',
+            'name' => 'Process Web Module',
+            'version' => '1.0.0',
+            'runtime' => [
+                'type' => 'process-web',
+                'command' => 'node',
+                'args' => [
+                    'server/index.js',
+                    '--port={{ port }}',
+                ],
+                'cwd' => '.',
+                'env' => [
+                    'NODE_ENV' => 'production',
+                ],
+                'readyUrl' => 'http://127.0.0.1:{{ port }}/health',
+                'timeoutMs' => 7000,
+                'stop' => [
+                    'signal' => 'TERM',
+                    'timeoutMs' => 1200,
+                ],
+            ],
+            'routes' => [
+                [
+                    'scheme' => 'babelchrome',
+                    'host' => 'process-web',
+                    'handler' => 'index',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $registry = new ModuleRegistry($this->workspaceDirectory.'/Catalog', $this->workspaceDirectory.'/Modules');
+        $module = $registry->find('vendor.process-web-module');
+
+        self::assertNotNull($module);
+        self::assertSame(ModuleRuntimeType::PROCESS_WEB, $module->runtimeType);
+        self::assertTrue($module->usesProcessWebRuntime());
+        self::assertSame('', $module->phpRequirement);
+        self::assertNotNull($module->processWeb);
+        self::assertSame('node', $module->processWeb->command);
+        self::assertSame(['server/index.js', '--port={{ port }}'], $module->processWeb->args);
+
+        $exportedModule = $module->toArray();
+        $requirements = $exportedModule['requirements'] ?? null;
+        $runtime = $exportedModule['runtime'] ?? null;
+
+        self::assertSame([], $requirements);
+        self::assertIsArray($runtime);
+        self::assertSame(ModuleRuntimeType::PROCESS_WEB, $runtime['type'] ?? null);
+        self::assertSame('node', $runtime['command'] ?? null);
+        self::assertSame('http://127.0.0.1:{{ port }}/health', $runtime['readyUrl'] ?? null);
     }
 
     /**
