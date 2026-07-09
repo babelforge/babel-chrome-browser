@@ -391,11 +391,13 @@ enforceLiveBrowserLimitHandler:^{
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     viewerNavigationURLResolver_ =
         [[BabelViewerNavigationURLResolver alloc] initWithStableViewerURLResolver:stableViewerURLResolver_
+                                                              moduleActionService:moduleActionService_
                                                              noViewerPageRenderer:noViewerPageRenderer_
                                                                htmlDataURLBuilder:htmlDataURLBuilder_];
     addressBarDisplayResolver_ =
         [[BabelAddressBarDisplayResolver alloc]
             initWithStableViewerURLResolver:stableViewerURLResolver_
+                         moduleActionService:moduleActionService_
                     internalPageTabPredicate:^BOOL(BabelBrowserTab* tab) {
                       return [weakSelf isInternalPageTab:tab];
                     }];

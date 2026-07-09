@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 
 @class BabelBrowserTab;
+@class BabelModuleActionService;
 @class BabelStableViewerURLResolver;
 
 /**
@@ -24,11 +25,13 @@ typedef BOOL (^BabelInternalPageTabPredicateBlock)(BabelBrowserTab* tab);
  * Initializes the resolver.
  *
  * @param stableViewerURLResolver The stable viewer URL resolver.
+ * @param moduleActionService The module action service.
  * @param internalPageTabPredicate The block checking internal page tabs.
  *
  * @return The initialized resolver.
  */
 - (instancetype)initWithStableViewerURLResolver:(BabelStableViewerURLResolver*)stableViewerURLResolver
+                            moduleActionService:(BabelModuleActionService*)moduleActionService
                        internalPageTabPredicate:(BabelInternalPageTabPredicateBlock)internalPageTabPredicate;
 
 /**

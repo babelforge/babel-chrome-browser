@@ -1,7 +1,5 @@
 #import "Browser/Navigation/StableURLs/StableViewerURLResolver.h"
 
-#import "LocalServices/LocalServiceHost.h"
-
 @implementation BabelStableViewerURLResolver
 
 - (BOOL)isStableViewerURLString:(NSString*)urlString {
@@ -69,16 +67,7 @@
 
 - (NSString*)resolvedViewerKindForStableViewerURLString:(NSString*)urlString {
   NSString* viewerKind = [self viewerKindForStableViewerURLString:urlString];
-  if (![viewerKind isEqualToString:@"viewer"]) {
-    return viewerKind;
-  }
-
-  NSURL* sourceURL = [self sourceURLForViewerURLString:urlString];
-  if (!sourceURL) {
-    return nil;
-  }
-
-  return [BabelLocalServiceHost.sharedHost viewerKindForURL:sourceURL];
+  return [viewerKind isEqualToString:@"viewer"] ? nil : viewerKind;
 }
 
 - (NSString*)sourceKindForStableViewerURLString:(NSString*)urlString {

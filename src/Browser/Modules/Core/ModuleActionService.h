@@ -41,6 +41,42 @@
                            error:(NSError**)error;
 
 /**
+ * Returns whether an enabled viewer can handle a source URL.
+ *
+ * @param url The source URL.
+ * @return YES when a viewer route is available.
+ */
+- (BOOL)supportsViewerURL:(NSURL*)url;
+
+/**
+ * Returns the effective viewer kind for a source URL.
+ *
+ * @param url The source URL.
+ * @return The viewer kind, or nil when unsupported.
+ */
+- (NSString*)viewerKindForURL:(NSURL*)url;
+
+/**
+ * Returns a local runtime URL for the viewer that handles a source URL.
+ *
+ * @param url The source URL.
+ * @param markdownTheme The Markdown theme query value.
+ * @param error The optional error pointer.
+ * @return The local runtime URL, or nil when unsupported.
+ */
+- (NSURL*)viewerURLForURL:(NSURL*)url
+            markdownTheme:(NSString*)markdownTheme
+                    error:(NSError**)error;
+
+/**
+ * Returns the address badge metadata for a stable viewer URL.
+ *
+ * @param stableViewerURL The stable viewer URL.
+ * @return The badge metadata, or nil when unavailable.
+ */
+- (NSDictionary*)addressBadgeForStableViewerURL:(NSURL*)stableViewerURL;
+
+/**
  * Returns the module identifier encoded in a runtime local service URL.
  *
  * @param components The URL components to inspect.

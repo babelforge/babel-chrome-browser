@@ -257,7 +257,7 @@ The host validates the envelope without interpreting the event. Compatible viewe
 
 ## Host Integration APIs
 
-BabelChrome exposes a small token-protected internal API from the ExtensionHost. These endpoints are intended for installed modules and native host integration, not for arbitrary remote pages.
+BabelChrome exposes a small token-protected internal API from the native local HTTP host and the remaining transitional ExtensionHost. These endpoints are intended for installed modules and native host integration, not for arbitrary remote pages.
 
 Installed module metadata:
 
@@ -277,6 +277,8 @@ GET  /internal/open-with/list/<extension>
 POST /internal/open-with/set/<extension>
 POST /internal/open-with/open
 POST /internal/message-relay
+GET  /source-status/<source-id>
+GET  /asset/<source-id>
 ```
 
 Module lifecycle:

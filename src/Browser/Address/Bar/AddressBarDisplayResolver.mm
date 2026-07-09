@@ -1,19 +1,22 @@
 #import "Browser/Address/Bar/AddressBarDisplayResolver.h"
 
+#import "Browser/Modules/Core/ModuleActionService.h"
 #import "Browser/UI/Models/BrowserModels.h"
 #import "Browser/Navigation/StableURLs/StableViewerURLResolver.h"
-#import "LocalServices/LocalServiceHost.h"
 
 @implementation BabelAddressBarDisplayResolver {
   BabelStableViewerURLResolver* stableViewerURLResolver_;
+  BabelModuleActionService* moduleActionService_;
   BabelInternalPageTabPredicateBlock internalPageTabPredicate_;
 }
 
 - (instancetype)initWithStableViewerURLResolver:(BabelStableViewerURLResolver*)stableViewerURLResolver
+                            moduleActionService:(BabelModuleActionService*)moduleActionService
                        internalPageTabPredicate:(BabelInternalPageTabPredicateBlock)internalPageTabPredicate {
   self = [super init];
   if (self) {
     stableViewerURLResolver_ = stableViewerURLResolver;
+    moduleActionService_ = moduleActionService;
     internalPageTabPredicate_ = [internalPageTabPredicate copy];
   }
   return self;
@@ -35,7 +38,7 @@
   }
 
   NSURL* badgeURL = [NSURL URLWithString:urlString];
-  NSDictionary* badge = [BabelLocalServiceHost.sharedHost addressBadgeForURL:badgeURL];
+  NSDictionary* badge = [moduleActionService_ addressBadgeForStableViewerURL:badgeURL];
   NSString* badgeText = [badge[@"text"] isKindOfClass:NSString.class] ? badge[@"text"] : @"";
   if (0 == badgeText.length) {
     return nil;

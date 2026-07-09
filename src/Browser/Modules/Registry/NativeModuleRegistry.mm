@@ -142,6 +142,43 @@ static NSString* const kBabelNativeModuleRegistryErrorDomain = @"fr.babelforge.b
   return [[fileTypes array] componentsJoinedByString:@","];
 }
 
+- (NSDictionary*)viewerRouteForURL:(NSURL*)url error:(NSError**)error {
+  BabelNativeModuleManifest* module = [self viewerModuleForURL:url error:error];
+  if (!module) {
+    return nil;
+  }
+
+  NSDictionary* route = [self firstBabelChromeRouteForModule:module];
+  NSString* host = [route[@"host"] isKindOfClass:NSString.class] ? route[@"host"] : @"";
+  NSString* handler = [route[@"handler"] isKindOfClass:NSString.class] ? route[@"handler"] : @"";
+  if (host.length == 0 || handler.length == 0) {
+    return nil;
+  }
+
+  return @{
+    @"handled" : @YES,
+    @"moduleId" : module.moduleIdentifier,
+    @"moduleIdentifier" : module.moduleIdentifier,
+    @"viewerKind" : host,
+    @"route" : [NSString stringWithFormat:@"/module/%@/%@", module.moduleIdentifier, handler],
+    @"handler" : handler
+  };
+}
+
+- (NSDictionary*)addressBadgeForViewerURL:(NSURL*)url error:(NSError**)error {
+  BabelNativeModuleManifest* module = [self viewerModuleForURL:url error:error];
+  if (!module || module.badge.count == 0) {
+    return nil;
+  }
+
+  NSMutableDictionary* badge = [module.badge mutableCopy];
+  if (module.settingsRoute.length > 0) {
+    badge[@"settingsRoute"] = module.settingsRoute;
+  }
+
+  return badge;
+}
+
 - (NSArray<NSString*>*)manifestPathsWithError:(NSError**)error {
   NSFileManager* fileManager = NSFileManager.defaultManager;
   BOOL isDirectory = NO;
@@ -175,6 +212,103 @@ static NSString* const kBabelNativeModuleRegistryErrorDomain = @"fr.babelforge.b
   }
 
   return [manifestPaths sortedArrayUsingSelector:@selector(compare:)];
+}
+
+- (BabelNativeModuleManifest*)viewerModuleForURL:(NSURL*)url error:(NSError**)error {
+  if (![self canResolveViewerURL:url]) {
+    return nil;
+  }
+
+  NSArray<BabelNativeModuleManifest*>* modules = [self enabledModulesWithError:error];
+  if (!modules) {
+    return nil;
+  }
+
+  BabelNativeModuleManifest* bestModule = nil;
+  NSInteger bestScore = 0;
+  for (BabelNativeModuleManifest* module in modules) {
+    NSInteger score = [self viewerScoreForModule:module URL:url];
+    if (score > bestScore) {
+      bestScore = score;
+      bestModule = module;
+    }
+  }
+
+  return bestModule;
+}
+
+- (BOOL)canResolveViewerURL:(NSURL*)url {
+  NSString* scheme = url.scheme.lowercaseString ?: @"";
+  return [scheme isEqualToString:@"file"] || [scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"];
+}
+
+- (NSInteger)viewerScoreForModule:(BabelNativeModuleManifest*)module URL:(NSURL*)url {
+  NSDictionary* route = [self firstBabelChromeRouteForModule:module];
+  if (!route) {
+    return 0;
+  }
+
+  NSString* extension = url.pathExtension.lowercaseString ?: @"";
+  NSString* path = url.path.lowercaseString ?: @"";
+  NSInteger score = 0;
+
+  if ([self stringList:module.fileTypeHandlerFileTypes containsString:extension]) {
+    score += 50;
+  } else if ([self stringList:module.fileTypes containsString:extension]) {
+    score += 40;
+  }
+
+  BOOL fileNameContainsMatched = [self fileNameContainsForModule:module matchesPath:path];
+  if (fileNameContainsMatched) {
+    score += 25;
+  }
+
+  if ([module.moduleType isEqualToString:@"viewer"]) {
+    score += 5;
+  }
+
+  if (score <= 5 && !fileNameContainsMatched) {
+    return 0;
+  }
+
+  return score;
+}
+
+- (NSDictionary*)firstBabelChromeRouteForModule:(BabelNativeModuleManifest*)module {
+  for (NSDictionary* route in module.routes) {
+    NSString* scheme = [route[@"scheme"] isKindOfClass:NSString.class] ? route[@"scheme"] : @"";
+    NSString* host = [route[@"host"] isKindOfClass:NSString.class] ? route[@"host"] : @"";
+    NSString* handler = [route[@"handler"] isKindOfClass:NSString.class] ? route[@"handler"] : @"";
+    if ([scheme isEqualToString:@"babelchrome"] && host.length > 0 && handler.length > 0) {
+      return route;
+    }
+  }
+
+  return nil;
+}
+
+- (BOOL)fileNameContainsForModule:(BabelNativeModuleManifest*)module matchesPath:(NSString*)path {
+  for (NSString* token in module.fileNameContains) {
+    if (token.length > 0 && [path rangeOfString:token].location != NSNotFound) {
+      return YES;
+    }
+  }
+
+  return NO;
+}
+
+- (BOOL)stringList:(NSArray<NSString*>*)strings containsString:(NSString*)candidate {
+  if (candidate.length == 0) {
+    return NO;
+  }
+
+  for (NSString* string in strings) {
+    if ([string isEqualToString:candidate]) {
+      return YES;
+    }
+  }
+
+  return NO;
 }
 
 + (NSString*)defaultModulesDirectoryPath {

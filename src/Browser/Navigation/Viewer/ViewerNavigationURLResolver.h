@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 
 @class BabelHTMLDataURLBuilder;
+@class BabelModuleActionService;
 @class BabelNoViewerPageRenderer;
 @class BabelStableViewerURLResolver;
 
@@ -16,11 +17,13 @@
  * Creates a viewer navigation URL resolver.
  *
  * @param stableViewerURLResolver The stable viewer URL parser.
+ * @param moduleActionService The module action service.
  * @param noViewerPageRenderer The renderer used when no viewer is installed.
  * @param htmlDataURLBuilder The builder used to convert HTML into data URLs.
  * @return The initialized resolver.
  */
 - (instancetype)initWithStableViewerURLResolver:(BabelStableViewerURLResolver*)stableViewerURLResolver
+                            moduleActionService:(BabelModuleActionService*)moduleActionService
                            noViewerPageRenderer:(BabelNoViewerPageRenderer*)noViewerPageRenderer
                              htmlDataURLBuilder:(BabelHTMLDataURLBuilder*)htmlDataURLBuilder;
 

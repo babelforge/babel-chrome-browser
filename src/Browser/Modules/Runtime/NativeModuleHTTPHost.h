@@ -5,6 +5,7 @@
 
 @class BabelNativeModuleProcessRuntimeManager;
 @class BabelNativeModuleRegistry;
+@class BabelViewerSourceRegistry;
 
 /**
  * Serves native module runtime HTTP routes on a loopback-only port.
@@ -16,10 +17,12 @@
  *
  * @param moduleRegistry The native module registry.
  * @param runtimeManager The native process runtime manager.
+ * @param sourceRegistry The viewer source registry.
  * @return The initialized host.
  */
 - (instancetype)initWithModuleRegistry:(BabelNativeModuleRegistry*)moduleRegistry
-                        runtimeManager:(BabelNativeModuleProcessRuntimeManager*)runtimeManager;
+                        runtimeManager:(BabelNativeModuleProcessRuntimeManager*)runtimeManager
+                         sourceRegistry:(BabelViewerSourceRegistry*)sourceRegistry;
 
 /**
  * Returns a local native host URL for a module route.
@@ -33,6 +36,22 @@
 - (NSURL*)moduleURLForIdentifier:(NSString*)moduleIdentifier
                            route:(NSString*)route
                  sourceURLString:(NSString*)sourceURLString
+                           error:(NSError**)error;
+
+/**
+ * Returns a local native host URL for a module route with additional query items.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param route The module route.
+ * @param sourceURLString The source URL to forward to the module.
+ * @param queryItems Additional query items to forward.
+ * @param error The optional error pointer.
+ * @return The local runtime URL, or nil when the host cannot be started.
+ */
+- (NSURL*)moduleURLForIdentifier:(NSString*)moduleIdentifier
+                           route:(NSString*)route
+                 sourceURLString:(NSString*)sourceURLString
+                      queryItems:(NSArray<NSURLQueryItem*>*)queryItems
                            error:(NSError**)error;
 
 /**

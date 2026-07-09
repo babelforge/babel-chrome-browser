@@ -1,22 +1,25 @@
 #import "Browser/Navigation/Viewer/ViewerNavigationURLResolver.h"
 
+#import "Browser/Modules/Core/ModuleActionService.h"
 #import "Browser/Utilities/HTML/HTMLDataURLBuilder.h"
 #import "Browser/InternalPages/Rendering/NoViewerPageRenderer.h"
 #import "Browser/Navigation/StableURLs/StableViewerURLResolver.h"
-#import "LocalServices/LocalServiceHost.h"
 
 @implementation BabelViewerNavigationURLResolver {
   BabelStableViewerURLResolver* stableViewerURLResolver_;
+  BabelModuleActionService* moduleActionService_;
   BabelNoViewerPageRenderer* noViewerPageRenderer_;
   BabelHTMLDataURLBuilder* htmlDataURLBuilder_;
 }
 
 - (instancetype)initWithStableViewerURLResolver:(BabelStableViewerURLResolver*)stableViewerURLResolver
+                            moduleActionService:(BabelModuleActionService*)moduleActionService
                            noViewerPageRenderer:(BabelNoViewerPageRenderer*)noViewerPageRenderer
                              htmlDataURLBuilder:(BabelHTMLDataURLBuilder*)htmlDataURLBuilder {
   self = [super init];
   if (self) {
     stableViewerURLResolver_ = stableViewerURLResolver;
+    moduleActionService_ = moduleActionService;
     noViewerPageRenderer_ = noViewerPageRenderer;
     htmlDataURLBuilder_ = htmlDataURLBuilder;
   }
@@ -29,11 +32,11 @@
   }
 
   NSURL* url = [NSURL URLWithString:urlString ?: @""];
-  if (!url || ![BabelLocalServiceHost.sharedHost supportsURL:url]) {
+  if (!url || ![moduleActionService_ supportsViewerURL:url]) {
     return nil;
   }
 
-  NSString* viewerKind = [BabelLocalServiceHost.sharedHost viewerKindForURL:url];
+  NSString* viewerKind = [moduleActionService_ viewerKindForURL:url];
   if (viewerKind.length == 0) {
     return nil;
   }
@@ -56,32 +59,11 @@
                                           markdownTheme:(NSString*)markdownTheme
                                                   error:(NSError**)error {
   NSURL* url = [stableViewerURLResolver_ sourceURLForViewerURLString:urlString];
-  if (!url || ![BabelLocalServiceHost.sharedHost supportsURL:url]) {
+  if (!url || ![moduleActionService_ supportsViewerURL:url]) {
     return nil;
   }
 
-  NSError* serviceError = nil;
-  if (![BabelLocalServiceHost.sharedHost startIfNeededWithError:&serviceError]) {
-    if (error) {
-      *error = serviceError;
-    }
-    return nil;
-  }
-
-  NSURL* viewerURL = [BabelLocalServiceHost.sharedHost viewerURLForURL:url];
-  NSURLComponents* viewerComponents = viewerURL ? [NSURLComponents componentsWithURL:viewerURL
-                                                             resolvingAgainstBaseURL:NO] : nil;
-  NSString* viewerKind = [stableViewerURLResolver_ resolvedViewerKindForStableViewerURLString:urlString];
-  if (viewerKind.length == 0) {
-    viewerKind = [BabelLocalServiceHost.sharedHost viewerKindForURL:url];
-  }
-  if (viewerComponents && [viewerKind isEqualToString:@"markdown"]) {
-    NSMutableArray<NSURLQueryItem*>* queryItems =
-        [viewerComponents.queryItems mutableCopy] ?: [NSMutableArray array];
-    [queryItems addObject:[NSURLQueryItem queryItemWithName:@"theme" value:markdownTheme]];
-    viewerComponents.queryItems = queryItems;
-    viewerURL = viewerComponents.URL;
-  }
+  NSURL* viewerURL = [moduleActionService_ viewerURLForURL:url markdownTheme:markdownTheme error:error];
 
   NSString* viewerURLString = viewerURL.absoluteString;
   NSString* fragment = [stableViewerURLResolver_ fragmentForStableViewerURLString:urlString];

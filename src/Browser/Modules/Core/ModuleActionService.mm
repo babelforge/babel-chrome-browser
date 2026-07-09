@@ -5,6 +5,8 @@
 #import "Browser/Modules/Registry/NativeModuleRegistry.h"
 #import "Browser/Modules/Runtime/NativeModuleHTTPHost.h"
 #import "Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h"
+#import "Browser/Navigation/StableURLs/StableViewerURLResolver.h"
+#import "Browser/Navigation/Viewer/ViewerSourceRegistry.h"
 #import "LocalServices/LocalServiceHost.h"
 
 @implementation BabelModuleActionService {
@@ -12,6 +14,8 @@
   BabelNativeModuleInstaller* nativeModuleInstaller_;
   BabelNativeModuleProcessRuntimeManager* nativeProcessRuntimeManager_;
   BabelNativeModuleHTTPHost* nativeModuleHTTPHost_;
+  BabelViewerSourceRegistry* viewerSourceRegistry_;
+  BabelStableViewerURLResolver* stableViewerURLResolver_;
 }
 
 - (instancetype)init {
@@ -21,8 +25,11 @@
     nativeModuleInstaller_ =
         [[BabelNativeModuleInstaller alloc] initWithModulesDirectoryPath:nativeModuleRegistry_.modulesDirectoryPath];
     nativeProcessRuntimeManager_ = [[BabelNativeModuleProcessRuntimeManager alloc] init];
+    viewerSourceRegistry_ = [[BabelViewerSourceRegistry alloc] init];
+    stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     nativeModuleHTTPHost_ = [[BabelNativeModuleHTTPHost alloc] initWithModuleRegistry:nativeModuleRegistry_
-                                                                       runtimeManager:nativeProcessRuntimeManager_];
+                                                                       runtimeManager:nativeProcessRuntimeManager_
+                                                                        sourceRegistry:viewerSourceRegistry_];
   }
 
   return self;
@@ -114,6 +121,65 @@
                                                            route:route
                                                  sourceURLString:sourceURLString
                                                            error:error];
+}
+
+- (BOOL)supportsViewerURL:(NSURL*)url {
+  return [nativeModuleRegistry_ viewerRouteForURL:url error:nil] != nil;
+}
+
+- (NSString*)viewerKindForURL:(NSURL*)url {
+  NSDictionary* route = [nativeModuleRegistry_ viewerRouteForURL:url error:nil];
+  return [route[@"viewerKind"] isKindOfClass:NSString.class] ? route[@"viewerKind"] : nil;
+}
+
+- (NSURL*)viewerURLForURL:(NSURL*)url
+            markdownTheme:(NSString*)markdownTheme
+                    error:(NSError**)error {
+  NSDictionary* route = [nativeModuleRegistry_ viewerRouteForURL:url error:error];
+  NSString* moduleIdentifier = [route[@"moduleIdentifier"] isKindOfClass:NSString.class]
+      ? route[@"moduleIdentifier"]
+      : @"";
+  NSString* handler = [route[@"handler"] isKindOfClass:NSString.class] ? route[@"handler"] : @"";
+  NSString* viewerKind = [route[@"viewerKind"] isKindOfClass:NSString.class] ? route[@"viewerKind"] : @"";
+  if (moduleIdentifier.length == 0 || handler.length == 0) {
+    return nil;
+  }
+
+  BOOL isRemoteURL = [url.scheme isEqualToString:@"http"] || [url.scheme isEqualToString:@"https"];
+  NSString* sourceType = isRemoteURL ? @"url" : @"file";
+  NSString* sourceValue = isRemoteURL ? url.absoluteString : url.path;
+  NSString* sourceIdentifier = [viewerSourceRegistry_ registerSourceWithType:sourceType
+                                                                       value:sourceValue
+                                                                       error:error];
+  if (sourceIdentifier.length == 0) {
+    return nil;
+  }
+
+  NSMutableArray<NSURLQueryItem*>* queryItems = [NSMutableArray array];
+  [queryItems addObject:[NSURLQueryItem queryItemWithName:@"sourceId" value:sourceIdentifier]];
+  if ([sourceType isEqualToString:@"file"]) {
+    [queryItems addObject:[NSURLQueryItem queryItemWithName:@"file" value:sourceValue]];
+  } else {
+    [queryItems addObject:[NSURLQueryItem queryItemWithName:@"url" value:sourceValue]];
+  }
+  if ([viewerKind isEqualToString:@"markdown"] && markdownTheme.length > 0) {
+    [queryItems addObject:[NSURLQueryItem queryItemWithName:@"theme" value:markdownTheme]];
+  }
+
+  return [nativeModuleHTTPHost_ moduleURLForIdentifier:moduleIdentifier
+                                                 route:handler
+                                       sourceURLString:url.absoluteString
+                                            queryItems:queryItems
+                                                 error:error];
+}
+
+- (NSDictionary*)addressBadgeForStableViewerURL:(NSURL*)stableViewerURL {
+  NSURL* sourceURL = [stableViewerURLResolver_ sourceURLForViewerURLString:stableViewerURL.absoluteString];
+  if (!sourceURL) {
+    return nil;
+  }
+
+  return [nativeModuleRegistry_ addressBadgeForViewerURL:sourceURL error:nil];
 }
 
 - (NSString*)localServiceModuleIdentifierForURLComponents:(NSURLComponents*)components {

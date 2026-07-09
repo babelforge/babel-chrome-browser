@@ -65,15 +65,15 @@ The main window state, left panel state, Developer Tools dock settings, tab open
 
 ## ExtensionHost And Viewers
 
-BabelChrome can route supported document URLs through a local loopback ExtensionHost instead of sending them directly to CEF. Viewer support comes from installed and enabled modules. The fresh module contract supports `static-web`, `process-web`, and `process-runtime`; current PHP-based viewers are packaged as `process-web` modules that start their own PHP front controller. The native app itself does not bundle Markdown, OpenAPI, JSON rendering logic, or module-specific server logic.
+BabelChrome can route supported document URLs through a native viewer dispatcher instead of sending them directly to CEF. Viewer support comes from installed and enabled modules. The fresh module contract supports `static-web`, `process-web`, and `process-runtime`; current PHP-based viewers are packaged as `process-web` modules that start their own PHP front controller. The native app itself does not bundle Markdown, OpenAPI, JSON rendering logic, or module-specific server logic.
 
 The native module registry discovers installed manifests directly from the user modules directory. It also parses the `process-web` and `process-runtime` declarations so the browser can reason about commands, routes, runtime metadata, and fallback diagnostics without asking ExtensionHost first.
 
 The native module installer validates and extracts zip packages, preserves enabled state on update, updates enabled state, removes modules, and asks the native runtime manager plus the transitional runtime layer to stop a module process before update, disable, or removal.
 
-The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. The native local HTTP host now owns tokenized `process-web` module route proxying, module `public/` asset serving, and on-demand `process-runtime` route execution. Several viewer/source internal APIs still use the transitional ExtensionHost until those paths are migrated.
+The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. The native local HTTP host now owns tokenized `process-web` module route proxying, module `public/` asset serving, viewer source registration, viewer source assets, viewer source status, Open With endpoints, message relay acknowledgement, and on-demand `process-runtime` route execution. Several non-viewer internal APIs still use the transitional ExtensionHost until those paths are migrated.
 
-`LocalServiceHost` is the transitional runtime process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, source registrations, and runtime state are not written inside `/Applications/BabelChrome.app`.
+`LocalServiceHost` is the transitional runtime process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host and transitional host share a writable state directory under Application Support so cache, logs, source registrations, and runtime state are not written inside `/Applications/BabelChrome.app`.
 
 This Symfony ExtensionHost is a transitional browser implementation detail, not the public module contract. New modules must not declare `php-web` or `php-class`; PHP, if needed, is a module-owned process dependency validated through readiness.
 
@@ -85,6 +85,7 @@ The native local HTTP host forwards BabelChrome context to `process-web` modules
 X-BabelChrome-Module-Id
 X-BabelChrome-Module-Route
 X-BabelChrome-Source-Url
+X-BabelChrome-Source-Id
 X-BabelChrome-Local-Service-Base-Url
 X-BabelChrome-Local-Service-Token
 X-BabelChrome-Module-Asset-Base-Url
@@ -96,6 +97,12 @@ The same host serves token-protected module assets from:
 
 ```text
 /module/<module-id>/assets/<path>
+/asset/<source-id>
+/source-status/<source-id>
+/internal/open-with/list/<extension>
+/internal/open-with/set/<extension>
+/internal/open-with/open
+/internal/message-relay
 ```
 
 For on-demand `process-runtime` modules, the native runtime manager runs a module-owned command without allocating a port. The command receives a JSON payload on stdin and can return either plain stdout or JSON stdout. JSON stdout can define `statusCode`, `headers`, `contentType`, and `body`, which the native local HTTP host maps to the module route response. Long-running `process-runtime` support remains a transitional/runtime-planning path and is not yet native-owned.
@@ -136,7 +143,7 @@ Example routing rules provided by the current viewer modules:
 
 Viewer modules own their rendering implementation. The current Markdown viewer renders with `league/commonmark`, the OpenAPI viewer renders with bundled Swagger UI, and the JSON viewer renders with bundled `andypf/json-viewer`. The shared viewer header is provided by `babelforge/babel-chrome-viewer-kit`, not by the native browser.
 
-Viewer links are resolved according to their source. Relative links from a local Markdown file are resolved from the source file directory. Relative Markdown-like links are routed back through the installed viewer when supported, while images and other local assets are served through module or ExtensionHost asset endpoints. Relative links from a remote Markdown URL are resolved from the remote URL. Absolute HTTP and HTTPS links remain normal web navigations unless their extension is explicitly routed to an enabled viewer module.
+Viewer links are resolved according to their source. Relative links from a local Markdown file are resolved from the source file directory. Relative Markdown-like links are routed back through the installed viewer when supported, while images and other registered assets are served through the native local HTTP host. Relative links from a remote Markdown URL are resolved from the remote URL. Absolute HTTP and HTTPS links remain normal web navigations unless their extension is explicitly routed to an enabled viewer module.
 
 ## Browser Lifecycle
 

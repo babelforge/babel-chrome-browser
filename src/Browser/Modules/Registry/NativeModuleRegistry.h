@@ -78,6 +78,24 @@
  */
 - (NSString*)fileTypeHeaderValueWithError:(NSError**)error;
 
+/**
+ * Returns the enabled viewer route that should handle a source URL.
+ *
+ * @param url The source URL.
+ * @param error The optional error pointer.
+ * @return A viewer route dictionary, or nil when no enabled viewer handles the URL.
+ */
+- (NSDictionary*)viewerRouteForURL:(NSURL*)url error:(NSError**)error;
+
+/**
+ * Returns the address badge metadata for a source URL handled by a viewer.
+ *
+ * @param url The source URL.
+ * @param error The optional error pointer.
+ * @return The badge metadata, or nil when no enabled viewer exposes one.
+ */
+- (NSDictionary*)addressBadgeForViewerURL:(NSURL*)url error:(NSError**)error;
+
 @end
 
 #endif

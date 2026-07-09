@@ -109,7 +109,7 @@ src/ExtensionHost/resources/
 
 ## Modules
 
-BabelChrome includes a native module registry and installer, a native local HTTP host for `process-web` routes, and a transitional LocalServiceHost runtime for internal APIs plus runtime paths that have not yet moved fully native.
+BabelChrome includes a native module registry and installer, a native local HTTP host for `process-web` routes and viewer helper endpoints, and a transitional LocalServiceHost runtime for internal APIs plus runtime paths that have not yet moved fully native.
 
 No module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
 
@@ -117,7 +117,7 @@ Installed module manifests declare viewer capabilities such as supported file ex
 
 The native app asks the native module registry for the matching installed viewer module instead of duplicating Markdown, OpenAPI, or JSON rules in native code. The generic `babelchrome://viewer/...` URLs are preferred for external integrations. Module-owned stable URLs such as `babelchrome://markdown/...`, `babelchrome://openapi/...`, and `babelchrome://json/...` remain compatible when the corresponding module is installed.
 
-The current Markdown/OpenAPI/JSON modules still reuse LocalServiceHost platform services for source loading and source registration. Viewer-specific PHP, Twig, source frontend assets, import maps, compiled public assets, and Composer vendors live in the modules and run behind the `process-web` contract.
+The current Markdown/OpenAPI/JSON modules use native host platform services for source registration, source assets, local auto-refresh status, Open With, and viewer message relay. Viewer-specific PHP, Twig, source frontend assets, import maps, compiled public assets, and Composer vendors live in the modules and run behind the `process-web` contract.
 
 BabelChrome supports a framework-agnostic `process-web` module contract. A PHP web module declares a module-owned HTTP process in `manifest.json`:
 
@@ -205,7 +205,7 @@ vendor/
 
 Module source directories are development workspaces. They may contain `assets/`, `importmap.php`, `tests/`, `var/`, `ai/`, build files, and other development-only files. `ModulePackageShipper` excludes those development paths from production zips and keeps runtime files such as `manifest.json`, `composer.json`, `composer.lock`, `src/`, `templates/`, `vendor/`, and `public/`.
 
-The transitional LocalServiceHost exposes module runtime and integration metadata through its internal API for module pages and native/runtime bridges:
+The transitional LocalServiceHost exposes module runtime and integration metadata through its internal API for module pages and native/runtime bridges. The native local HTTP host exposes the viewer-facing helpers used by `process-web` viewer pages:
 
 ```text
 /internal/modules
@@ -216,6 +216,9 @@ The transitional LocalServiceHost exposes module runtime and integration metadat
 /internal/open-with/list/<extension>
 /internal/open-with/set/<extension>
 /internal/open-with/open
+/internal/message-relay
+/source-status/<source-id>
+/asset/<source-id>
 ```
 
 `/internal/modules` returns installed modules only. BabelChrome currently has no built-in module catalog and does not claim to know the latest version available outside the installed packages.
@@ -228,7 +231,7 @@ X-BabelChrome-File-Types: md,markdown,mmd,mermaid,yaml,yml,json
 
 This header is intentionally limited to file type capabilities. It does not expose installed module identifiers, module names, or module versions.
 
-The `/internal/open-with/...` endpoints are token-protected LocalServiceHost endpoints used by viewer modules:
+The `/internal/open-with/...` endpoints are token-protected native host endpoints used by viewer modules:
 
 - `GET /internal/open-with/list/<extension>` returns the shared default application id, when still available, and the macOS applications discovered for that extension;
 - `POST /internal/open-with/set/<extension>` stores a shared default application id for that extension after validating that the application is available;
@@ -343,7 +346,7 @@ Modules can also serve static files from their own `public/` directory through:
 
 The endpoint is token-protected and rejects paths that resolve outside the module `public/` directory.
 
-Native `process-web` module requests receive equivalent context through HTTP headers, including `X-BabelChrome-Module-Id`, `X-BabelChrome-Module-Route`, `X-BabelChrome-Source-Url`, `X-BabelChrome-Local-Service-Base-Url`, `X-BabelChrome-Local-Service-Token`, `X-BabelChrome-Module-Asset-Base-Url`, `X-BabelChrome-Module-Asset-Token-Query`, and `X-BabelChrome-File-Types`. Stable values that are known before the process starts are also injected into the process environment, including `BABELCHROME_LOCAL_SERVICE_BASE_URL`, `BABELCHROME_LOCAL_SERVICE_TOKEN`, `BABELCHROME_MODULE_ASSET_BASE_URL`, `BABELCHROME_MODULE_ASSET_TOKEN_QUERY`, and `BABELCHROME_FILE_TYPES`.
+Native `process-web` module requests receive equivalent context through HTTP headers, including `X-BabelChrome-Module-Id`, `X-BabelChrome-Module-Route`, `X-BabelChrome-Source-Url`, `X-BabelChrome-Source-Id`, `X-BabelChrome-Local-Service-Base-Url`, `X-BabelChrome-Local-Service-Token`, `X-BabelChrome-Module-Asset-Base-Url`, `X-BabelChrome-Module-Asset-Token-Query`, and `X-BabelChrome-File-Types`. Stable values that are known before the process starts are also injected into the process environment, including `BABELCHROME_LOCAL_SERVICE_BASE_URL`, `BABELCHROME_LOCAL_SERVICE_TOKEN`, `BABELCHROME_VIEWER_STATE_DIR`, `BABELCHROME_VIEWER_TOKEN`, `BABELCHROME_MODULE_ASSET_BASE_URL`, `BABELCHROME_MODULE_ASSET_TOKEN_QUERY`, and `BABELCHROME_FILE_TYPES`.
 
 Native on-demand `process-runtime` commands receive the same core context through their stdin JSON payload and process environment. The stdin payload includes the module id, module name, module version, installed module path, route, hook name when relevant, original source URL, tokenized LocalServiceHost base URL/token for transitional helper APIs, request query parameters, and current `X-BabelChrome-File-Types` value.
 
