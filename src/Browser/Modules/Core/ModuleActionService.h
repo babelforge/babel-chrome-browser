@@ -27,6 +27,20 @@
                                                error:(NSError**)error;
 
 /**
+ * Returns a local runtime URL for one installed module route.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param route The module route.
+ * @param sourceURLString The original source URL to forward.
+ * @param error The optional error pointer.
+ * @return A local runtime URL, or nil when unavailable.
+ */
+- (NSURL*)moduleURLForIdentifier:(NSString*)moduleIdentifier
+                           route:(NSString*)route
+                 sourceURLString:(NSString*)sourceURLString
+                           error:(NSError**)error;
+
+/**
  * Returns the module identifier encoded in a runtime local service URL.
  *
  * @param components The URL components to inspect.

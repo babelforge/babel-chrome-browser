@@ -229,6 +229,12 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 
 - (NSDictionary*)restartProcessWebRuntimeForModule:(BabelNativeModuleManifest*)module
                                              error:(NSError**)error {
+  return [self restartProcessWebRuntimeForModule:module additionalEnvironment:@{} error:error];
+}
+
+- (NSDictionary*)restartProcessWebRuntimeForModule:(BabelNativeModuleManifest*)module
+                            additionalEnvironment:(NSDictionary<NSString*, NSString*>*)additionalEnvironment
+                                            error:(NSError**)error {
   if (![module.runtimeType isEqualToString:@"process-web"] || !module.processWeb) {
     [self assignError:error
           description:[NSString stringWithFormat:@"Module \"%@\" does not declare a process-web runtime.",
@@ -259,7 +265,9 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 
   NSString* readyURL = [self resolvedProcessWebReadyURLForModule:module port:port];
   NSString* baseURL = [NSString stringWithFormat:@"http://127.0.0.1:%ld", static_cast<long>(port)];
-  NSDictionary<NSString*, NSString*>* environment = [self resolvedProcessWebEnvironmentForModule:module port:port];
+  NSDictionary<NSString*, NSString*>* environment = [self resolvedProcessWebEnvironmentForModule:module
+                                                                                            port:port
+                                                                           additionalEnvironment:additionalEnvironment];
 
   NSTask* task = [[NSTask alloc] init];
   task.executableURL = [NSURL fileURLWithPath:@"/usr/bin/env"];
@@ -309,6 +317,39 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 
   processWebInstances_[module.moduleIdentifier ?: @""] = instance;
   return [self processWebStatusForInstance:instance];
+}
+
+- (NSDictionary*)startProcessWebRuntimeIfNeededForModule:(BabelNativeModuleManifest*)module
+                                                   error:(NSError**)error {
+  return [self startProcessWebRuntimeIfNeededForModule:module additionalEnvironment:@{} error:error];
+}
+
+- (NSDictionary*)startProcessWebRuntimeIfNeededForModule:(BabelNativeModuleManifest*)module
+                                   additionalEnvironment:(NSDictionary<NSString*, NSString*>*)additionalEnvironment
+                                                   error:(NSError**)error {
+  BabelNativeModuleProcessWebInstance* instance = processWebInstances_[module.moduleIdentifier ?: @""];
+  if (instance && [instance isRunning]) {
+    BOOL environmentMatches = YES;
+    for (NSString* key in additionalEnvironment ?: @{}) {
+      NSString* expected = additionalEnvironment[key] ?: @"";
+      NSString* current = instance.environment[key] ?: @"";
+      if (![current isEqualToString:expected]) {
+        environmentMatches = NO;
+        break;
+      }
+    }
+
+    if (environmentMatches) {
+      return [self processWebStatusForInstance:instance];
+    }
+  }
+
+  if (instance) {
+    [instance stop];
+    [processWebInstances_ removeObjectForKey:module.moduleIdentifier ?: @""];
+  }
+
+  return [self restartProcessWebRuntimeForModule:module additionalEnvironment:additionalEnvironment ?: @{} error:error];
 }
 
 - (NSDictionary*)stopRuntimeForModule:(BabelNativeModuleManifest*)module
@@ -394,7 +435,8 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 }
 
 - (NSDictionary<NSString*, NSString*>*)resolvedProcessWebEnvironmentForModule:(BabelNativeModuleManifest*)module
-                                                                         port:(NSInteger)port {
+                                                                         port:(NSInteger)port
+                                                        additionalEnvironment:(NSDictionary<NSString*, NSString*>*)additionalEnvironment {
   NSMutableDictionary<NSString*, NSString*>* environment = [NSProcessInfo.processInfo.environment mutableCopy];
   if (!environment) {
     environment = [NSMutableDictionary dictionary];
@@ -411,6 +453,9 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   environment[@"BABELCHROME_MODULE_DIR"] = module.path ?: @"";
   environment[@"BABELCHROME_PORT"] = [NSString stringWithFormat:@"%ld", static_cast<long>(port)];
   environment[@"PORT"] = [NSString stringWithFormat:@"%ld", static_cast<long>(port)];
+  for (NSString* key in additionalEnvironment ?: @{}) {
+    environment[key] = additionalEnvironment[key] ?: @"";
+  }
 
   return environment;
 }

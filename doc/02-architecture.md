@@ -17,7 +17,7 @@ BabelChrome owns only the local browser shell for BabelForge. It does not own Ba
 - `BrowserViews` contains the reusable AppKit controls used by the browser shell, including tab items, group items, browser host views, resize handles, and hand-cursor buttons.
 - `BrowserClient` receives CEF callbacks for titles, address changes, browser creation, browser close, and load errors.
 - The native module registry and installer load installed manifests, validate module zips, update module enabled state, remove modules, and compute module metadata used by the browser UI.
-- `LocalServiceHost` starts and stops the loopback extension service used by installed module routes and optional document viewers.
+- `LocalServiceHost` starts and stops the transitional loopback extension service still used by source registration, viewer helper APIs, internal APIs, and runtime paths that have not yet moved to the native host.
 - `Configuration` centralizes application name and profile path.
 
 ## Profile
@@ -71,13 +71,32 @@ The native module registry discovers installed manifests directly from the user 
 
 The native module installer validates and extracts zip packages, preserves enabled state on update, updates enabled state, removes modules, and asks the native runtime manager plus the transitional runtime layer to stop a module process before update, disable, or removal.
 
-The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. Proxying process-web routes and executing process-runtime commands are still handled by the transitional ExtensionHost until the next migration step.
+The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. The native local HTTP host now owns tokenized `process-web` module route proxying and module `public/` asset serving. Executing `process-runtime` commands and several viewer/source internal APIs still use the transitional ExtensionHost until those paths are migrated.
 
 `LocalServiceHost` is the transitional runtime process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, source registrations, and runtime state are not written inside `/Applications/BabelChrome.app`.
 
 This Symfony ExtensionHost is a transitional browser implementation detail, not the public module contract. New modules must not declare `php-web` or `php-class`; PHP, if needed, is a module-owned process dependency validated through readiness.
 
-For `process-web` modules, the native runtime manager can allocate a second local port, start the module command from the installed module directory, and wait for the declared readiness URL. The transitional ExtensionHost still proxies declared module routes to module HTTP processes until the native local HTTP host replaces that path. This keeps the user-facing URL stable while allowing the runtime port to change on each app launch.
+For `process-web` modules, the native runtime manager allocates a module-local port, starts the module command from the installed module directory, and waits for the declared readiness URL. The native local HTTP host exposes the stable tokenized `/module/<module-id>/<route>` URL that Chromium loads, then proxies the request to the current runtime port. This keeps the user-facing `babelchrome://...` URL stable while allowing the process port to change on each app launch.
+
+The native local HTTP host forwards BabelChrome context to `process-web` modules through headers:
+
+```text
+X-BabelChrome-Module-Id
+X-BabelChrome-Module-Route
+X-BabelChrome-Source-Url
+X-BabelChrome-Local-Service-Base-Url
+X-BabelChrome-Local-Service-Token
+X-BabelChrome-Module-Asset-Base-Url
+X-BabelChrome-Module-Asset-Token-Query
+X-BabelChrome-File-Types
+```
+
+The same host serves token-protected module assets from:
+
+```text
+/module/<module-id>/assets/<path>
+```
 
 For `process-runtime` modules, the ExtensionHost runs a module-owned command without allocating a port. On-demand commands receive a JSON payload on stdin and can return either plain stdout or JSON stdout. Long-running process-runtime instances are stopped when the module is disabled, removed, updated, or when BabelChrome quits.
 

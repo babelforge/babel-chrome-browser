@@ -152,6 +152,8 @@ set(BABEL_CHROME_SOURCES
   Browser/Modules/Registry/NativeModuleManifest.mm
   Browser/Modules/Registry/NativeModuleRegistry.h
   Browser/Modules/Registry/NativeModuleRegistry.mm
+  Browser/Modules/Runtime/NativeModuleHTTPHost.h
+  Browser/Modules/Runtime/NativeModuleHTTPHost.mm
   Browser/Modules/Runtime/NativeModuleProcessRuntimeDefinition.h
   Browser/Modules/Runtime/NativeModuleProcessRuntimeDefinition.mm
   Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h

@@ -1,7 +1,6 @@
 #import "Browser/Modules/Navigation/ModuleNavigationURLResolver.h"
 
 #import "Browser/Modules/Core/ModuleActionService.h"
-#import "LocalServices/LocalServiceHost.h"
 
 @implementation BabelModuleNavigationURLResolver {
   BabelModuleActionService* moduleActionService_;
@@ -49,10 +48,10 @@
   }
 
   NSError* error = nil;
-  NSURL* moduleURL = [BabelLocalServiceHost.sharedHost moduleURLForIdentifier:moduleIdentifier
-                                                                       route:route
-                                                             sourceURLString:sourceURLString
-                                                                       error:&error];
+  NSURL* moduleURL = [moduleActionService_ moduleURLForIdentifier:moduleIdentifier
+                                                            route:route
+                                                  sourceURLString:sourceURLString
+                                                            error:&error];
   return moduleURL.absoluteString;
 }
 

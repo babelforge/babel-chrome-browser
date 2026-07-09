@@ -109,7 +109,7 @@ src/ExtensionHost/resources/
 
 ## Modules
 
-BabelChrome includes a native module registry and installer, plus a transitional LocalServiceHost runtime for executing module routes and internal APIs.
+BabelChrome includes a native module registry and installer, a native local HTTP host for `process-web` routes, and a transitional LocalServiceHost runtime for internal APIs plus runtime paths that have not yet moved fully native.
 
 No module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
 
@@ -299,15 +299,15 @@ babelchrome://modules
 From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed. These package and enabled-state mutations are native filesystem operations. BabelChrome stops native `process-web` instances directly before update, disable, or removal, then still asks LocalServiceHost to stop any transitional runtime process while the migration continues.
 The page also displays module-declared `babelchrome://<host>` routes, file type badges, hook badges, installed versions, and a `Settings` action when the module manifest exposes a settings route.
 
-For `process-web` modules, BabelChrome owns native runtime diagnostics, restart, stop, port allocation, command interpolation, environment preparation, readiness waiting, and log capture. Process-web route proxying and process-runtime command execution still use the transitional ExtensionHost until the native local HTTP host is introduced.
+For `process-web` modules, BabelChrome owns native runtime diagnostics, restart, stop, port allocation, command interpolation, environment preparation, readiness waiting, log capture, tokenized route proxying, and tokenized module `public/` asset serving. `process-runtime` command execution still uses the transitional ExtensionHost until the native command dispatcher is introduced.
 
-Enabled modules that declare routes can also be opened from this page. BabelChrome opens the module through the LocalServiceHost using:
+Enabled modules that declare routes can also be opened from this page. `process-web` modules are opened through the native local HTTP host using:
 
 ```text
 /module/<module-id>/<route>
 ```
 
-The native app creates the tokenized local URL internally, so module pages can use normal local HTTP navigation without exposing the token in user-facing commands.
+The native app creates the tokenized local URL internally, starts the module runtime if needed, and proxies the request to the current module-owned process port. Remaining non-native runtime paths still use LocalServiceHost during the migration.
 
 Module-declared `babelchrome://<host>` URLs are also resolved natively. For example, the demo module declares `scheme=babelchrome`, `host=demo`, and `handler=index`, so it can be opened with:
 
@@ -324,7 +324,7 @@ Enabled modules can also declare application lifecycle hooks. BabelChrome curren
 
 The Project Launcher module uses these hooks to snapshot running managed servers on quit, stop those servers before BabelChrome exits, and restart the same servers on the next BabelChrome launch. Restarted servers receive fresh manager-chosen ports, while user-facing stable URLs such as `babelchrome://server/<project-id>` remain unchanged.
 
-Module route handlers receive a `ModuleRequest` object with a runtime context. The context exposes the LocalServiceHost base URL, the current access token, the original `sourceUrl`, and helper methods for generating tokenized module asset and module route URLs:
+ExtensionHost-backed route handlers receive a `ModuleRequest` object with a runtime context. The context exposes the LocalServiceHost base URL, the current access token, the original `sourceUrl`, and helper methods for generating tokenized module asset and module route URLs:
 
 ```text
 ModuleRequest.context.baseUrl
@@ -342,6 +342,8 @@ Modules can also serve static files from their own `public/` directory through:
 ```
 
 The endpoint is token-protected and rejects paths that resolve outside the module `public/` directory.
+
+Native `process-web` module requests receive equivalent context through HTTP headers, including `X-BabelChrome-Module-Id`, `X-BabelChrome-Module-Route`, `X-BabelChrome-Source-Url`, `X-BabelChrome-Local-Service-Base-Url`, `X-BabelChrome-Local-Service-Token`, `X-BabelChrome-Module-Asset-Base-Url`, `X-BabelChrome-Module-Asset-Token-Query`, and `X-BabelChrome-File-Types`. Stable values that are known before the process starts are also injected into the process environment, including `BABELCHROME_LOCAL_SERVICE_BASE_URL`, `BABELCHROME_LOCAL_SERVICE_TOKEN`, `BABELCHROME_MODULE_ASSET_BASE_URL`, `BABELCHROME_MODULE_ASSET_TOKEN_QUERY`, and `BABELCHROME_FILE_TYPES`.
 
 The native zip installer validates archives before extraction:
 

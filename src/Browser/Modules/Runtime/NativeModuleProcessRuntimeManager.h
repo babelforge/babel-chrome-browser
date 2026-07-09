@@ -29,6 +29,19 @@
                                              error:(NSError**)error;
 
 /**
+ * Starts one process-web runtime when it is not already running.
+ *
+ * @param module The installed module manifest.
+ * @param error The optional error pointer.
+ * @return The running runtime status, or nil when the process cannot start.
+ */
+- (NSDictionary*)startProcessWebRuntimeIfNeededForModule:(BabelNativeModuleManifest*)module
+                                                   error:(NSError**)error;
+- (NSDictionary*)startProcessWebRuntimeIfNeededForModule:(BabelNativeModuleManifest*)module
+                                   additionalEnvironment:(NSDictionary<NSString*, NSString*>*)additionalEnvironment
+                                                   error:(NSError**)error;
+
+/**
  * Stops one module runtime.
  *
  * @param module The installed module manifest.

@@ -95,10 +95,10 @@
                     sourceURLString:(NSString*)sourceURLString
                  requestedURLString:(NSString*)requestedURLString {
   NSError* error = nil;
-  NSURL* moduleURL = [BabelLocalServiceHost.sharedHost moduleURLForIdentifier:moduleIdentifier
-                                                                       route:route
-                                                             sourceURLString:sourceURLString
-                                                                       error:&error];
+  NSURL* moduleURL = [owner_->moduleActionService_ moduleURLForIdentifier:moduleIdentifier
+                                                                    route:route
+                                                          sourceURLString:sourceURLString
+                                                                    error:&error];
   if (!moduleURL) {
     [owner_->moduleUIActionCoordinator_ showModuleActionAlertWithError:error];
     return;

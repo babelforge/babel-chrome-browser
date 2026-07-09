@@ -3,6 +3,7 @@
 #import "Browser/Modules/Installation/NativeModuleInstaller.h"
 #import "Browser/Modules/Registry/NativeModuleManifest.h"
 #import "Browser/Modules/Registry/NativeModuleRegistry.h"
+#import "Browser/Modules/Runtime/NativeModuleHTTPHost.h"
 #import "Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h"
 #import "LocalServices/LocalServiceHost.h"
 
@@ -10,6 +11,7 @@
   BabelNativeModuleRegistry* nativeModuleRegistry_;
   BabelNativeModuleInstaller* nativeModuleInstaller_;
   BabelNativeModuleProcessRuntimeManager* nativeProcessRuntimeManager_;
+  BabelNativeModuleHTTPHost* nativeModuleHTTPHost_;
 }
 
 - (instancetype)init {
@@ -19,9 +21,16 @@
     nativeModuleInstaller_ =
         [[BabelNativeModuleInstaller alloc] initWithModulesDirectoryPath:nativeModuleRegistry_.modulesDirectoryPath];
     nativeProcessRuntimeManager_ = [[BabelNativeModuleProcessRuntimeManager alloc] init];
+    nativeModuleHTTPHost_ = [[BabelNativeModuleHTTPHost alloc] initWithModuleRegistry:nativeModuleRegistry_
+                                                                       runtimeManager:nativeProcessRuntimeManager_];
   }
 
   return self;
+}
+
+- (void)dealloc {
+  [nativeModuleHTTPHost_ stop];
+  [nativeProcessRuntimeManager_ stopAllRuntimes];
 }
 
 - (NSDictionary*)modulesSnapshotWithError:(NSError**)error {
@@ -84,6 +93,26 @@
   }
 
   return nil;
+}
+
+- (NSURL*)moduleURLForIdentifier:(NSString*)moduleIdentifier
+                           route:(NSString*)route
+                 sourceURLString:(NSString*)sourceURLString
+                           error:(NSError**)error {
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (module && module.enabled && [module.runtimeType isEqualToString:@"process-web"]) {
+    return [nativeModuleHTTPHost_ moduleURLForIdentifier:moduleIdentifier
+                                                   route:route
+                                         sourceURLString:sourceURLString
+                                                   error:error];
+  }
+
+  return [BabelLocalServiceHost.sharedHost moduleURLForIdentifier:moduleIdentifier
+                                                           route:route
+                                                 sourceURLString:sourceURLString
+                                                           error:error];
 }
 
 - (NSString*)localServiceModuleIdentifierForURLComponents:(NSURLComponents*)components {
