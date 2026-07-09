@@ -18,6 +18,7 @@ final class ModulePackageShipper
     private const EXCLUDED_NAMES = [
         '.DS_Store',
         '.git',
+        '.gitignore',
         '.idea',
         '.php-cs-fixer.cache',
         '.phpunit.cache',

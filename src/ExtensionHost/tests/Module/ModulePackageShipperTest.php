@@ -54,6 +54,7 @@ final class ModulePackageShipperTest extends TestCase
         self::assertZipNotContains($targetPath, 'phpstan.neon');
         self::assertZipNotContains($targetPath, 'phpunit.xml.dist');
         self::assertZipNotContains($targetPath, '.php-cs-fixer.dist.php');
+        self::assertZipNotContains($targetPath, '.gitignore');
         self::assertZipNotContains($targetPath, '.phpunit.result.cache');
         self::assertZipNotContains($targetPath, 'tests/ModuleTest.php');
         self::assertZipNotContains($targetPath, 'var/cache/item');
@@ -195,6 +196,7 @@ final class ModulePackageShipperTest extends TestCase
                 ],
             ],
         ], JSON_THROW_ON_ERROR));
+        file_put_contents($moduleDirectory.'/.gitignore', '/var/');
         file_put_contents($moduleDirectory.'/worker/index.js', 'console.log("process-runtime");');
         file_put_contents($moduleDirectory.'/worker/bin/run', '#!/usr/bin/env node');
         file_put_contents($moduleDirectory.'/node_modules/example/index.js', 'export default true;');
@@ -208,6 +210,7 @@ final class ModulePackageShipperTest extends TestCase
         self::assertZipContains($targetPath, 'worker/index.js');
         self::assertZipContains($targetPath, 'worker/bin/run');
         self::assertZipContains($targetPath, 'node_modules/example/index.js');
+        self::assertZipNotContains($targetPath, '.gitignore');
         self::assertZipNotContains($targetPath, 'composer.json');
     }
 
