@@ -80,6 +80,15 @@
 - (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
 
 /**
+ * Returns readiness diagnostics for one installed module.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error The optional error pointer.
+ * @return The readiness status response, or nil on failure.
+ */
+- (NSDictionary*)readinessStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
+
+/**
  * Returns runtime diagnostics for one installed module.
  *
  * @param moduleIdentifier The module identifier.
@@ -96,6 +105,15 @@
  * @return The restart response, or nil on failure.
  */
 - (NSDictionary*)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
+
+/**
+ * Stops one module runtime when supported.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error The optional error pointer.
+ * @return The stop response, or nil on failure.
+ */
+- (NSDictionary*)stopRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
 
 @end
 

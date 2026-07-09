@@ -210,6 +210,31 @@ final class ViewerControllerTest extends TestCase
     }
 
     /**
+     * Ensures internal module readiness can be checked explicitly.
+     */
+    public function testInternalModulesReadinessStatusReturnsDeclaredStatus(): void
+    {
+        $this->writeSetupModule();
+
+        $response = $this->controller()->internalModulesReadinessStatus(Request::create('/internal/modules/readiness-status', 'GET', [
+            'token' => 'test-token',
+            'moduleId' => 'vendor.setup-module',
+        ]));
+
+        $decoded = json_decode($this->responseContent($response), true);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertIsArray($decoded);
+        self::assertTrue($decoded['ok'] ?? false);
+        self::assertSame('vendor.setup-module', $decoded['moduleId'] ?? null);
+
+        $readinessStatus = $decoded['readinessStatus'] ?? null;
+        self::assertIsArray($readinessStatus);
+        self::assertSame('ready', $readinessStatus['state'] ?? null);
+        self::assertTrue($readinessStatus['ready'] ?? false);
+    }
+
+    /**
      * Ensures module rows include runtime diagnostics.
      */
     public function testInternalModulesIncludesRuntimeStatus(): void
@@ -266,6 +291,20 @@ final class ViewerControllerTest extends TestCase
         self::assertIsInt($restartRuntimeStatus['port'] ?? null);
         self::assertIsString($restartRuntimeStatus['baseUrl'] ?? null);
         self::assertStringStartsWith('http://127.0.0.1:', $restartRuntimeStatus['baseUrl']);
+
+        $stopResponse = $controller->internalModulesRuntimeStop(Request::create('/internal/modules/runtime-stop', 'GET', [
+            'token' => 'test-token',
+            'moduleId' => 'vendor.process-web-module',
+        ]));
+        $stopPayload = json_decode($this->responseContent($stopResponse), true);
+
+        self::assertSame(Response::HTTP_OK, $stopResponse->getStatusCode());
+        self::assertIsArray($stopPayload);
+        self::assertTrue($stopPayload['ok'] ?? false);
+        $stopRuntimeStatus = $stopPayload['runtimeStatus'] ?? null;
+        self::assertIsArray($stopRuntimeStatus);
+        self::assertSame('stopped', $stopRuntimeStatus['state'] ?? null);
+        self::assertFalse($stopRuntimeStatus['running'] ?? true);
     }
 
     /**

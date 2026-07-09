@@ -320,6 +320,19 @@ static NSUInteger const kLegacyViewerCacheKeyLengthThreshold = 64;
                               error:error];
 }
 
+- (NSDictionary*)readinessStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  if (moduleIdentifier.length == 0) {
+    [self assignError:error message:@"Missing module identifier."];
+    return nil;
+  }
+
+  return [self internalJSONWithPath:@"/internal/modules/readiness-status"
+                         queryItems:@[
+                           [NSURLQueryItem queryItemWithName:@"moduleId" value:moduleIdentifier]
+                         ]
+                              error:error];
+}
+
 - (NSDictionary*)runtimeStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
   if (moduleIdentifier.length == 0) {
     [self assignError:error message:@"Missing module identifier."];
@@ -340,6 +353,19 @@ static NSUInteger const kLegacyViewerCacheKeyLengthThreshold = 64;
   }
 
   return [self internalJSONWithPath:@"/internal/modules/runtime-restart"
+                         queryItems:@[
+                           [NSURLQueryItem queryItemWithName:@"moduleId" value:moduleIdentifier]
+                         ]
+                              error:error];
+}
+
+- (NSDictionary*)stopRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  if (moduleIdentifier.length == 0) {
+    [self assignError:error message:@"Missing module identifier."];
+    return nil;
+  }
+
+  return [self internalJSONWithPath:@"/internal/modules/runtime-stop"
                          queryItems:@[
                            [NSURLQueryItem queryItemWithName:@"moduleId" value:moduleIdentifier]
                          ]

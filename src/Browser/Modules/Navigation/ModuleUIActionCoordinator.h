@@ -54,12 +54,28 @@
 - (BOOL)setupModuleWithIdentifier:(NSString*)moduleIdentifier;
 
 /**
+ * Refreshes one module readiness status.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @return YES when the readiness request completed.
+ */
+- (BOOL)refreshReadinessForModuleWithIdentifier:(NSString*)moduleIdentifier;
+
+/**
  * Confirms and restarts a module runtime when supported.
  *
  * @param moduleIdentifier The module identifier.
  * @return YES when the runtime restart request completed.
  */
 - (BOOL)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier;
+
+/**
+ * Confirms and stops a module runtime when supported.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @return YES when the runtime stop request completed.
+ */
+- (BOOL)stopRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier;
 
 /**
  * Prompts for the module update URL.

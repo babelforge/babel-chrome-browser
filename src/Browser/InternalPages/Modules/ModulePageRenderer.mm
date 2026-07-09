@@ -25,7 +25,7 @@
     [moduleListHTML appendFormat:@"<p class='empty'>%@</p>",
                                  [self htmlEscapedString:error.localizedDescription]];
   } else if (modules.count == 0) {
-    [moduleListHTML appendString:@"<p class='empty'>No PHP module is registered.</p>"];
+    [moduleListHTML appendString:@"<p class='empty'>No module is registered.</p>"];
   } else {
     [moduleListHTML appendString:@"<ul class='stripedList moduleList'>"];
     for (NSDictionary* module in modules) {
@@ -40,12 +40,20 @@
           [module[@"description"] isKindOfClass:NSString.class] ? module[@"description"] : @"";
       BOOL enabled = [module[@"enabled"] boolValue];
       BOOL hasIsolatedVendor = [module[@"hasIsolatedVendor"] boolValue];
+      NSDictionary* readinessStatus =
+          [module[@"readinessStatus"] isKindOfClass:NSDictionary.class] ? module[@"readinessStatus"] : @{};
+      NSDictionary* runtimeStatus =
+          [module[@"runtimeStatus"] isKindOfClass:NSDictionary.class] ? module[@"runtimeStatus"] : @{};
       NSString* settingsRoute =
           [module[@"settingsRoute"] isKindOfClass:NSString.class] ? module[@"settingsRoute"] : @"";
       BOOL hasSettingsPage = settingsRoute.length > 0 && ![settingsRoute isEqualToString:@"babelchrome://modules"];
       NSString* enabledLabel = enabled ? @"Enabled" : @"Disabled";
       NSString* vendorLabel = hasIsolatedVendor ? @"Bundled vendor" : @"No bundled vendor";
       NSString* versionLabel = [NSString stringWithFormat:@"Installed %@", moduleVersion];
+      NSString* enabledBadgeHTML = [self statusBadgeHTMLWithLabel:enabledLabel
+                                                            style:enabled ? @"statusReady" : @"statusIdle"];
+      NSString* readinessBadgeHTML = [self readinessBadgeHTMLForStatus:readinessStatus];
+      NSString* runtimeBadgeHTML = [self runtimeBadgeHTMLForStatus:runtimeStatus];
       NSString* detailsActionHTML = @"";
       NSString* settingsActionHTML = @"";
       NSString* toggleActionHTML = @"";
@@ -75,7 +83,8 @@
 
       [moduleListHTML appendFormat:
           @"<li class='moduleItem'>"
-           "<div class='moduleText'><span>%@</span><small>%@ - %@ - %@ - %@</small><em>%@</em>"
+           "<div class='moduleText'><span>%@</span><small>%@ - %@ - %@</small><em>%@</em>"
+           "<div class='moduleStatusRow'>%@%@%@</div>"
            "<p class='note'>%@</p></div>"
            "<div class='moduleButtons'>"
            "<div class='moduleButtonCell'>%@</div><div class='moduleButtonCell'>%@</div>"
@@ -86,8 +95,10 @@
           [self htmlEscapedString:moduleIdentifier],
           [self htmlEscapedString:versionLabel],
           @"User-installed",
-          [self htmlEscapedString:enabledLabel],
           [self htmlEscapedString:vendorLabel],
+          enabledBadgeHTML,
+          readinessBadgeHTML,
+          runtimeBadgeHTML,
           [self htmlEscapedString:moduleDescription],
           detailsActionHTML,
           settingsActionHTML,
@@ -98,7 +109,7 @@
   }
 
   return [NSString stringWithFormat:
-      @"<h1>PHP Modules</h1>"
+      @"<h1>Modules</h1>"
        "<section>"
        "<h2>Installed Modules</h2>"
        "<div class='buttonRow'>"
@@ -159,13 +170,13 @@
   NSDictionary* readinessStatus = [selectedModule[@"readinessStatus"] isKindOfClass:NSDictionary.class]
       ? selectedModule[@"readinessStatus"]
       : @{};
+  NSDictionary* readiness = [selectedModule[@"readiness"] isKindOfClass:NSDictionary.class]
+      ? selectedModule[@"readiness"]
+      : nil;
   NSDictionary* setup = [selectedModule[@"setup"] isKindOfClass:NSDictionary.class] ? selectedModule[@"setup"] : nil;
   NSDictionary* runtimeStatus = [selectedModule[@"runtimeStatus"] isKindOfClass:NSDictionary.class]
       ? selectedModule[@"runtimeStatus"]
       : @{};
-  NSString* readinessState = [readinessStatus[@"state"] isKindOfClass:NSString.class]
-      ? readinessStatus[@"state"]
-      : @"unknown";
   NSNumber* ready = [readinessStatus[@"ready"] isKindOfClass:NSNumber.class] ? readinessStatus[@"ready"] : nil;
   NSNumber* canSetup = [readinessStatus[@"canSetup"] isKindOfClass:NSNumber.class] ? readinessStatus[@"canSetup"] : nil;
   BOOL canRunSetup = setup != nil && ![ready boolValue] && (!canSetup || [canSetup boolValue]);
@@ -173,6 +184,17 @@
       ? [NSString stringWithFormat:@"<a class='smallButton' href='babelchrome://modules?setup=%@'>Run Setup</a>",
                                    [self queryEscapedString:moduleIdentifier ?: @""]]
       : @"";
+  NSString* readinessActionHTML = readiness != nil
+      ? [NSString stringWithFormat:@"<a class='smallButton' href='babelchrome://modules?checkReadiness=%@'>Check readiness</a>",
+                                   [self queryEscapedString:moduleIdentifier ?: @""]]
+      : @"";
+  NSMutableString* detailsActionsHTML = [NSMutableString string];
+  if (setupActionHTML.length > 0 || readinessActionHTML.length > 0) {
+    [detailsActionsHTML appendString:@"<div class='detailsActions'>"];
+    [detailsActionsHTML appendString:readinessActionHTML];
+    [detailsActionsHTML appendString:setupActionHTML];
+    [detailsActionsHTML appendString:@"</div>"];
+  }
 
   NSMutableString* readinessMessagesHTML = [NSMutableString string];
   NSArray* readinessMessages = [readinessStatus[@"messages"] isKindOfClass:NSArray.class]
@@ -241,6 +263,7 @@
        "<dt>Runtime</dt><dd><code>%@</code></dd>"
        "<dt>Status</dt><dd>%@</dd>"
        "<dt>Readiness</dt><dd>%@</dd>"
+       "<dt>Runtime state</dt><dd>%@</dd>"
        "<dt>PHP</dt><dd><code>%@</code></dd>"
        "<dt>Vendor</dt><dd>%@</dd>"
        "</dl>"
@@ -257,11 +280,13 @@
       [self htmlEscapedString:moduleVersion],
       [self htmlEscapedString:moduleType],
       [self htmlEscapedString:runtimeType],
-      enabled ? @"Enabled" : @"Disabled",
-      [self htmlEscapedString:readinessState],
+      [self statusBadgeHTMLWithLabel:(enabled ? @"Enabled" : @"Disabled")
+                                style:enabled ? @"statusReady" : @"statusIdle"],
+      [self readinessBadgeHTMLForStatus:readinessStatus],
+      [self runtimeBadgeHTMLForStatus:runtimeStatus],
       [self htmlEscapedString:phpRequirement],
-      hasIsolatedVendor ? @"Own vendor" : @"No module vendor",
-      setupActionHTML,
+      hasIsolatedVendor ? @"Bundled vendor" : @"No module vendor",
+      detailsActionsHTML,
       readinessDetailsHTML,
       runtimeDiagnosticsHTML,
       routesHTML.length > 0 ? routesHTML : @"<li>No route declared.</li>",
@@ -282,6 +307,8 @@
   NSString* logs = [runtimeStatus[@"logs"] isKindOfClass:NSString.class] ? runtimeStatus[@"logs"] : @"";
   NSNumber* port = [runtimeStatus[@"port"] isKindOfClass:NSNumber.class] ? runtimeStatus[@"port"] : nil;
   BOOL restartable = [runtimeStatus[@"restartable"] boolValue] && moduleIdentifier.length > 0;
+  NSNumber* runningValue = [runtimeStatus[@"running"] isKindOfClass:NSNumber.class] ? runtimeStatus[@"running"] : nil;
+  BOOL running = [runningValue boolValue] && moduleIdentifier.length > 0;
   NSArray* command = [runtimeStatus[@"command"] isKindOfClass:NSArray.class] ? runtimeStatus[@"command"] : @[];
 
   NSMutableString* detailsHTML = [NSMutableString string];
@@ -307,18 +334,31 @@
     [detailsHTML appendFormat:@"<dt>CWD</dt><dd><code>%@</code></dd>", [self htmlEscapedString:cwd]];
   }
 
+  NSString* restartLabel = ([state isEqualToString:@"stopped"] || [state isEqualToString:@"idle"])
+      ? @"Start runtime"
+      : @"Restart runtime";
   NSString* restartActionHTML = restartable
-      ? [NSString stringWithFormat:@"<a class='smallButton' href='babelchrome://modules?restartRuntime=%@'>Restart runtime</a>",
+      ? [NSString stringWithFormat:@"<a class='smallButton' href='babelchrome://modules?restartRuntime=%@'>%@</a>",
+                                   [self queryEscapedString:moduleIdentifier],
+                                   restartLabel]
+      : @"";
+  NSString* stopActionHTML = running
+      ? [NSString stringWithFormat:@"<a class='smallButton dangerButton' href='babelchrome://modules?stopRuntime=%@'>Stop runtime</a>",
                                    [self queryEscapedString:moduleIdentifier]]
       : @"";
+  NSString* runtimeActionsHTML = (restartActionHTML.length > 0 || stopActionHTML.length > 0)
+      ? [NSString stringWithFormat:@"<div class='detailsActions'>%@%@</div>",
+                                   restartActionHTML,
+                                   stopActionHTML]
+      : @"";
   NSString* logsHTML = logs.length > 0
-      ? [NSString stringWithFormat:@"<pre>%@</pre>", [self htmlEscapedString:logs]]
+      ? [NSString stringWithFormat:@"<pre class='runtimeLog'>%@</pre>", [self htmlEscapedString:logs]]
       : @"<p class='empty'>No runtime log captured.</p>";
 
   return [NSString stringWithFormat:
       @"<section><h2>Runtime Diagnostics</h2><dl>%@</dl>%@<h3>Logs</h3>%@</section>",
       detailsHTML,
-      restartActionHTML,
+      runtimeActionsHTML,
       logsHTML];
 }
 
@@ -340,6 +380,60 @@
   }
 
   return [parts componentsJoinedByString:@" "];
+}
+
+- (NSString*)readinessBadgeHTMLForStatus:(NSDictionary*)readinessStatus {
+  NSString* state = [readinessStatus[@"state"] isKindOfClass:NSString.class]
+      ? readinessStatus[@"state"]
+      : @"unknown";
+  NSNumber* ready = [readinessStatus[@"ready"] isKindOfClass:NSNumber.class] ? readinessStatus[@"ready"] : nil;
+  if (ready && [ready boolValue]) {
+    return [self statusBadgeHTMLWithLabel:@"Ready" style:@"statusReady"];
+  }
+
+  if (ready && ![ready boolValue]) {
+    NSString* style = [state isEqualToString:@"not-ready"] ? @"statusWarning" : @"statusFailed";
+    return [self statusBadgeHTMLWithLabel:[self displayLabelForState:state fallback:@"Not ready"] style:style];
+  }
+
+  return [self statusBadgeHTMLWithLabel:[self displayLabelForState:state fallback:@"Unknown"] style:@"statusUnknown"];
+}
+
+- (NSString*)runtimeBadgeHTMLForStatus:(NSDictionary*)runtimeStatus {
+  NSString* state = [runtimeStatus[@"state"] isKindOfClass:NSString.class]
+      ? runtimeStatus[@"state"]
+      : @"unknown";
+  NSNumber* running = [runtimeStatus[@"running"] isKindOfClass:NSNumber.class] ? runtimeStatus[@"running"] : nil;
+  if (running && [running boolValue]) {
+    return [self statusBadgeHTMLWithLabel:@"Running" style:@"statusRunning"];
+  }
+
+  if ([state isEqualToString:@"stopped"] || [state isEqualToString:@"idle"]) {
+    return [self statusBadgeHTMLWithLabel:[self displayLabelForState:state fallback:@"Idle"] style:@"statusIdle"];
+  }
+
+  if ([state isEqualToString:@"exited"] || [state isEqualToString:@"unavailable"]) {
+    return [self statusBadgeHTMLWithLabel:[self displayLabelForState:state fallback:@"Failed"] style:@"statusFailed"];
+  }
+
+  return [self statusBadgeHTMLWithLabel:[self displayLabelForState:state fallback:@"Host managed"] style:@"statusUnknown"];
+}
+
+- (NSString*)statusBadgeHTMLWithLabel:(NSString*)label style:(NSString*)style {
+  return [NSString stringWithFormat:@"<span class='statusBadge %@'>%@</span>",
+                                    [self htmlEscapedString:style ?: @"statusUnknown"],
+                                    [self htmlEscapedString:label ?: @"Unknown"]];
+}
+
+- (NSString*)displayLabelForState:(NSString*)state fallback:(NSString*)fallback {
+  NSString* normalizedState =
+      [state stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  if (normalizedState.length == 0) {
+    return fallback ?: @"Unknown";
+  }
+
+  NSString* spacedState = [normalizedState stringByReplacingOccurrencesOfString:@"-" withString:@" "];
+  return spacedState.capitalizedString;
 }
 
 - (NSString*)moduleUpdatesPageBodyWithUpdateResult:(NSDictionary*)updateResult

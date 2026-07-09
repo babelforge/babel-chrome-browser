@@ -17,7 +17,9 @@ NSString* const BabelInternalNavigationActionInstallSelectedUpdates = @"installS
 NSString* const BabelInternalNavigationActionEnable = @"enable";
 NSString* const BabelInternalNavigationActionDisable = @"disable";
 NSString* const BabelInternalNavigationActionSetup = @"setup";
+NSString* const BabelInternalNavigationActionCheckReadiness = @"checkReadiness";
 NSString* const BabelInternalNavigationActionRestartRuntime = @"restartRuntime";
+NSString* const BabelInternalNavigationActionStopRuntime = @"stopRuntime";
 NSString* const BabelInternalNavigationActionModuleDetails = @"module";
 NSString* const BabelInternalNavigationActionOpen = @"open";
 NSString* const BabelInternalNavigationActionReopen = @"reopen";
@@ -122,8 +124,16 @@ NSString* const BabelInternalNavigationActionReopen = @"reopen";
       return [self actionWithName:BabelInternalNavigationActionSetup value:item.value];
     }
 
+    if ([item.name isEqualToString:BabelInternalNavigationActionCheckReadiness] && item.value.length > 0) {
+      return [self actionWithName:BabelInternalNavigationActionCheckReadiness value:item.value];
+    }
+
     if ([item.name isEqualToString:BabelInternalNavigationActionRestartRuntime] && item.value.length > 0) {
       return [self actionWithName:BabelInternalNavigationActionRestartRuntime value:item.value];
+    }
+
+    if ([item.name isEqualToString:BabelInternalNavigationActionStopRuntime] && item.value.length > 0) {
+      return [self actionWithName:BabelInternalNavigationActionStopRuntime value:item.value];
     }
 
     if ([item.name isEqualToString:BabelInternalNavigationActionRemove] && item.value.length > 0) {

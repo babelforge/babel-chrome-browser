@@ -25,7 +25,7 @@
   panel.canChooseFiles = YES;
   panel.canChooseDirectories = NO;
   panel.allowsMultipleSelection = YES;
-  panel.title = @"Install PHP Modules";
+  panel.title = @"Install Modules";
   if ([panel runModal] != NSModalResponseOK) {
     return NO;
   }
@@ -75,7 +75,7 @@
 
 - (BOOL)removePHPModuleWithIdentifier:(NSString*)moduleIdentifier {
   NSAlert* confirmation = [[NSAlert alloc] init];
-  confirmation.messageText = @"Remove PHP Module";
+  confirmation.messageText = @"Remove Module";
   confirmation.informativeText =
       [NSString stringWithFormat:@"Remove module \"%@\" from BabelChrome?", moduleIdentifier ?: @""];
   [confirmation addButtonWithTitle:@"Remove"];
@@ -117,6 +117,24 @@
   return YES;
 }
 
+- (BOOL)refreshReadinessForModuleWithIdentifier:(NSString*)moduleIdentifier {
+  NSError* error = nil;
+  NSDictionary* response =
+      [moduleActionService_ readinessStatusForModuleWithIdentifier:moduleIdentifier error:&error];
+  if (!response || ![response[@"ok"] boolValue]) {
+    NSString* message = [response[@"error"] isKindOfClass:NSString.class]
+        ? response[@"error"]
+        : error.localizedDescription ?: @"The readiness check failed.";
+    [self showModuleActionAlertWithError:
+        [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                            code:4
+                        userInfo:@{NSLocalizedDescriptionKey : message}]];
+    return NO;
+  }
+
+  return YES;
+}
+
 - (BOOL)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier {
   NSAlert* confirmation = [[NSAlert alloc] init];
   confirmation.messageText = @"Restart Module Runtime";
@@ -139,6 +157,35 @@
     [self showModuleActionAlertWithError:
         [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
                             code:3
+                        userInfo:@{NSLocalizedDescriptionKey : message}]];
+    return NO;
+  }
+
+  return YES;
+}
+
+- (BOOL)stopRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier {
+  NSAlert* confirmation = [[NSAlert alloc] init];
+  confirmation.messageText = @"Stop Module Runtime";
+  confirmation.informativeText =
+      [NSString stringWithFormat:@"Stop runtime for module \"%@\"?", moduleIdentifier ?: @""];
+  [confirmation addButtonWithTitle:@"Stop Runtime"];
+  [confirmation addButtonWithTitle:@"Cancel"];
+  confirmation.alertStyle = NSAlertStyleWarning;
+  if ([confirmation runModal] != NSAlertFirstButtonReturn) {
+    return NO;
+  }
+
+  NSError* error = nil;
+  NSDictionary* response =
+      [moduleActionService_ stopRuntimeForModuleWithIdentifier:moduleIdentifier error:&error];
+  if (!response || ![response[@"ok"] boolValue]) {
+    NSString* message = [response[@"error"] isKindOfClass:NSString.class]
+        ? response[@"error"]
+        : error.localizedDescription ?: @"The runtime stop failed.";
+    [self showModuleActionAlertWithError:
+        [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                            code:5
                         userInfo:@{NSLocalizedDescriptionKey : message}]];
     return NO;
   }
@@ -249,7 +296,7 @@
 
 - (void)showModuleActionAlertWithError:(NSError*)error {
   NSAlert* alert = [[NSAlert alloc] init];
-  alert.messageText = @"Unable to Manage PHP Module";
+  alert.messageText = @"Unable to Manage Module";
   alert.informativeText = error.localizedDescription ?: @"The module operation failed.";
   alert.alertStyle = NSAlertStyleWarning;
   [alert runModal];

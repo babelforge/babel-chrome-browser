@@ -104,6 +104,37 @@ final readonly class ViewerController
     }
 
     /**
+     * Returns the current readiness status for one installed module.
+     *
+     * @param Request $request the current request
+     *
+     * @return JsonResponse the readiness response
+     */
+    #[Route('/internal/modules/readiness-status', name: 'internal_modules_readiness_status', methods: ['GET'])]
+    public function internalModulesReadinessStatus(Request $request): JsonResponse
+    {
+        if (!$this->hasValidToken($request)) {
+            return new JsonResponse(['error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $moduleId = $this->queryString($request, 'moduleId');
+        if ('' === $moduleId) {
+            return new JsonResponse(['ok' => false, 'error' => 'Missing module id.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $module = $this->moduleRegistry->find($moduleId);
+        if (null === $module) {
+            return new JsonResponse(['ok' => false, 'error' => 'Module not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return new JsonResponse([
+            'ok' => true,
+            'moduleId' => $module->id,
+            'readinessStatus' => $this->moduleReadinessChecker->status($module),
+        ]);
+    }
+
+    /**
      * Returns runtime diagnostics for one installed module.
      *
      * @param Request $request the current request
@@ -171,6 +202,57 @@ final readonly class ViewerController
                 'runtimeStatus' => $this->runtimeStatus($module),
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+    }
+
+    /**
+     * Stops one module runtime when the runtime owns a stoppable process.
+     *
+     * @param Request $request the current request
+     *
+     * @return JsonResponse the stop response
+     */
+    #[Route('/internal/modules/runtime-stop', name: 'internal_modules_runtime_stop', methods: ['GET'])]
+    public function internalModulesRuntimeStop(Request $request): JsonResponse
+    {
+        if (!$this->hasValidToken($request)) {
+            return new JsonResponse(['error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $moduleId = $this->queryString($request, 'moduleId');
+        if ('' === $moduleId) {
+            return new JsonResponse(['ok' => false, 'error' => 'Missing module id.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $module = $this->moduleRegistry->find($moduleId);
+        if (null === $module) {
+            return new JsonResponse(['ok' => false, 'error' => 'Module not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (ModuleRuntimeType::isProcessWeb($module->runtimeType)) {
+            $this->moduleProcessWebRuntime->stopModule($module->id);
+
+            return new JsonResponse([
+                'ok' => true,
+                'moduleId' => $module->id,
+                'runtimeStatus' => $this->runtimeStatus($module),
+            ]);
+        }
+
+        if (ModuleRuntimeType::isProcessRuntime($module->runtimeType)) {
+            $this->moduleProcessRuntime->stopModule($module->id);
+
+            return new JsonResponse([
+                'ok' => true,
+                'moduleId' => $module->id,
+                'runtimeStatus' => $this->runtimeStatus($module),
+            ]);
+        }
+
+        return new JsonResponse([
+            'ok' => false,
+            'error' => sprintf('Runtime "%s" does not support explicit stop.', $module->runtimeType),
+            'runtimeStatus' => $this->runtimeStatus($module),
+        ], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     /**
