@@ -137,6 +137,7 @@ Modules
     |__ Navigation
     |__ Projects
     |__ Registry
+    |__ Runtime
     |__ Updates
 ```
 
@@ -146,6 +147,7 @@ Modules
 - `Navigation`: module route resolution and module-aware UI navigation.
 - `Projects`: Project Launcher JSON import helpers.
 - `Registry`: native installed-module manifest loading, validation, snapshots, and file-type header metadata.
+- `Runtime`: native process runtime definitions, port allocation, command interpolation, cwd resolution, and fallback runtime diagnostics.
 - `Updates`: available module update checks and update metadata resolution.
 
 ## Navigation

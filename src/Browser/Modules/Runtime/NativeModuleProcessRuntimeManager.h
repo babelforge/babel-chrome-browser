@@ -1,0 +1,63 @@
+#ifndef BABEL_CHROME_BROWSER_MODULES_RUNTIME_NATIVE_MODULE_PROCESS_RUNTIME_MANAGER_H_
+#define BABEL_CHROME_BROWSER_MODULES_RUNTIME_NATIVE_MODULE_PROCESS_RUNTIME_MANAGER_H_
+
+#import <Foundation/Foundation.h>
+
+@class BabelNativeModuleManifest;
+
+/**
+ * Prepares native process runtime diagnostics and process launch inputs.
+ */
+@interface BabelNativeModuleProcessRuntimeManager : NSObject
+
+/**
+ * Returns runtime diagnostics for one manifest without starting processes.
+ *
+ * @param module The installed module manifest.
+ * @return The runtime status dictionary.
+ */
+- (NSDictionary*)runtimeStatusForModule:(BabelNativeModuleManifest*)module;
+
+/**
+ * Allocates the local port that a process-web module would receive.
+ *
+ * @param error The optional error pointer.
+ * @return The allocated port number, or nil when no port can be allocated.
+ */
+- (NSNumber*)allocateProcessWebPortWithError:(NSError**)error;
+
+/**
+ * Resolves a process-web command line for a module and allocated port.
+ *
+ * @param module The installed module manifest.
+ * @param port The allocated local port.
+ * @return The resolved command line, or an empty array when unavailable.
+ */
+- (NSArray<NSString*>*)resolvedProcessWebCommandForModule:(BabelNativeModuleManifest*)module
+                                                     port:(NSInteger)port;
+
+/**
+ * Resolves a process-web readiness URL for a module and allocated port.
+ *
+ * @param module The installed module manifest.
+ * @param port The allocated local port.
+ * @return The resolved readiness URL, or an empty string when unavailable.
+ */
+- (NSString*)resolvedProcessWebReadyURLForModule:(BabelNativeModuleManifest*)module
+                                            port:(NSInteger)port;
+
+/**
+ * Resolves a module process working directory.
+ *
+ * @param module The installed module manifest.
+ * @param cwd The manifest cwd value.
+ * @param error The optional error pointer.
+ * @return The resolved working directory path, or nil when invalid.
+ */
+- (NSString*)resolvedWorkingDirectoryForModule:(BabelNativeModuleManifest*)module
+                                           cwd:(NSString*)cwd
+                                         error:(NSError**)error;
+
+@end
+
+#endif

@@ -1,5 +1,8 @@
 #import "Browser/Modules/Registry/NativeModuleManifest.h"
 
+#import "Browser/Modules/Runtime/NativeModuleProcessRuntimeDefinition.h"
+#import "Browser/Modules/Runtime/NativeModuleProcessWebDefinition.h"
+
 static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.babel-chrome.native-module-manifest";
 
 @implementation BabelNativeModuleManifest
@@ -25,6 +28,8 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
 @synthesize readiness = _readiness;
 @synthesize setup = _setup;
 @synthesize runtime = _runtime;
+@synthesize processWeb = _processWeb;
+@synthesize processRuntime = _processRuntime;
 @synthesize requirements = _requirements;
 
 + (instancetype)manifestWithDictionary:(NSDictionary*)data
@@ -51,8 +56,44 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
     return nil;
   }
 
-  NSDictionary* runtime = [data[@"runtime"] isKindOfClass:NSDictionary.class] ? data[@"runtime"] : @{};
-  NSString* runtimeType = [runtime[@"type"] isKindOfClass:NSString.class] ? runtime[@"type"] : @"process-runtime";
+  NSDictionary* runtime = [data[@"runtime"] isKindOfClass:NSDictionary.class] ? data[@"runtime"] : nil;
+  if (!runtime) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Module \"%@\" must declare runtime.type.", moduleIdentifier]];
+    return nil;
+  }
+
+  NSString* runtimeType = [runtime[@"type"] isKindOfClass:NSString.class]
+      ? [runtime[@"type"] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet]
+      : @"";
+  if (runtimeType.length == 0) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Module \"%@\" must declare runtime.type.", moduleIdentifier]];
+    return nil;
+  }
+
+  BabelNativeModuleProcessWebDefinition* processWeb = nil;
+  BabelNativeModuleProcessRuntimeDefinition* processRuntime = nil;
+  if ([runtimeType isEqualToString:@"process-web"]) {
+    processWeb = [BabelNativeModuleProcessWebDefinition definitionWithRuntimeDictionary:runtime];
+    if (!processWeb) {
+      [self assignError:error
+            description:[NSString stringWithFormat:@"Module \"%@\" must declare runtime.command for process-web.",
+                                                       moduleIdentifier]];
+      return nil;
+    }
+  }
+
+  if ([runtimeType isEqualToString:@"process-runtime"]) {
+    processRuntime = [BabelNativeModuleProcessRuntimeDefinition definitionWithRuntimeDictionary:runtime];
+    if (!processRuntime) {
+      [self assignError:error
+            description:[NSString stringWithFormat:@"Module \"%@\" must declare runtime.command for process-runtime.",
+                                                       moduleIdentifier]];
+      return nil;
+    }
+  }
+
   NSString* settingsRoute = [self settingsRouteFromDictionary:data];
 
   return [[self alloc] initWithModuleIdentifier:moduleIdentifier
@@ -74,8 +115,10 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
                                   settingsRoute:settingsRoute
                                    defaultGroup:[self trimmedOptionalStringForKey:@"defaultGroup" dictionary:data]
                                       readiness:[data[@"readiness"] isKindOfClass:NSDictionary.class] ? data[@"readiness"] : @{}
-                                          setup:[data[@"setup"] isKindOfClass:NSDictionary.class] ? data[@"setup"] : @{}
+                                        setup:[data[@"setup"] isKindOfClass:NSDictionary.class] ? data[@"setup"] : @{}
                                         runtime:runtime
+                                     processWeb:processWeb
+                                 processRuntime:processRuntime
                                    requirements:[data[@"requirements"] isKindOfClass:NSDictionary.class] ? data[@"requirements"] : @{}];
 }
 
@@ -104,6 +147,8 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
     @"defaultGroup" : self.defaultGroup.length > 0 ? self.defaultGroup : [NSNull null],
     @"readiness" : self.readiness.count > 0 ? self.readiness : [NSNull null],
     @"setup" : self.setup.count > 0 ? self.setup : [NSNull null],
+    @"processWeb" : self.processWeb ? [self.processWeb dictionaryRepresentation] : [NSNull null],
+    @"processRuntime" : self.processRuntime ? [self.processRuntime dictionaryRepresentation] : [NSNull null],
     @"hasIsolatedVendor" : @([self hasIsolatedVendor])
   };
 }
@@ -134,6 +179,8 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
                                readiness:(NSDictionary*)readiness
                                    setup:(NSDictionary*)setup
                                  runtime:(NSDictionary*)runtime
+                              processWeb:(BabelNativeModuleProcessWebDefinition*)processWeb
+                          processRuntime:(BabelNativeModuleProcessRuntimeDefinition*)processRuntime
                             requirements:(NSDictionary*)requirements {
   self = [super init];
   if (self) {
@@ -158,6 +205,8 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
     _readiness = [readiness copy];
     _setup = [setup copy];
     _runtime = [runtime copy];
+    _processWeb = processWeb;
+    _processRuntime = processRuntime;
     _requirements = [requirements copy];
   }
 

@@ -113,7 +113,7 @@ BabelChrome includes a native module registry and installer, plus a transitional
 
 No module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
 
-Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. Modules keep their document renderers, view models, error classes, frontend assets, import map metadata, compiled public assets, process commands, and dependencies inside their own module package. Static and process-backed modules keep the files required by their declared runtime.
+Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. Modules keep their document renderers, view models, error classes, frontend assets, import map metadata, compiled public assets, process commands, and dependencies inside their own module package. Static and process-backed modules keep the files required by their declared runtime. The native manifest loader requires `runtime.type` and validates required `runtime.command` fields for `process-web` and `process-runtime` modules.
 
 The native app asks the native module registry for the matching installed viewer module instead of duplicating Markdown, OpenAPI, or JSON rules in native code. The generic `babelchrome://viewer/...` URLs are preferred for external integrations. Module-owned stable URLs such as `babelchrome://markdown/...`, `babelchrome://openapi/...`, and `babelchrome://json/...` remain compatible when the corresponding module is installed.
 
@@ -298,6 +298,8 @@ babelchrome://modules
 
 From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed. These package and enabled-state mutations are native filesystem operations; while the native runtime migration continues, BabelChrome still asks LocalServiceHost to stop any running module process before update, disable, or removal.
 The page also displays module-declared `babelchrome://<host>` routes, file type badges, hook badges, installed versions, and a `Settings` action when the module manifest exposes a settings route.
+
+If ExtensionHost is temporarily unavailable, BabelChrome can still derive safe runtime diagnostics from native manifest metadata. These diagnostics report `process-web` modules as stopped and `process-runtime` modules as idle; they do not start or proxy module processes.
 
 Enabled modules that declare routes can also be opened from this page. BabelChrome opens the module through the LocalServiceHost using:
 

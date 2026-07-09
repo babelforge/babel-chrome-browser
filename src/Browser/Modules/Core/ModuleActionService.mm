@@ -2,11 +2,13 @@
 
 #import "Browser/Modules/Installation/NativeModuleInstaller.h"
 #import "Browser/Modules/Registry/NativeModuleRegistry.h"
+#import "Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h"
 #import "LocalServices/LocalServiceHost.h"
 
 @implementation BabelModuleActionService {
   BabelNativeModuleRegistry* nativeModuleRegistry_;
   BabelNativeModuleInstaller* nativeModuleInstaller_;
+  BabelNativeModuleProcessRuntimeManager* nativeProcessRuntimeManager_;
 }
 
 - (instancetype)init {
@@ -15,6 +17,7 @@
     nativeModuleRegistry_ = [[BabelNativeModuleRegistry alloc] init];
     nativeModuleInstaller_ =
         [[BabelNativeModuleInstaller alloc] initWithModulesDirectoryPath:nativeModuleRegistry_.modulesDirectoryPath];
+    nativeProcessRuntimeManager_ = [[BabelNativeModuleProcessRuntimeManager alloc] init];
   }
 
   return self;
@@ -182,7 +185,24 @@
 }
 
 - (NSDictionary*)runtimeStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
-  return [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier error:error];
+  NSError* hostError = nil;
+  NSDictionary* hostStatus = [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier
+                                                                                              error:&hostError];
+  if (hostStatus) {
+    return hostStatus;
+  }
+
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (module) {
+    return [nativeProcessRuntimeManager_ runtimeStatusForModule:module];
+  }
+
+  if (error) {
+    *error = nativeError ?: hostError;
+  }
+  return nil;
 }
 
 - (NSDictionary*)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {

@@ -3,6 +3,9 @@
 
 #import <Foundation/Foundation.h>
 
+@class BabelNativeModuleProcessRuntimeDefinition;
+@class BabelNativeModuleProcessWebDefinition;
+
 /**
  * Represents one BabelChrome module manifest loaded by the native browser.
  */
@@ -29,6 +32,8 @@
 @property(nonatomic, readonly, strong) NSDictionary* readiness;
 @property(nonatomic, readonly, strong) NSDictionary* setup;
 @property(nonatomic, readonly, strong) NSDictionary* runtime;
+@property(nonatomic, readonly, strong) BabelNativeModuleProcessWebDefinition* processWeb;
+@property(nonatomic, readonly, strong) BabelNativeModuleProcessRuntimeDefinition* processRuntime;
 @property(nonatomic, readonly, strong) NSDictionary* requirements;
 
 /**
