@@ -1,6 +1,6 @@
 # Features
 
-Navigation: [Previous: Manual Tests](03-manual-tests.md) | [README](README.md) | [Next: PHP Modules](05-php-modules.md)
+Navigation: [Previous: Manual Tests](03-manual-tests.md) | [README](README.md) | [Next: Modules](05-php-modules.md)
 
 ## Application Role
 
@@ -107,13 +107,13 @@ Example OpenAPI files are stored under:
 src/ExtensionHost/resources/
 ```
 
-## PHP Modules
+## Modules
 
 BabelChrome includes the LocalServiceHost module registry.
 
-No PHP module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
+No module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
 
-Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. Current PHP modules keep their entrypoints, document renderers, view models, error classes, Twig templates, source frontend assets, import map metadata, compiled public assets, and Composer dependencies inside their own module package.
+Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. PHP modules keep their entrypoints, document renderers, view models, error classes, Twig templates, source frontend assets, import map metadata, compiled public assets, and Composer dependencies inside their own module package. Static and process-backed modules keep the files required by their declared runtime.
 
 The native app asks the LocalServiceHost for the matching installed viewer module instead of duplicating Markdown, OpenAPI, or JSON rules in native code. The generic `babelchrome://viewer/...` URLs are preferred for external integrations. Module-owned stable URLs such as `babelchrome://markdown/...`, `babelchrome://openapi/...`, and `babelchrome://json/...` remain compatible when the corresponding module is installed.
 
@@ -187,6 +187,9 @@ The current module source packages are:
 ../modules/demo-module
 ../modules/plain-php-module
 ../modules/laravel-module
+../modules/process-runtime-demo-module
+../modules/process-web-demo-module
+../modules/node-process-web-demo-module
 ```
 
 Shared viewer UI code lives in its own Composer package:
@@ -296,9 +299,9 @@ Modules can declare file types that should be visible to HTTP pages through the 
 
 This is separate from `fileTypes`, which is still used by BabelChrome's viewer router to decide whether a URL or file should be opened by a viewer module.
 
-The Markdown and OpenAPI modules declare source-file menu items for future native context-menu wiring when installed. The PHP Modules page also displays declared menu items for debugging module manifests.
+The Markdown and OpenAPI modules declare source-file menu items for native context-menu wiring when installed. The Modules page also displays declared menu items for debugging module manifests.
 
-The native Settings page links to the internal PHP Modules page:
+The native Settings page links to the internal Modules page:
 
 ```text
 babelchrome://modules
@@ -680,4 +683,4 @@ BabelChrome - <page title>
 
 Clickable native controls use a pointing hand cursor on hover.
 
-Navigation: [Previous: Manual Tests](03-manual-tests.md) | [README](README.md) | [Next: PHP Modules](05-php-modules.md)
+Navigation: [Previous: Manual Tests](03-manual-tests.md) | [README](README.md) | [Next: Modules](05-php-modules.md)

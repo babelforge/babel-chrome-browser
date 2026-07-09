@@ -22,7 +22,7 @@ open "babelchrome://open?group=Group%20n&url=http%3A%2F%2F127.0.0.1%3A8772"
 - [Architecture](02-architecture.md)
 - [Manual Tests](03-manual-tests.md)
 - [Features](04-features.md)
-- [PHP Modules](05-php-modules.md)
+- [Modules](05-php-modules.md)
 - [Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
 - [Browser Source Layout](07-browser-source-layout.md)
 
@@ -42,12 +42,12 @@ BabelChrome currently provides:
 - Markdown rendering through the optional Markdown viewer module, including local Mermaid, local syntax highlighting, generated table of contents, selectable themes, local auto-refresh, source-file context actions, and visible error pages;
 - OpenAPI and Swagger YAML/JSON rendering through the optional OpenAPI viewer module, including internal and relative `$ref` resolution with local referenced-file auto-refresh;
 - shared viewer header controls for module viewers, including an `Open with` application selector backed by BabelChrome internal endpoints and a generic message relay for compatible viewer tabs;
-- a LocalServiceHost module registry with runtime handlers for `php-web` front controllers, `php-class` entrypoints, and `static-web` document roots, route handlers, renderers, view models, errors, Twig templates, source frontend assets, import maps, compiled public assets, and dependencies supplied by installed modules, manifest-declared viewer capabilities, menu item contributions, contextual menu item resolution, zip installation/update, enable/disable/remove actions for modules, route and settings actions, local catalog metadata, installed-vs-available version display, module metadata and hook APIs, address badge resolution, runtime context helpers, readiness checks, user-confirmed setup actions, and per-module dependency isolation;
+- a LocalServiceHost module registry with runtime handlers for `php-web` front controllers, `php-class` entrypoints, `static-web` document roots, `process-web` local HTTP processes, and `process-runtime` command processes, plus route handlers, renderers, view models, errors, Twig templates, source frontend assets, import maps, compiled public assets, and dependencies supplied by installed modules, manifest-declared viewer capabilities, menu item contributions, contextual menu item resolution, zip installation/update, enable/disable/remove actions for modules, route and settings actions, local catalog metadata, installed-vs-available version display, module metadata and hook APIs, address badge resolution, runtime context helpers, readiness checks, user-confirmed setup actions, and per-module dependency isolation;
 - native routing from module-declared `babelchrome://<host>` URLs to LocalServiceHost module routes;
 - viewer capability detection through `X-BabelChrome-File-Types`;
 - module public asset serving from each module's own `public/` directory;
-- a tested `ModulePackageShipper` service exposed by `tools/ship-php-module.php`, `tools/build-php-modules.sh`, and the meta workspace `tools/dev2prod.sh` helper for packaging current PHP modules with their own Composer locks and module-local `vendor/`, and static web modules without Composer;
-- installable Markdown, OpenAPI, JSON, project launcher, demo, no-framework PHP, and Laravel modules under the sibling `../modules/` workspace;
+- a tested runtime-aware `ModulePackageShipper` service exposed by the historical `tools/ship-php-module.php`, `tools/build-php-modules.sh`, and the meta workspace `tools/dev2prod.sh` helper for packaging PHP modules with their own Composer locks and module-local `vendor/`, static web modules without Composer, and process-backed modules with their own executable runtime files;
+- installable Markdown, OpenAPI, JSON, project launcher, demo, no-framework PHP, Laravel, and runtime demo modules under the sibling `../modules/` workspace;
 - lazy session restoration that rebuilds native groups and tabs before starting the active CEF browser;
 - a left AppKit panel containing the BabelForge placeholder and the groups list;
 - collapsible left panel with compact group initials;

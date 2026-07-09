@@ -1,6 +1,6 @@
 # Browser Window Controller Refactor
 
-Navigation: [Previous: PHP Modules](05-php-modules.md) | [README](README.md) | [Next: Browser Source Layout](07-browser-source-layout.md)
+Navigation: [Previous: Modules](05-php-modules.md) | [README](README.md) | [Next: Browser Source Layout](07-browser-source-layout.md)
 
 This page documents the current `BrowserWindowController` split and the rules that keep the controller from becoming a single large implementation file again.
 
@@ -115,4 +115,4 @@ Before committing a controller refactor:
 - `./tools/build-app.sh` succeeds.
 - `/Applications/BabelChrome.app` is reinstalled when behavior or installed code changes.
 
-Navigation: [Previous: PHP Modules](05-php-modules.md) | [README](README.md) | [Next: Browser Source Layout](07-browser-source-layout.md)
+Navigation: [Previous: Modules](05-php-modules.md) | [README](README.md) | [Next: Browser Source Layout](07-browser-source-layout.md)

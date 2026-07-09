@@ -1,4 +1,4 @@
-# PHP Modules
+# Modules
 
 Navigation: [Previous: Features](04-features.md) | [README](README.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
 
@@ -348,7 +348,7 @@ Modules with settings should declare:
 }
 ```
 
-The PHP Modules page shows a `Settings` button only for modules that expose this route. Settings pages should be module-owned pages; they should not be mixed into the native application settings page.
+The Modules page shows a `Settings` button only for modules that expose this route. Settings pages should be module-owned pages; they should not be mixed into the native application settings page.
 
 ## Hooks And Capabilities
 
