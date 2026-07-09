@@ -326,7 +326,7 @@ The original URL is forwarded to the module route as `sourceUrl`.
 Enabled modules can also declare application lifecycle hooks. BabelChrome currently dispatches:
 
 - `app.did-start` after the native window and restored tabs have been rebuilt;
-- `app.will-quit` before the LocalServiceHost PHP process is stopped.
+- `app.will-quit` before the ExtensionHost process is stopped.
 
 The Project Launcher module uses these hooks to snapshot running managed servers on quit, stop those servers before BabelChrome exits, and restart the same servers on the next BabelChrome launch. Restarted servers receive fresh manager-chosen ports, while user-facing stable URLs such as `babelchrome://server/<project-id>` remain unchanged.
 
@@ -357,13 +357,20 @@ Zip installation is validated before extraction:
 - symlink entries are rejected;
 - the archive must contain `manifest.json` at its root or inside one top-level directory.
 
-Future external modules can be prepared with the low-level dev2prod shipper:
+External modules can be prepared with the low-level dev2prod shipper:
 
 ```bash
 php tools/ship-php-module.php <module-directory> [target.zip]
 ```
 
-The shipper expects a module directory containing at least `manifest.json`, `composer.json`, `src/`, and `vendor/`. Optional public files can be shipped under `public/`. The shipper excludes development-only directories such as `tests`, `var`, `ai`, `.git`, `build`, `coverage`, and `node_modules`.
+Despite its historical filename, the shipper is runtime-aware. It expects a module directory containing `manifest.json`, then validates and packages the files needed by the declared runtime:
+
+- PHP runtimes keep Composer production dependencies and PHP application files;
+- `static-web` runtimes keep the declared static document root and public assets;
+- `process-web` runtimes keep executable files and production dependencies needed to start a local HTTP process;
+- `process-runtime` runtimes keep executable files and production dependencies needed by non-web commands.
+
+The shipper excludes development-only directories such as `tests`, `ai`, `.git`, `build`, and `coverage`. Runtime-owned directories such as `var` or `node_modules` are kept only when the declared process runtime needs them.
 The packaging logic is implemented by the tested `ModulePackageShipper` service, while the CLI script is only a thin command-line wrapper.
 
 All workspace modules can be packaged into the production zip directory with:
