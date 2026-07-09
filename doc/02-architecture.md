@@ -71,7 +71,7 @@ The native module registry discovers installed manifests directly from the user 
 
 The native module installer validates and extracts zip packages, preserves enabled state on update, updates enabled state, removes modules, and asks the native runtime manager plus the transitional runtime layer to stop a module process before update, disable, or removal.
 
-The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. The native local HTTP host now owns tokenized `process-web` module route proxying and module `public/` asset serving. Executing `process-runtime` commands and several viewer/source internal APIs still use the transitional ExtensionHost until those paths are migrated.
+The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. The native local HTTP host now owns tokenized `process-web` module route proxying, module `public/` asset serving, and on-demand `process-runtime` route execution. Several viewer/source internal APIs still use the transitional ExtensionHost until those paths are migrated.
 
 `LocalServiceHost` is the transitional runtime process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, source registrations, and runtime state are not written inside `/Applications/BabelChrome.app`.
 
@@ -98,7 +98,7 @@ The same host serves token-protected module assets from:
 /module/<module-id>/assets/<path>
 ```
 
-For `process-runtime` modules, the ExtensionHost runs a module-owned command without allocating a port. On-demand commands receive a JSON payload on stdin and can return either plain stdout or JSON stdout. Long-running process-runtime instances are stopped when the module is disabled, removed, updated, or when BabelChrome quits.
+For on-demand `process-runtime` modules, the native runtime manager runs a module-owned command without allocating a port. The command receives a JSON payload on stdin and can return either plain stdout or JSON stdout. JSON stdout can define `statusCode`, `headers`, `contentType`, and `body`, which the native local HTTP host maps to the module route response. Long-running `process-runtime` support remains a transitional/runtime-planning path and is not yet native-owned.
 
 Viewer-backed tabs are represented by stable BabelChrome URLs. External integrations should prefer the generic viewer dispatcher:
 

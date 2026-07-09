@@ -301,7 +301,24 @@ static NSUInteger const kBabelNativeModuleHTTPHostMaximumHeaderBytes = 65536;
 
   NSError* error = nil;
   BabelNativeModuleManifest* module = [moduleRegistry_ moduleWithIdentifier:moduleIdentifier error:&error];
-  if (!module || !module.enabled || ![module.runtimeType isEqualToString:@"process-web"]) {
+  if (!module || !module.enabled) {
+    [self sendStatus:404
+              reason:@"Not Found"
+         contentType:@"text/plain; charset=utf-8"
+                body:[@"Module route not found" dataUsingEncoding:NSUTF8StringEncoding]
+            toSocket:clientSocket];
+    return;
+  }
+
+  if ([module.runtimeType isEqualToString:@"process-runtime"]) {
+    [self executeProcessRuntimeRouteWithModule:module
+                                         route:route
+                                    components:components
+                                      toSocket:clientSocket];
+    return;
+  }
+
+  if (![module.runtimeType isEqualToString:@"process-web"]) {
     [self sendStatus:404
               reason:@"Not Found"
          contentType:@"text/plain; charset=utf-8"
@@ -340,6 +357,53 @@ static NSUInteger const kBabelNativeModuleHTTPHostMaximumHeaderBytes = 65536;
            sourceURL:[self queryValueForName:@"sourceUrl" components:components]
        requestHeaders:headers
              toSocket:clientSocket];
+}
+
+- (void)executeProcessRuntimeRouteWithModule:(BabelNativeModuleManifest*)module
+                                       route:(NSString*)route
+                                  components:(NSURLComponents*)components
+                                    toSocket:(int)clientSocket {
+  NSError* error = nil;
+  NSString* fileTypes = [moduleRegistry_ fileTypeHeaderValueWithError:nil] ?: @"";
+  NSDictionary* response = [runtimeManager_ executeProcessRuntimeForModule:module
+                                                                     route:route
+                                                                 sourceURL:[self queryValueForName:@"sourceUrl" components:components]
+                                                       localServiceBaseURL:[self baseURLString]
+                                                         localServiceToken:token_ ?: @""
+                                                                queryItems:components.queryItems ?: @[]
+                                                                 fileTypes:fileTypes
+                                                                      hook:[self queryValueForName:@"hook" components:components]
+                                                                     error:&error];
+  if (!response) {
+    NSString* message = error.localizedDescription ?: @"Module process-runtime route could not be executed.";
+    [self sendStatus:502
+              reason:@"Bad Gateway"
+         contentType:@"text/plain; charset=utf-8"
+                body:[message dataUsingEncoding:NSUTF8StringEncoding]
+            toSocket:clientSocket];
+    return;
+  }
+
+  NSInteger status = [response[@"statusCode"] isKindOfClass:NSNumber.class] ? [response[@"statusCode"] integerValue] : 200;
+  NSString* contentType = [response[@"contentType"] isKindOfClass:NSString.class]
+      ? response[@"contentType"]
+      : @"application/octet-stream";
+  NSDictionary* headers = [response[@"headers"] isKindOfClass:NSDictionary.class] ? response[@"headers"] : @{};
+  NSData* body = [response[@"body"] isKindOfClass:NSData.class] ? response[@"body"] : [NSData data];
+  NSMutableDictionary<NSString*, NSString*>* responseHeaders = [NSMutableDictionary dictionary];
+  for (id key in headers) {
+    id value = headers[key];
+    if ([key isKindOfClass:NSString.class] && [value isKindOfClass:NSString.class]) {
+      responseHeaders[key] = value;
+    }
+  }
+  responseHeaders[@"Content-Type"] = contentType;
+
+  [self sendStatus:status
+            reason:[self reasonForStatus:status]
+           headers:responseHeaders
+              body:body
+          toSocket:clientSocket];
 }
 
 - (void)serveModuleAssetWithComponents:(NSURLComponents*)components
@@ -548,13 +612,33 @@ static NSUInteger const kBabelNativeModuleHTTPHostMaximumHeaderBytes = 65536;
        contentType:(NSString*)contentType
               body:(NSData*)body
           toSocket:(int)clientSocket {
+  [self sendStatus:status
+            reason:reason
+           headers:@{@"Content-Type" : contentType ?: @"application/octet-stream"}
+              body:body
+          toSocket:clientSocket];
+}
+
+- (void)sendStatus:(NSInteger)status
+            reason:(NSString*)reason
+           headers:(NSDictionary<NSString*, NSString*>*)headers
+              body:(NSData*)body
+          toSocket:(int)clientSocket {
   NSData* responseBody = body ?: [NSData data];
-  NSString* header = [NSString stringWithFormat:
-      @"HTTP/1.1 %ld %@\r\nContent-Type: %@\r\nContent-Length: %lu\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n",
-      static_cast<long>(status),
-      reason ?: @"OK",
-      contentType ?: @"application/octet-stream",
-      static_cast<unsigned long>(responseBody.length)];
+  NSMutableString* header = [NSMutableString stringWithFormat:@"HTTP/1.1 %ld %@\r\n",
+                                                               static_cast<long>(status),
+                                                               reason ?: @"OK"];
+  for (NSString* key in headers ?: @{}) {
+    NSString* value = headers[key];
+    if ([key rangeOfString:@"\r"].location == NSNotFound &&
+        [key rangeOfString:@"\n"].location == NSNotFound &&
+        [value rangeOfString:@"\r"].location == NSNotFound &&
+        [value rangeOfString:@"\n"].location == NSNotFound) {
+      [header appendFormat:@"%@: %@\r\n", key, value];
+    }
+  }
+  [header appendFormat:@"Content-Length: %lu\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n",
+                       static_cast<unsigned long>(responseBody.length)];
   NSMutableData* response = [NSMutableData dataWithData:[header dataUsingEncoding:NSUTF8StringEncoding]];
   [response appendData:responseBody];
 

@@ -42,6 +42,30 @@
                                                    error:(NSError**)error;
 
 /**
+ * Executes one process-runtime module route.
+ *
+ * @param module The installed module manifest.
+ * @param route The requested module route.
+ * @param sourceURL The original source URL forwarded to the module.
+ * @param localServiceBaseURL The native local service base URL.
+ * @param localServiceToken The native local service token.
+ * @param queryItems The request query items.
+ * @param fileTypes The enabled BabelChrome file type handlers.
+ * @param hook The optional lifecycle hook name.
+ * @param error The optional error pointer.
+ * @return The response dictionary, or nil when execution fails.
+ */
+- (NSDictionary*)executeProcessRuntimeForModule:(BabelNativeModuleManifest*)module
+                                          route:(NSString*)route
+                                      sourceURL:(NSString*)sourceURL
+                            localServiceBaseURL:(NSString*)localServiceBaseURL
+                              localServiceToken:(NSString*)localServiceToken
+                                     queryItems:(NSArray<NSURLQueryItem*>*)queryItems
+                                      fileTypes:(NSString*)fileTypes
+                                           hook:(NSString*)hook
+                                          error:(NSError**)error;
+
+/**
  * Stops one module runtime.
  *
  * @param module The installed module manifest.

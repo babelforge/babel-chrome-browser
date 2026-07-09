@@ -102,7 +102,8 @@
   NSError* nativeError = nil;
   BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
                                                                             error:&nativeError];
-  if (module && module.enabled && [module.runtimeType isEqualToString:@"process-web"]) {
+  if (module && module.enabled &&
+      ([module.runtimeType isEqualToString:@"process-web"] || [module.runtimeType isEqualToString:@"process-runtime"])) {
     return [nativeModuleHTTPHost_ moduleURLForIdentifier:moduleIdentifier
                                                    route:route
                                          sourceURLString:sourceURLString
@@ -218,7 +219,8 @@
   NSError* nativeError = nil;
   BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
                                                                             error:&nativeError];
-  if (module && [module.runtimeType isEqualToString:@"process-web"]) {
+  if (module &&
+      ([module.runtimeType isEqualToString:@"process-web"] || [module.runtimeType isEqualToString:@"process-runtime"])) {
     return [nativeProcessRuntimeManager_ runtimeStatusForModule:module];
   }
 
@@ -254,7 +256,8 @@
   NSError* nativeError = nil;
   BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
                                                                             error:&nativeError];
-  if (module && [module.runtimeType isEqualToString:@"process-web"]) {
+  if (module &&
+      ([module.runtimeType isEqualToString:@"process-web"] || [module.runtimeType isEqualToString:@"process-runtime"])) {
     return [nativeProcessRuntimeManager_ stopRuntimeForModule:module error:error];
   }
 

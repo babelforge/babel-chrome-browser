@@ -299,7 +299,7 @@ babelchrome://modules
 From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed. These package and enabled-state mutations are native filesystem operations. BabelChrome stops native `process-web` instances directly before update, disable, or removal, then still asks LocalServiceHost to stop any transitional runtime process while the migration continues.
 The page also displays module-declared `babelchrome://<host>` routes, file type badges, hook badges, installed versions, and a `Settings` action when the module manifest exposes a settings route.
 
-For `process-web` modules, BabelChrome owns native runtime diagnostics, restart, stop, port allocation, command interpolation, environment preparation, readiness waiting, log capture, tokenized route proxying, and tokenized module `public/` asset serving. `process-runtime` command execution still uses the transitional ExtensionHost until the native command dispatcher is introduced.
+For `process-web` modules, BabelChrome owns native runtime diagnostics, restart, stop, port allocation, command interpolation, environment preparation, readiness waiting, log capture, tokenized route proxying, and tokenized module `public/` asset serving. For on-demand `process-runtime` modules, BabelChrome now executes route commands natively, passes a JSON payload on stdin, decodes plain or JSON stdout, and maps the result to the tokenized module route response.
 
 Enabled modules that declare routes can also be opened from this page. `process-web` modules are opened through the native local HTTP host using:
 
@@ -307,7 +307,7 @@ Enabled modules that declare routes can also be opened from this page. `process-
 /module/<module-id>/<route>
 ```
 
-The native app creates the tokenized local URL internally, starts the module runtime if needed, and proxies the request to the current module-owned process port. Remaining non-native runtime paths still use LocalServiceHost during the migration.
+The native app creates the tokenized local URL internally. For `process-web`, it starts the module runtime if needed and proxies the request to the current module-owned process port. For on-demand `process-runtime`, it runs the route command directly and returns the command output as the HTTP response. Remaining non-native runtime paths still use LocalServiceHost during the migration.
 
 Module-declared `babelchrome://<host>` URLs are also resolved natively. For example, the demo module declares `scheme=babelchrome`, `host=demo`, and `handler=index`, so it can be opened with:
 
@@ -344,6 +344,8 @@ Modules can also serve static files from their own `public/` directory through:
 The endpoint is token-protected and rejects paths that resolve outside the module `public/` directory.
 
 Native `process-web` module requests receive equivalent context through HTTP headers, including `X-BabelChrome-Module-Id`, `X-BabelChrome-Module-Route`, `X-BabelChrome-Source-Url`, `X-BabelChrome-Local-Service-Base-Url`, `X-BabelChrome-Local-Service-Token`, `X-BabelChrome-Module-Asset-Base-Url`, `X-BabelChrome-Module-Asset-Token-Query`, and `X-BabelChrome-File-Types`. Stable values that are known before the process starts are also injected into the process environment, including `BABELCHROME_LOCAL_SERVICE_BASE_URL`, `BABELCHROME_LOCAL_SERVICE_TOKEN`, `BABELCHROME_MODULE_ASSET_BASE_URL`, `BABELCHROME_MODULE_ASSET_TOKEN_QUERY`, and `BABELCHROME_FILE_TYPES`.
+
+Native on-demand `process-runtime` commands receive the same core context through their stdin JSON payload and process environment. The stdin payload includes the module id, module name, module version, installed module path, route, hook name when relevant, original source URL, tokenized LocalServiceHost base URL/token for transitional helper APIs, request query parameters, and current `X-BabelChrome-File-Types` value.
 
 The native zip installer validates archives before extraction:
 

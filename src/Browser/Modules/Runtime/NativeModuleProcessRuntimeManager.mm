@@ -1,8 +1,10 @@
 #import "Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h"
 
 #import "Browser/Modules/Registry/NativeModuleManifest.h"
+#import "Browser/Modules/Runtime/NativeModuleProcessRuntimeDefinition.h"
 #import "Browser/Modules/Runtime/NativeModulePortAllocator.h"
 #import "Browser/Modules/Runtime/NativeModuleProcessWebDefinition.h"
+#import "Browser/Modules/Runtime/NativeModuleRuntimeCommand.h"
 #import "Browser/Modules/Runtime/NativeModuleRuntimeStatusProvider.h"
 
 #include <signal.h>
@@ -352,10 +354,106 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   return [self restartProcessWebRuntimeForModule:module additionalEnvironment:additionalEnvironment ?: @{} error:error];
 }
 
+- (NSDictionary*)executeProcessRuntimeForModule:(BabelNativeModuleManifest*)module
+                                          route:(NSString*)route
+                                      sourceURL:(NSString*)sourceURL
+                            localServiceBaseURL:(NSString*)localServiceBaseURL
+                              localServiceToken:(NSString*)localServiceToken
+                                     queryItems:(NSArray<NSURLQueryItem*>*)queryItems
+                                      fileTypes:(NSString*)fileTypes
+                                           hook:(NSString*)hook
+                                          error:(NSError**)error {
+  if (![module.runtimeType isEqualToString:@"process-runtime"] || !module.processRuntime) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Module \"%@\" does not declare a process-runtime runtime.",
+                                                 module.moduleIdentifier ?: @""]];
+    return nil;
+  }
+
+  if (![module.processRuntime.mode isEqualToString:@"on-demand"]) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Module \"%@\" process-runtime mode \"%@\" is not native yet.",
+                                                 module.moduleIdentifier ?: @"",
+                                                 module.processRuntime.mode ?: @""]];
+    return nil;
+  }
+
+  BabelNativeModuleRuntimeCommand* command = [module.processRuntime commandForRoute:route ?: @""];
+  if (!command) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Module \"%@\" process-runtime route \"%@\" does not declare a command.",
+                                                 module.moduleIdentifier ?: @"",
+                                                 route ?: @""]];
+    return nil;
+  }
+
+  NSString* cwd = [self resolvedWorkingDirectoryForModule:module cwd:module.processRuntime.cwd error:error];
+  if (cwd.length == 0) {
+    return nil;
+  }
+
+  NSArray<NSString*>* commandLine = [self resolvedProcessRuntimeCommand:command
+                                                                  module:module
+                                                                   route:route
+                                                               sourceURL:sourceURL
+                                                                    hook:hook];
+  NSDictionary<NSString*, NSString*>* environment = [self resolvedProcessRuntimeEnvironmentForModule:module
+                                                                                               route:route
+                                                                                           sourceURL:sourceURL
+                                                                                 localServiceBaseURL:localServiceBaseURL
+                                                                                   localServiceToken:localServiceToken
+                                                                                           fileTypes:fileTypes
+                                                                                                hook:hook];
+  NSDictionary* payload = [self processRuntimePayloadForModule:module
+                                                         route:route
+                                                     sourceURL:sourceURL
+                                           localServiceBaseURL:localServiceBaseURL
+                                                    queryItems:queryItems
+                                                     fileTypes:fileTypes
+                                                          hook:hook];
+
+  NSDictionary* execution = [self runProcessRuntimeCommandLine:commandLine
+                                                           cwd:cwd
+                                                   environment:environment
+                                                       payload:payload
+                                                     timeoutMs:command.timeoutMs
+                                                         error:error];
+  if (!execution) {
+    return nil;
+  }
+
+  if ([execution[@"timedOut"] boolValue]) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Module \"%@\" process-runtime route \"%@\" timed out.%@",
+                                                 module.moduleIdentifier ?: @"",
+                                                 route ?: @"",
+                                                 [self logsSuffixForExecution:execution]]];
+    return nil;
+  }
+
+  NSInteger exitCode = [execution[@"exitCode"] isKindOfClass:NSNumber.class] ? [execution[@"exitCode"] integerValue] : -1;
+  if (exitCode != 0) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Module \"%@\" process-runtime route \"%@\" failed with exit code %ld.%@",
+                                                 module.moduleIdentifier ?: @"",
+                                                 route ?: @"",
+                                                 static_cast<long>(exitCode),
+                                                 [self logsSuffixForExecution:execution]]];
+    return nil;
+  }
+
+  NSString* stdoutText = [execution[@"stdout"] isKindOfClass:NSString.class] ? execution[@"stdout"] : @"";
+  return [self responseFromProcessRuntimeStdout:stdoutText];
+}
+
 - (NSDictionary*)stopRuntimeForModule:(BabelNativeModuleManifest*)module
                                 error:(NSError**)error {
   if ([module.runtimeType isEqualToString:@"process-web"]) {
     [self stopRuntimeForModuleIdentifier:module.moduleIdentifier];
+    return [statusProvider_ runtimeStatusForModule:module];
+  }
+
+  if ([module.runtimeType isEqualToString:@"process-runtime"]) {
     return [statusProvider_ runtimeStatusForModule:module];
   }
 
@@ -460,6 +558,280 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   return environment;
 }
 
+- (NSArray<NSString*>*)resolvedProcessRuntimeCommand:(BabelNativeModuleRuntimeCommand*)command
+                                               module:(BabelNativeModuleManifest*)module
+                                                route:(NSString*)route
+                                            sourceURL:(NSString*)sourceURL
+                                                 hook:(NSString*)hook {
+  NSMutableArray<NSString*>* commandLine = [NSMutableArray array];
+  for (NSString* item in [command commandLine]) {
+    [commandLine addObject:[self interpolate:item
+                                      module:module
+                                       route:route
+                                   sourceURL:sourceURL
+                                        hook:hook]];
+  }
+
+  return commandLine;
+}
+
+- (NSDictionary<NSString*, NSString*>*)resolvedProcessRuntimeEnvironmentForModule:(BabelNativeModuleManifest*)module
+                                                                            route:(NSString*)route
+                                                                        sourceURL:(NSString*)sourceURL
+                                                              localServiceBaseURL:(NSString*)localServiceBaseURL
+                                                                localServiceToken:(NSString*)localServiceToken
+                                                                        fileTypes:(NSString*)fileTypes
+                                                                             hook:(NSString*)hook {
+  NSMutableDictionary<NSString*, NSString*>* environment = [NSMutableDictionary dictionary];
+  NSDictionary<NSString*, NSString*>* currentEnvironment = NSProcessInfo.processInfo.environment;
+  for (NSString* key in @[ @"PATH", @"HOME", @"TMPDIR", @"TMP", @"TEMP", @"SHELL" ]) {
+    NSString* value = currentEnvironment[key];
+    if (value.length > 0) {
+      environment[key] = value;
+    }
+  }
+
+  for (NSString* key in module.processRuntime.env ?: @{}) {
+    environment[key] = [self interpolate:module.processRuntime.env[key]
+                                  module:module
+                                   route:route
+                               sourceURL:sourceURL
+                                    hook:hook];
+  }
+
+  environment[@"BABELCHROME_MODULE_ID"] = module.moduleIdentifier ?: @"";
+  environment[@"BABELCHROME_MODULE_NAME"] = module.name ?: @"";
+  environment[@"BABELCHROME_MODULE_VERSION"] = module.version ?: @"";
+  environment[@"BABELCHROME_MODULE_DIR"] = module.path ?: @"";
+  environment[@"BABELCHROME_MODULE_ROUTE"] = route ?: @"";
+  environment[@"BABELCHROME_HOOK"] = hook ?: @"";
+  environment[@"BABELCHROME_SOURCE_URL"] = sourceURL ?: @"";
+  environment[@"BABELCHROME_FILE_TYPES"] = fileTypes ?: @"";
+  environment[@"BABELCHROME_LOCAL_SERVICE_BASE_URL"] = localServiceBaseURL ?: @"";
+  environment[@"BABELCHROME_LOCAL_SERVICE_TOKEN"] = localServiceToken ?: @"";
+
+  return environment;
+}
+
+- (NSDictionary*)processRuntimePayloadForModule:(BabelNativeModuleManifest*)module
+                                          route:(NSString*)route
+                                      sourceURL:(NSString*)sourceURL
+                            localServiceBaseURL:(NSString*)localServiceBaseURL
+                                     queryItems:(NSArray<NSURLQueryItem*>*)queryItems
+                                      fileTypes:(NSString*)fileTypes
+                                           hook:(NSString*)hook {
+  return @{
+    @"module" : @{
+      @"id" : module.moduleIdentifier ?: @"",
+      @"name" : module.name ?: @"",
+      @"version" : module.version ?: @"",
+      @"path" : module.path ?: @""
+    },
+    @"route" : route ?: @"",
+    @"hook" : hook ?: @"",
+    @"sourceUrl" : sourceURL ?: @"",
+    @"localServiceBaseUrl" : localServiceBaseURL ?: @"",
+    @"query" : [self queryDictionaryFromItems:queryItems],
+    @"fileTypes" : fileTypes ?: @""
+  };
+}
+
+- (NSDictionary<NSString*, NSString*>*)queryDictionaryFromItems:(NSArray<NSURLQueryItem*>*)queryItems {
+  NSMutableDictionary<NSString*, NSString*>* query = [NSMutableDictionary dictionary];
+  for (NSURLQueryItem* item in queryItems ?: @[]) {
+    if (item.name.length == 0 || [item.name isEqualToString:@"token"]) {
+      continue;
+    }
+    query[item.name] = item.value ?: @"";
+  }
+
+  return query;
+}
+
+- (NSDictionary*)runProcessRuntimeCommandLine:(NSArray<NSString*>*)commandLine
+                                          cwd:(NSString*)cwd
+                                  environment:(NSDictionary<NSString*, NSString*>*)environment
+                                      payload:(NSDictionary*)payload
+                                    timeoutMs:(NSInteger)timeoutMs
+                                        error:(NSError**)error {
+  if (commandLine.count == 0) {
+    [self assignError:error description:@"Process-runtime command is empty."];
+    return nil;
+  }
+
+  NSData* payloadData = [NSJSONSerialization dataWithJSONObject:payload ?: @{}
+                                                       options:0
+                                                         error:error];
+  if (!payloadData) {
+    return nil;
+  }
+
+  NSTask* task = [[NSTask alloc] init];
+  task.executableURL = [NSURL fileURLWithPath:@"/usr/bin/env"];
+  task.arguments = commandLine;
+  task.currentDirectoryURL = [NSURL fileURLWithPath:cwd isDirectory:YES];
+  task.environment = environment;
+
+  NSPipe* stdinPipe = [NSPipe pipe];
+  NSPipe* stdoutPipe = [NSPipe pipe];
+  NSPipe* stderrPipe = [NSPipe pipe];
+  task.standardInput = stdinPipe;
+  task.standardOutput = stdoutPipe;
+  task.standardError = stderrPipe;
+
+  NSMutableData* stdoutData = [NSMutableData data];
+  NSMutableData* stderrData = [NSMutableData data];
+  stdoutPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle* handle) {
+    NSData* data = handle.availableData;
+    if (data.length == 0) {
+      handle.readabilityHandler = nil;
+      return;
+    }
+    @synchronized(stdoutData) {
+      [stdoutData appendData:data];
+    }
+  };
+  stderrPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle* handle) {
+    NSData* data = handle.availableData;
+    if (data.length == 0) {
+      handle.readabilityHandler = nil;
+      return;
+    }
+    @synchronized(stderrData) {
+      [stderrData appendData:data];
+    }
+  };
+
+  dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+  task.terminationHandler = ^(NSTask* finishedTask) {
+    (void)finishedTask;
+    dispatch_semaphore_signal(semaphore);
+  };
+
+  NSError* launchError = nil;
+  if (![task launchAndReturnError:&launchError]) {
+    stdoutPipe.fileHandleForReading.readabilityHandler = nil;
+    stderrPipe.fileHandleForReading.readabilityHandler = nil;
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Process-runtime command could not be started: %@",
+                                                 launchError.localizedDescription ?: @"unknown error"]];
+    return nil;
+  }
+
+  [stdinPipe.fileHandleForWriting writeData:payloadData];
+  [stdinPipe.fileHandleForWriting closeFile];
+
+  NSInteger timeout = timeoutMs > 0 ? timeoutMs : 10000;
+  dispatch_time_t deadline = dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(timeout) * NSEC_PER_MSEC);
+  BOOL timedOut = dispatch_semaphore_wait(semaphore, deadline) != 0;
+  if (timedOut) {
+    [task terminate];
+    NSDate* killDeadline = [NSDate dateWithTimeIntervalSinceNow:1.0];
+    while (task.running && [killDeadline timeIntervalSinceNow] > 0) {
+      usleep(20000);
+    }
+    if (task.running) {
+      kill(task.processIdentifier, SIGKILL);
+    }
+  }
+
+  [task waitUntilExit];
+  stdoutPipe.fileHandleForReading.readabilityHandler = nil;
+  stderrPipe.fileHandleForReading.readabilityHandler = nil;
+
+  NSString* stdoutText = [[NSString alloc] initWithData:stdoutData encoding:NSUTF8StringEncoding] ?: @"";
+  NSString* stderrText = [[NSString alloc] initWithData:stderrData encoding:NSUTF8StringEncoding] ?: @"";
+  return @{
+    @"exitCode" : @(task.terminationStatus),
+    @"stdout" : stdoutText,
+    @"stderr" : stderrText,
+    @"timedOut" : @(timedOut)
+  };
+}
+
+- (NSDictionary*)responseFromProcessRuntimeStdout:(NSString*)stdoutText {
+  NSString* trimmed = [stdoutText stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  if (trimmed.length == 0) {
+    return @{
+      @"statusCode" : @204,
+      @"headers" : @{},
+      @"contentType" : @"text/plain; charset=utf-8",
+      @"body" : [NSData data]
+    };
+  }
+
+  NSData* jsonData = [trimmed dataUsingEncoding:NSUTF8StringEncoding];
+  id decoded = jsonData ? [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil] : nil;
+  if ([decoded isKindOfClass:NSDictionary.class]) {
+    return [self responseFromProcessRuntimeJSONOutput:decoded];
+  }
+
+  return @{
+    @"statusCode" : @200,
+    @"headers" : @{},
+    @"contentType" : @"text/plain; charset=utf-8",
+    @"body" : [stdoutText dataUsingEncoding:NSUTF8StringEncoding] ?: [NSData data]
+  };
+}
+
+- (NSDictionary*)responseFromProcessRuntimeJSONOutput:(NSDictionary*)output {
+  NSNumber* declaredStatus = [output[@"statusCode"] isKindOfClass:NSNumber.class] ? output[@"statusCode"] : @200;
+  NSMutableDictionary<NSString*, NSString*>* headers = [NSMutableDictionary dictionary];
+  NSDictionary* declaredHeaders = [output[@"headers"] isKindOfClass:NSDictionary.class] ? output[@"headers"] : @{};
+  for (id key in declaredHeaders) {
+    id value = declaredHeaders[key];
+    if ([key isKindOfClass:NSString.class] && [value isKindOfClass:NSString.class]) {
+      headers[key] = value;
+    }
+  }
+
+  NSString* contentType = [output[@"contentType"] isKindOfClass:NSString.class] ? output[@"contentType"] : @"";
+  id body = output[@"body"] ?: output;
+  NSData* bodyData = nil;
+  if ([body isKindOfClass:NSString.class]) {
+    bodyData = [body dataUsingEncoding:NSUTF8StringEncoding];
+    if (contentType.length == 0) {
+      contentType = headers[@"Content-Type"] ?: @"text/plain; charset=utf-8";
+    }
+  } else if ([NSJSONSerialization isValidJSONObject:body]) {
+    bodyData = [NSJSONSerialization dataWithJSONObject:body options:0 error:nil];
+    if (contentType.length == 0) {
+      contentType = headers[@"Content-Type"] ?: @"application/json; charset=utf-8";
+    }
+  }
+
+  if (!bodyData) {
+    bodyData = [NSData data];
+  }
+  if (contentType.length == 0) {
+    contentType = @"application/octet-stream";
+  }
+
+  [headers removeObjectForKey:@"Content-Type"];
+  return @{
+    @"statusCode" : declaredStatus,
+    @"headers" : headers,
+    @"contentType" : contentType,
+    @"body" : bodyData
+  };
+}
+
+- (NSString*)logsSuffixForExecution:(NSDictionary*)execution {
+  NSMutableArray<NSString*>* parts = [NSMutableArray array];
+  NSString* stdoutText = [execution[@"stdout"] isKindOfClass:NSString.class] ? execution[@"stdout"] : @"";
+  NSString* stderrText = [execution[@"stderr"] isKindOfClass:NSString.class] ? execution[@"stderr"] : @"";
+  NSString* trimmedStdout = [stdoutText stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  NSString* trimmedStderr = [stderrText stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  if (trimmedStdout.length > 0) {
+    [parts addObject:[@"stdout: " stringByAppendingString:trimmedStdout]];
+  }
+  if (trimmedStderr.length > 0) {
+    [parts addObject:[@"stderr: " stringByAppendingString:trimmedStderr]];
+  }
+
+  return parts.count == 0 ? @"" : [@"\nProcess log:\n" stringByAppendingString:[parts componentsJoinedByString:@"\n"]];
+}
+
 - (NSDictionary*)processWebStatusForInstance:(BabelNativeModuleProcessWebInstance*)instance {
   BOOL running = [instance isRunning];
   return @{
@@ -543,6 +915,27 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     @"{{ port }}" : [NSString stringWithFormat:@"%ld", static_cast<long>(port)],
     @"{{ moduleId }}" : module.moduleIdentifier ?: @"",
     @"{{ moduleDir }}" : module.path ?: @""
+  };
+
+  NSString* interpolated = value ?: @"";
+  for (NSString* token in replacements) {
+    interpolated = [interpolated stringByReplacingOccurrencesOfString:token withString:replacements[token]];
+  }
+
+  return interpolated;
+}
+
+- (NSString*)interpolate:(NSString*)value
+                  module:(BabelNativeModuleManifest*)module
+                   route:(NSString*)route
+               sourceURL:(NSString*)sourceURL
+                    hook:(NSString*)hook {
+  NSDictionary<NSString*, NSString*>* replacements = @{
+    @"{{ moduleId }}" : module.moduleIdentifier ?: @"",
+    @"{{ moduleDir }}" : module.path ?: @"",
+    @"{{ route }}" : route ?: @"",
+    @"{{ hook }}" : hook ?: @"",
+    @"{{ sourceUrl }}" : sourceURL ?: @""
   };
 
   NSString* interpolated = value ?: @"";
