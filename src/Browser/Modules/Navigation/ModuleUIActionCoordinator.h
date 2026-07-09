@@ -54,6 +54,14 @@
 - (BOOL)setupModuleWithIdentifier:(NSString*)moduleIdentifier;
 
 /**
+ * Confirms and restarts a module runtime when supported.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @return YES when the runtime restart request completed.
+ */
+- (BOOL)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier;
+
+/**
  * Prompts for the module update URL.
  */
 - (void)configureModuleUpdateURLFromPrompt;

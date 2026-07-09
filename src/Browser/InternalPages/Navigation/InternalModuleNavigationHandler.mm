@@ -104,6 +104,15 @@ NSString* const BabelInternalModuleNavigationDestinationOpenModule = @"open-modu
                           route:nil];
   }
 
+  if ([action.name isEqualToString:BabelInternalNavigationActionRestartRuntime]) {
+    [moduleUIActionCoordinator_ restartRuntimeForModuleWithIdentifier:action.value];
+    return [BabelInternalModuleNavigationResult
+        resultWithDestination:BabelInternalModuleNavigationDestinationDetails
+        capabilitiesDidChange:NO
+              moduleIdentifier:action.value
+                          route:nil];
+  }
+
   if ([action.name isEqualToString:BabelInternalNavigationActionModuleDetails]) {
     return [BabelInternalModuleNavigationResult
         resultWithDestination:BabelInternalModuleNavigationDestinationDetails

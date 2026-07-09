@@ -65,6 +65,9 @@ final class ViewerControllerTest extends TestCase
      */
     protected function tearDown(): void
     {
+        new ModuleProcessRuntime()->stopAll();
+        new ModuleProcessWebRuntime()->stopAll();
+
         putenv('BABELCHROME_VIEWER_STATE_DIR');
         putenv('BABELCHROME_VIEWER_TOKEN');
 
@@ -204,6 +207,65 @@ final class ViewerControllerTest extends TestCase
         self::assertIsString($stdout);
         self::assertStringContainsString('setup-output', $stdout);
         self::assertSame('ready', $readinessStatus['state'] ?? null);
+    }
+
+    /**
+     * Ensures module rows include runtime diagnostics.
+     */
+    public function testInternalModulesIncludesRuntimeStatus(): void
+    {
+        $response = $this->controller()->internalModules(Request::create('/internal/modules', 'GET', [
+            'token' => 'test-token',
+        ]));
+
+        $decoded = json_decode($this->responseContent($response), true);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertIsArray($decoded);
+        self::assertIsArray($decoded['modules'] ?? null);
+
+        $firstModule = $decoded['modules'][0] ?? null;
+        self::assertIsArray($firstModule);
+        self::assertIsArray($firstModule['runtimeStatus'] ?? null);
+        self::assertArrayHasKey('state', $firstModule['runtimeStatus']);
+    }
+
+    /**
+     * Ensures a process-web runtime can be restarted from the internal endpoint.
+     */
+    public function testInternalModulesRuntimeRestartStartsProcessWebModule(): void
+    {
+        $this->writeProcessWebModule();
+        $controller = $this->controller();
+
+        $statusResponse = $controller->internalModulesRuntimeStatus(Request::create('/internal/modules/runtime-status', 'GET', [
+            'token' => 'test-token',
+            'moduleId' => 'vendor.process-web-module',
+        ]));
+        $statusPayload = json_decode($this->responseContent($statusResponse), true);
+
+        self::assertSame(Response::HTTP_OK, $statusResponse->getStatusCode());
+        self::assertIsArray($statusPayload);
+        $statusRuntimeStatus = $statusPayload['runtimeStatus'] ?? null;
+        self::assertIsArray($statusRuntimeStatus);
+        self::assertSame('stopped', $statusRuntimeStatus['state'] ?? null);
+
+        $restartResponse = $controller->internalModulesRuntimeRestart(Request::create('/internal/modules/runtime-restart', 'GET', [
+            'token' => 'test-token',
+            'moduleId' => 'vendor.process-web-module',
+        ]));
+        $restartPayload = json_decode($this->responseContent($restartResponse), true);
+
+        self::assertSame(Response::HTTP_OK, $restartResponse->getStatusCode());
+        self::assertIsArray($restartPayload);
+        self::assertTrue($restartPayload['ok'] ?? false);
+        $restartRuntimeStatus = $restartPayload['runtimeStatus'] ?? null;
+        self::assertIsArray($restartRuntimeStatus);
+        self::assertSame('running', $restartRuntimeStatus['state'] ?? null);
+        self::assertTrue($restartRuntimeStatus['running'] ?? false);
+        self::assertIsInt($restartRuntimeStatus['port'] ?? null);
+        self::assertIsString($restartRuntimeStatus['baseUrl'] ?? null);
+        self::assertStringStartsWith('http://127.0.0.1:', $restartRuntimeStatus['baseUrl']);
     }
 
     /**
@@ -635,6 +697,8 @@ final class ViewerControllerTest extends TestCase
     private function controller(): ViewerController
     {
         $registry = new SourceRegistry();
+        $processRuntime = new ModuleProcessRuntime();
+        $processWebRuntime = new ModuleProcessWebRuntime();
 
         return new ViewerController(
             new SourceLoader($registry),
@@ -648,16 +712,16 @@ final class ViewerControllerTest extends TestCase
             new ModuleRouteDispatcher(
                 $moduleRegistry,
                 new ModuleRuntimeDispatcher(
-                    new ProcessRuntimeHandler(new ModuleProcessRuntime()),
-                    new ProcessWebRuntimeHandler(new ModuleProcessWebRuntime()),
+                    new ProcessRuntimeHandler($processRuntime),
+                    new ProcessWebRuntimeHandler($processWebRuntime),
                     new PhpWebRuntimeHandler(new ModuleWebRuntime()),
                     new StaticWebRuntimeHandler(),
                     new PhpClassRuntimeHandler($moduleAutoloadRegistrar),
                 ),
             ),
             new ModuleUrlResolver($moduleRegistry),
-            new ModuleProcessRuntime(),
-            new ModuleProcessWebRuntime(),
+            $processRuntime,
+            $processWebRuntime,
             new OpenWithService(),
             new Environment(new FilesystemLoader(dirname(__DIR__, 2).'/templates')),
         );
@@ -789,6 +853,46 @@ final class ViewerControllerTest extends TestCase
                 'command' => escapeshellarg(PHP_BINARY).' -r '.escapeshellarg('echo "setup-output";'),
             ],
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
+
+    /**
+     * Writes a minimal process-web module used for runtime diagnostics.
+     */
+    private function writeProcessWebModule(): void
+    {
+        $moduleDirectory = $this->stateDirectory.'/Modules/vendor.process-web-module';
+        if (!mkdir($moduleDirectory.'/public', 0o775, true) && !is_dir($moduleDirectory.'/public')) {
+            self::fail('Unable to create process-web module directory.');
+        }
+
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.process-web-module',
+            'name' => 'Process Web Module',
+            'version' => '1.0.0',
+            'enabled' => true,
+            'runtime' => [
+                'type' => 'process-web',
+                'command' => PHP_BINARY,
+                'args' => [
+                    '-S',
+                    '127.0.0.1:{{ port }}',
+                    '-t',
+                    'public',
+                ],
+                'cwd' => '.',
+                'readyUrl' => 'http://127.0.0.1:{{ port }}/health',
+                'timeoutMs' => 5000,
+            ],
+            'routes' => [
+                [
+                    'scheme' => 'babelchrome',
+                    'host' => 'process-web-test',
+                    'handler' => 'index',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        file_put_contents($moduleDirectory.'/public/health', 'ok');
+        file_put_contents($moduleDirectory.'/public/index', 'process-web-ok');
     }
 
     /**

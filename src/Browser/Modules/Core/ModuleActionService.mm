@@ -116,4 +116,12 @@
   return [BabelLocalServiceHost.sharedHost setupModuleWithIdentifier:moduleIdentifier error:error];
 }
 
+- (NSDictionary*)runtimeStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  return [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier error:error];
+}
+
+- (NSDictionary*)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  return [BabelLocalServiceHost.sharedHost restartRuntimeForModuleWithIdentifier:moduleIdentifier error:error];
+}
+
 @end

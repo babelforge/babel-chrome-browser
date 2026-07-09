@@ -17,6 +17,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleSetupRunner;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleUrlResolver;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessRuntime;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessWebRuntime;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
 use BabelForge\BabelChrome\LocalViewer\Service\OpenWithService;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceLoader;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceRegistry;
@@ -100,6 +101,76 @@ final readonly class ViewerController
             'setup' => $setupResult,
             'readinessStatus' => $this->moduleReadinessChecker->status($module),
         ]);
+    }
+
+    /**
+     * Returns runtime diagnostics for one installed module.
+     *
+     * @param Request $request the current request
+     *
+     * @return JsonResponse the runtime status response
+     */
+    #[Route('/internal/modules/runtime-status', name: 'internal_modules_runtime_status', methods: ['GET'])]
+    public function internalModulesRuntimeStatus(Request $request): JsonResponse
+    {
+        if (!$this->hasValidToken($request)) {
+            return new JsonResponse(['error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $moduleId = $this->queryString($request, 'moduleId');
+        $module = $this->moduleRegistry->find($moduleId);
+        if (null === $module) {
+            return new JsonResponse(['ok' => false, 'error' => 'Module not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return new JsonResponse([
+            'ok' => true,
+            'moduleId' => $module->id,
+            'runtimeStatus' => $this->runtimeStatus($module),
+        ]);
+    }
+
+    /**
+     * Restarts one module runtime when the runtime supports explicit restart.
+     *
+     * @param Request $request the current request
+     *
+     * @return JsonResponse the restart response
+     */
+    #[Route('/internal/modules/runtime-restart', name: 'internal_modules_runtime_restart', methods: ['GET'])]
+    public function internalModulesRuntimeRestart(Request $request): JsonResponse
+    {
+        if (!$this->hasValidToken($request)) {
+            return new JsonResponse(['error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $moduleId = $this->queryString($request, 'moduleId');
+        $module = $this->moduleRegistry->find($moduleId);
+        if (null === $module) {
+            return new JsonResponse(['ok' => false, 'error' => 'Module not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (!ModuleRuntimeType::isProcessWeb($module->runtimeType)) {
+            return new JsonResponse([
+                'ok' => false,
+                'error' => sprintf('Runtime "%s" does not support explicit restart.', $module->runtimeType),
+                'runtimeStatus' => $this->runtimeStatus($module),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        try {
+            return new JsonResponse([
+                'ok' => true,
+                'moduleId' => $module->id,
+                'runtimeStatus' => $this->moduleProcessWebRuntime->restart($module),
+            ]);
+        } catch (ModuleDispatchException $exception) {
+            return new JsonResponse([
+                'ok' => false,
+                'error' => $exception->getMessage(),
+                'runtimeStatus' => $this->runtimeStatus($module),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
     }
 
     /**
@@ -583,10 +654,37 @@ final readonly class ViewerController
         foreach ($this->moduleRegistry->all() as $module) {
             $row = $module->toArray();
             $row['readinessStatus'] = $this->moduleReadinessChecker->status($module);
+            $row['runtimeStatus'] = $this->runtimeStatus($module);
             $rows[] = $row;
         }
 
         return $rows;
+    }
+
+    /**
+     * Returns runtime diagnostics for one module without starting a stopped runtime.
+     *
+     * @param ModuleManifest $module the module manifest
+     *
+     * @return array<string, mixed> the runtime status
+     */
+    private function runtimeStatus(ModuleManifest $module): array
+    {
+        if (ModuleRuntimeType::isProcessWeb($module->runtimeType)) {
+            return $this->moduleProcessWebRuntime->status($module);
+        }
+
+        if (ModuleRuntimeType::isProcessRuntime($module->runtimeType)) {
+            return $this->moduleProcessRuntime->status($module);
+        }
+
+        return [
+            'kind' => $module->runtimeType,
+            'state' => 'managed-by-host',
+            'running' => null,
+            'restartable' => false,
+            'logs' => '',
+        ];
     }
 
     /**

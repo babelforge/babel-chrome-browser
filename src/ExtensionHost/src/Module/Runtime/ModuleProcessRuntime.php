@@ -74,6 +74,43 @@ final class ModuleProcessRuntime
     }
 
     /**
+     * Returns the current process-runtime status for one module.
+     *
+     * @param ModuleManifest $module the module manifest
+     *
+     * @return array<string, mixed> the runtime status
+     */
+    public function status(ModuleManifest $module): array
+    {
+        $definition = $module->processRuntime;
+        if (!$definition instanceof ModuleProcessRuntimeDefinition) {
+            return [
+                'kind' => 'process-runtime',
+                'state' => 'unavailable',
+                'running' => false,
+                'restartable' => false,
+                'messages' => ['Module does not declare a process-runtime definition.'],
+            ];
+        }
+
+        $instance = self::$instances[$module->id] ?? null;
+        $running = null !== $instance && $instance->isRunning();
+        $command = null === $instance ? array_merge([$definition->command->command], $definition->command->args) : $instance->command;
+        $cwd = null === $instance ? $definition->cwd : $instance->cwd;
+
+        return [
+            'kind' => 'process-runtime',
+            'mode' => $definition->mode,
+            'state' => null === $instance ? 'idle' : ($running ? 'running' : 'exited'),
+            'running' => $running,
+            'restartable' => false,
+            'command' => $command,
+            'cwd' => $cwd,
+            'logs' => $instance?->logs() ?? '',
+        ];
+    }
+
+    /**
      * Dispatches an on-demand process request.
      *
      * @param ModuleManifest                 $module     the module manifest

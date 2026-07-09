@@ -66,6 +66,61 @@ final class ModuleProcessWebRuntime
     }
 
     /**
+     * Returns the current process-web runtime status for one module.
+     *
+     * @param ModuleManifest $module the module manifest
+     *
+     * @return array<string, mixed> the runtime status
+     */
+    public function status(ModuleManifest $module): array
+    {
+        $definition = $module->processWeb;
+        $instance = self::$instances[$module->id] ?? null;
+        if (!$definition instanceof ModuleProcessWebDefinition) {
+            return [
+                'kind' => 'process-web',
+                'state' => 'unavailable',
+                'running' => false,
+                'restartable' => false,
+                'messages' => ['Module does not declare a process-web runtime.'],
+            ];
+        }
+
+        if (null === $instance) {
+            return [
+                'kind' => 'process-web',
+                'state' => 'stopped',
+                'running' => false,
+                'restartable' => true,
+                'command' => array_merge([$definition->command], $definition->args),
+                'cwd' => $definition->cwd,
+                'readyUrl' => $definition->readyUrl,
+                'logs' => '',
+            ];
+        }
+
+        return $this->instanceStatus($instance);
+    }
+
+    /**
+     * Restarts one process-web module and returns its new status.
+     *
+     * @param ModuleManifest $module the module manifest
+     *
+     * @return array<string, mixed> the runtime status
+     *
+     * @throws ModuleDispatchException when the process cannot be started
+     */
+    public function restart(ModuleManifest $module): array
+    {
+        $this->stopModule($module->id);
+        $instance = $this->start($module);
+        self::$instances[$module->id] = $instance;
+
+        return $this->instanceStatus($instance);
+    }
+
+    /**
      * Returns a running instance, starting or restarting it when needed.
      *
      * @param ModuleManifest $module the module manifest
@@ -90,6 +145,31 @@ final class ModuleProcessWebRuntime
         self::$instances[$module->id] = $instance;
 
         return $instance;
+    }
+
+    /**
+     * Builds a status payload for one running or exited process-web instance.
+     *
+     * @param ModuleProcessWebInstance $instance the process-web instance
+     *
+     * @return array<string, mixed> the runtime status
+     */
+    private function instanceStatus(ModuleProcessWebInstance $instance): array
+    {
+        $running = $instance->isRunning();
+
+        return [
+            'kind' => 'process-web',
+            'state' => $running ? 'running' : 'exited',
+            'running' => $running,
+            'restartable' => true,
+            'port' => $instance->port,
+            'baseUrl' => $instance->baseUrl,
+            'command' => $instance->command,
+            'cwd' => $instance->cwd,
+            'readyUrl' => $instance->readyUrl,
+            'logs' => $instance->logs(),
+        ];
     }
 
     /**

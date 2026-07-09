@@ -166,6 +166,24 @@
  */
 - (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
 
+/**
+ * Returns runtime diagnostics for one installed module.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error Receives request or diagnostic errors.
+ * @return A decoded JSON dictionary, otherwise nil.
+ */
+- (NSDictionary*)runtimeStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
+
+/**
+ * Restarts one module runtime when supported.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error Receives request or restart errors.
+ * @return A decoded JSON dictionary, otherwise nil.
+ */
+- (NSDictionary*)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
+
 @end
 
 #endif

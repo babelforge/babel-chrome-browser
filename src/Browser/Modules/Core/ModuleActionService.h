@@ -79,6 +79,24 @@
  */
 - (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
 
+/**
+ * Returns runtime diagnostics for one installed module.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error The optional error pointer.
+ * @return The runtime status response, or nil on failure.
+ */
+- (NSDictionary*)runtimeStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
+
+/**
+ * Restarts one module runtime when supported.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error The optional error pointer.
+ * @return The restart response, or nil on failure.
+ */
+- (NSDictionary*)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
+
 @end
 
 #endif

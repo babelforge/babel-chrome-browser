@@ -117,6 +117,35 @@
   return YES;
 }
 
+- (BOOL)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier {
+  NSAlert* confirmation = [[NSAlert alloc] init];
+  confirmation.messageText = @"Restart Module Runtime";
+  confirmation.informativeText =
+      [NSString stringWithFormat:@"Restart runtime for module \"%@\"?", moduleIdentifier ?: @""];
+  [confirmation addButtonWithTitle:@"Restart Runtime"];
+  [confirmation addButtonWithTitle:@"Cancel"];
+  confirmation.alertStyle = NSAlertStyleInformational;
+  if ([confirmation runModal] != NSAlertFirstButtonReturn) {
+    return NO;
+  }
+
+  NSError* error = nil;
+  NSDictionary* response =
+      [moduleActionService_ restartRuntimeForModuleWithIdentifier:moduleIdentifier error:&error];
+  if (!response || ![response[@"ok"] boolValue]) {
+    NSString* message = [response[@"error"] isKindOfClass:NSString.class]
+        ? response[@"error"]
+        : error.localizedDescription ?: @"The runtime restart failed.";
+    [self showModuleActionAlertWithError:
+        [NSError errorWithDomain:@"fr.babelforge.babel-chrome.modules"
+                            code:3
+                        userInfo:@{NSLocalizedDescriptionKey : message}]];
+    return NO;
+  }
+
+  return YES;
+}
+
 - (void)configureModuleUpdateURLFromPrompt {
   NSAlert* alert = [[NSAlert alloc] init];
   alert.messageText = @"Module Update URL";

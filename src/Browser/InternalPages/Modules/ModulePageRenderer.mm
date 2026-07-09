@@ -144,6 +144,7 @@
   NSString* moduleName = [selectedModule[@"name"] isKindOfClass:NSString.class] ? selectedModule[@"name"] : moduleIdentifier;
   NSString* moduleVersion = [selectedModule[@"version"] isKindOfClass:NSString.class] ? selectedModule[@"version"] : @"";
   NSString* moduleType = [selectedModule[@"type"] isKindOfClass:NSString.class] ? selectedModule[@"type"] : @"";
+  NSString* runtimeType = [selectedModule[@"runtimeType"] isKindOfClass:NSString.class] ? selectedModule[@"runtimeType"] : @"";
   NSString* moduleDescription =
       [selectedModule[@"description"] isKindOfClass:NSString.class] ? selectedModule[@"description"] : @"";
   BOOL enabled = [selectedModule[@"enabled"] boolValue];
@@ -159,6 +160,9 @@
       ? selectedModule[@"readinessStatus"]
       : @{};
   NSDictionary* setup = [selectedModule[@"setup"] isKindOfClass:NSDictionary.class] ? selectedModule[@"setup"] : nil;
+  NSDictionary* runtimeStatus = [selectedModule[@"runtimeStatus"] isKindOfClass:NSDictionary.class]
+      ? selectedModule[@"runtimeStatus"]
+      : @{};
   NSString* readinessState = [readinessStatus[@"state"] isKindOfClass:NSString.class]
       ? readinessStatus[@"state"]
       : @"unknown";
@@ -182,6 +186,8 @@
   NSString* readinessDetailsHTML = readinessMessagesHTML.length > 0
       ? [NSString stringWithFormat:@"<section><h2>Readiness Details</h2><ul>%@</ul></section>", readinessMessagesHTML]
       : @"";
+  NSString* runtimeDiagnosticsHTML = [self runtimeDiagnosticsHTML:runtimeStatus
+                                                 moduleIdentifier:moduleIdentifier ?: @""];
 
   NSMutableString* routesHTML = [NSMutableString string];
   for (NSDictionary* route in routes) {
@@ -232,6 +238,7 @@
        "<dt>Identifier</dt><dd><code>%@</code></dd>"
        "<dt>Version</dt><dd>%@</dd>"
        "<dt>Type</dt><dd>%@</dd>"
+       "<dt>Runtime</dt><dd><code>%@</code></dd>"
        "<dt>Status</dt><dd>%@</dd>"
        "<dt>Readiness</dt><dd>%@</dd>"
        "<dt>PHP</dt><dd><code>%@</code></dd>"
@@ -239,6 +246,7 @@
        "</dl>"
        "%@"
        "</section>"
+       "%@"
        "%@"
        "<section><h2>Routes</h2><ul>%@</ul></section>"
        "<section><h2>Capabilities</h2><div class='routeList'>%@</div></section>"
@@ -248,14 +256,90 @@
       [self htmlEscapedString:moduleIdentifier ?: @""],
       [self htmlEscapedString:moduleVersion],
       [self htmlEscapedString:moduleType],
+      [self htmlEscapedString:runtimeType],
       enabled ? @"Enabled" : @"Disabled",
       [self htmlEscapedString:readinessState],
       [self htmlEscapedString:phpRequirement],
       hasIsolatedVendor ? @"Own vendor" : @"No module vendor",
       setupActionHTML,
       readinessDetailsHTML,
+      runtimeDiagnosticsHTML,
       routesHTML.length > 0 ? routesHTML : @"<li>No route declared.</li>",
       tagsHTML.length > 0 ? tagsHTML : @"<span class='empty'>No capability declared.</span>"];
+}
+
+- (NSString*)runtimeDiagnosticsHTML:(NSDictionary*)runtimeStatus moduleIdentifier:(NSString*)moduleIdentifier {
+  if (runtimeStatus.count == 0) {
+    return @"";
+  }
+
+  NSString* runtimeKind = [runtimeStatus[@"kind"] isKindOfClass:NSString.class] ? runtimeStatus[@"kind"] : @"";
+  NSString* state = [runtimeStatus[@"state"] isKindOfClass:NSString.class] ? runtimeStatus[@"state"] : @"unknown";
+  NSString* mode = [runtimeStatus[@"mode"] isKindOfClass:NSString.class] ? runtimeStatus[@"mode"] : @"";
+  NSString* baseURL = [runtimeStatus[@"baseUrl"] isKindOfClass:NSString.class] ? runtimeStatus[@"baseUrl"] : @"";
+  NSString* readyURL = [runtimeStatus[@"readyUrl"] isKindOfClass:NSString.class] ? runtimeStatus[@"readyUrl"] : @"";
+  NSString* cwd = [runtimeStatus[@"cwd"] isKindOfClass:NSString.class] ? runtimeStatus[@"cwd"] : @"";
+  NSString* logs = [runtimeStatus[@"logs"] isKindOfClass:NSString.class] ? runtimeStatus[@"logs"] : @"";
+  NSNumber* port = [runtimeStatus[@"port"] isKindOfClass:NSNumber.class] ? runtimeStatus[@"port"] : nil;
+  BOOL restartable = [runtimeStatus[@"restartable"] boolValue] && moduleIdentifier.length > 0;
+  NSArray* command = [runtimeStatus[@"command"] isKindOfClass:NSArray.class] ? runtimeStatus[@"command"] : @[];
+
+  NSMutableString* detailsHTML = [NSMutableString string];
+  [detailsHTML appendFormat:@"<dt>Kind</dt><dd><code>%@</code></dd>", [self htmlEscapedString:runtimeKind]];
+  [detailsHTML appendFormat:@"<dt>State</dt><dd>%@</dd>", [self htmlEscapedString:state]];
+  if (mode.length > 0) {
+    [detailsHTML appendFormat:@"<dt>Mode</dt><dd><code>%@</code></dd>", [self htmlEscapedString:mode]];
+  }
+  if (port) {
+    [detailsHTML appendFormat:@"<dt>Port</dt><dd>%@</dd>", port];
+  }
+  if (baseURL.length > 0) {
+    [detailsHTML appendFormat:@"<dt>Base URL</dt><dd><code>%@</code></dd>", [self htmlEscapedString:baseURL]];
+  }
+  if (readyURL.length > 0) {
+    [detailsHTML appendFormat:@"<dt>Ready URL</dt><dd><code>%@</code></dd>", [self htmlEscapedString:readyURL]];
+  }
+  if (command.count > 0) {
+    [detailsHTML appendFormat:@"<dt>Command</dt><dd><code>%@</code></dd>",
+                              [self htmlEscapedString:[self shellDisplayStringForCommand:command]]];
+  }
+  if (cwd.length > 0) {
+    [detailsHTML appendFormat:@"<dt>CWD</dt><dd><code>%@</code></dd>", [self htmlEscapedString:cwd]];
+  }
+
+  NSString* restartActionHTML = restartable
+      ? [NSString stringWithFormat:@"<a class='smallButton' href='babelchrome://modules?restartRuntime=%@'>Restart runtime</a>",
+                                   [self queryEscapedString:moduleIdentifier]]
+      : @"";
+  NSString* logsHTML = logs.length > 0
+      ? [NSString stringWithFormat:@"<pre>%@</pre>", [self htmlEscapedString:logs]]
+      : @"<p class='empty'>No runtime log captured.</p>";
+
+  return [NSString stringWithFormat:
+      @"<section><h2>Runtime Diagnostics</h2><dl>%@</dl>%@<h3>Logs</h3>%@</section>",
+      detailsHTML,
+      restartActionHTML,
+      logsHTML];
+}
+
+- (NSString*)shellDisplayStringForCommand:(NSArray*)command {
+  NSMutableArray<NSString*>* parts = [NSMutableArray array];
+  for (id item in command) {
+    if (![item isKindOfClass:NSString.class]) {
+      continue;
+    }
+
+    NSString* value = item;
+    if (value.length == 0) {
+      continue;
+    }
+
+    BOOL needsQuoting = [value rangeOfCharacterFromSet:NSCharacterSet.whitespaceAndNewlineCharacterSet].location != NSNotFound;
+    NSString* escaped = [value stringByReplacingOccurrencesOfString:@"'" withString:@"'\\''"];
+    [parts addObject:needsQuoting ? [NSString stringWithFormat:@"'%@'", escaped] : escaped];
+  }
+
+  return [parts componentsJoinedByString:@" "];
 }
 
 - (NSString*)moduleUpdatesPageBodyWithUpdateResult:(NSDictionary*)updateResult
