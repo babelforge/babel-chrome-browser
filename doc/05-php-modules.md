@@ -2,7 +2,7 @@
 
 Navigation: [Previous: Features](04-features.md) | [README](README.md) | [Next: Browser Window Controller Refactor](06-browser-window-controller-refactor.md)
 
-BabelChrome modules are installable extension packages. The currently implemented runtime handlers execute PHP modules, serve static web modules, and proxy module-owned local HTTP processes through `process-web`. Installed modules live outside the application bundle and are discovered from:
+BabelChrome modules are installable extension packages. The currently implemented runtime handlers execute PHP modules, serve static web modules, proxy module-owned local HTTP processes through `process-web`, and execute non-web module processes through `process-runtime`. Installed modules live outside the application bundle and are discovered from:
 
 ```text
 ~/Library/Application Support/BabelForge/BabelChrome/Modules
@@ -164,6 +164,31 @@ A process web module declares a command that starts a local HTTP server:
 `process-web` modules do not need a PHP entrypoint, `requirements.php`, `composer.json`, or a Composer `vendor/` directory. BabelChrome assigns a local port, starts the process on first route access, waits for `readyUrl`, then proxies declared module routes to the process. Supported placeholders in `command`, `args`, `env`, and `readyUrl` are `{{ port }}`, `{{ moduleId }}`, and `{{ moduleDir }}`.
 
 The assigned port is never a stable browser URL. Users and integrations keep opening declared `babelchrome://` routes, and the ExtensionHost rebuilds the process URL after app restart. Running process-web instances are stopped when the module is disabled, removed, updated, or when BabelChrome dispatches `app.will-quit`.
+
+A process runtime module declares a command without implying an HTTP server:
+
+```json
+{
+  "runtime": {
+    "type": "process-runtime",
+    "mode": "on-demand",
+    "command": "node",
+    "args": ["worker/index.js", "{{ route }}"],
+    "cwd": ".",
+    "timeoutMs": 10000,
+    "commands": {
+      "lifecycle": {
+        "command": "node",
+        "args": ["worker/lifecycle.js", "{{ hook }}"]
+      }
+    }
+  }
+}
+```
+
+Supported modes are `on-demand` and `long-running`. On-demand commands receive a JSON payload on stdin with module metadata, route, hook, source URL, query values, local service base URL, and advertised file types. Plain stdout is returned as text; JSON stdout can declare `statusCode`, `contentType`, `headers`, and `body`.
+
+`process-runtime` modules do not need a PHP entrypoint, `requirements.php`, `composer.json`, or a Composer `vendor/` directory. They also do not expose a browser route unless the manifest explicitly declares one in `routes`.
 
 ## Readiness And Setup
 

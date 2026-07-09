@@ -15,6 +15,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleSetupRunner;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleUrlResolver;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessRuntime;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessWebRuntime;
 use BabelForge\BabelChrome\LocalViewer\Service\OpenWithService;
 use BabelForge\BabelChrome\LocalViewer\Service\SourceLoader;
@@ -40,6 +41,7 @@ final readonly class ViewerController
      * @param ModuleSetupRunner       $moduleSetupRunner       runs explicit setup commands
      * @param ModuleRouteDispatcher   $moduleRouteDispatcher   dispatches routable modules
      * @param ModuleUrlResolver       $moduleUrlResolver       resolves module metadata from URLs
+     * @param ModuleProcessRuntime    $moduleProcessRuntime    manages process-runtime module processes
      * @param ModuleProcessWebRuntime $moduleProcessWebRuntime manages process-web module processes
      * @param OpenWithService         $openWithService         opens local files with macOS applications
      * @param Environment             $twig                    renders viewer templates
@@ -55,6 +57,7 @@ final readonly class ViewerController
         private ModuleSetupRunner $moduleSetupRunner,
         private ModuleRouteDispatcher $moduleRouteDispatcher,
         private ModuleUrlResolver $moduleUrlResolver,
+        private ModuleProcessRuntime $moduleProcessRuntime,
         private ModuleProcessWebRuntime $moduleProcessWebRuntime,
         private OpenWithService $openWithService,
         private Environment $twig,
@@ -121,6 +124,7 @@ final readonly class ViewerController
         try {
             $existingModule = $this->moduleRegistry->find($this->moduleIdFromZip($zipPath));
             if (null !== $existingModule) {
+                $this->moduleProcessRuntime->stopModule($existingModule->id);
                 $this->moduleProcessWebRuntime->stopModule($existingModule->id);
             }
 
@@ -184,6 +188,7 @@ final readonly class ViewerController
         }
 
         try {
+            $this->moduleProcessRuntime->stopModule($moduleId);
             $this->moduleProcessWebRuntime->stopModule($moduleId);
             $this->moduleInstaller->remove($moduleId);
 
@@ -689,6 +694,7 @@ final readonly class ViewerController
         }
 
         if ('app.will-quit' === $hook) {
+            $this->moduleProcessRuntime->stopAll();
             $this->moduleProcessWebRuntime->stopAll();
         }
 
@@ -1096,6 +1102,7 @@ final readonly class ViewerController
 
         try {
             if (!$enabled) {
+                $this->moduleProcessRuntime->stopModule($moduleId);
                 $this->moduleProcessWebRuntime->stopModule($moduleId);
             }
 

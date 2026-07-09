@@ -17,6 +17,8 @@ final class ModuleRuntimeType
 
     public const PROCESS_WEB = 'process-web';
 
+    public const PROCESS_RUNTIME = 'process-runtime';
+
     private const LEGACY_WEB = 'web';
 
     private const LEGACY_CLASS = 'class';
@@ -83,6 +85,18 @@ final class ModuleRuntimeType
     public static function isProcessWeb(string $runtimeType): bool
     {
         return self::PROCESS_WEB === self::normalize($runtimeType);
+    }
+
+    /**
+     * Returns whether a runtime type is the process runtime.
+     *
+     * @param string $runtimeType the runtime type
+     *
+     * @return bool true when the runtime type is process runtime
+     */
+    public static function isProcessRuntime(string $runtimeType): bool
+    {
+        return self::PROCESS_RUNTIME === self::normalize($runtimeType);
     }
 
     /**

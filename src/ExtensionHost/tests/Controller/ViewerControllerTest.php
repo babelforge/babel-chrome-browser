@@ -15,10 +15,12 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleSetupRunner;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleUrlResolver;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleWebRuntime;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessRuntime;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessWebRuntime;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpClassRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpWebRuntimeHandler;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ProcessRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ProcessWebRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\StaticWebRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Service\OpenWithService;
@@ -646,6 +648,7 @@ final class ViewerControllerTest extends TestCase
             new ModuleRouteDispatcher(
                 $moduleRegistry,
                 new ModuleRuntimeDispatcher(
+                    new ProcessRuntimeHandler(new ModuleProcessRuntime()),
                     new ProcessWebRuntimeHandler(new ModuleProcessWebRuntime()),
                     new PhpWebRuntimeHandler(new ModuleWebRuntime()),
                     new StaticWebRuntimeHandler(),
@@ -653,6 +656,7 @@ final class ViewerControllerTest extends TestCase
                 ),
             ),
             new ModuleUrlResolver($moduleRegistry),
+            new ModuleProcessRuntime(),
             new ModuleProcessWebRuntime(),
             new OpenWithService(),
             new Environment(new FilesystemLoader(dirname(__DIR__, 2).'/templates')),

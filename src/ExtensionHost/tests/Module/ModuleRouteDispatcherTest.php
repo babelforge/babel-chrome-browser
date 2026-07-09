@@ -11,12 +11,15 @@ use BabelForge\BabelChrome\LocalViewer\Module\ModuleRequest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRouteDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRuntimeContext;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleWebRuntime;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessRuntime;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessRuntimeInstance;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessWebInstance;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleProcessWebRuntime;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeDispatcher;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpClassRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\PhpWebRuntimeHandler;
+use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ProcessRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ProcessWebRuntimeHandler;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\StaticWebRuntimeHandler;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -33,10 +36,13 @@ use Symfony\Component\HttpFoundation\Response;
 #[CoversClass(ModuleWebRuntime::class)]
 #[CoversClass(ModuleRuntimeDispatcher::class)]
 #[CoversClass(ModuleRuntimeType::class)]
+#[CoversClass(ModuleProcessRuntime::class)]
+#[CoversClass(ModuleProcessRuntimeInstance::class)]
 #[CoversClass(ModuleProcessWebInstance::class)]
 #[CoversClass(ModuleProcessWebRuntime::class)]
 #[CoversClass(PhpClassRuntimeHandler::class)]
 #[CoversClass(PhpWebRuntimeHandler::class)]
+#[CoversClass(ProcessRuntimeHandler::class)]
 #[CoversClass(ProcessWebRuntimeHandler::class)]
 #[CoversClass(StaticWebRuntimeHandler::class)]
 final class ModuleRouteDispatcherTest extends TestCase
@@ -66,6 +72,7 @@ final class ModuleRouteDispatcherTest extends TestCase
         $this->writeStaticWebModule();
         $this->writeEscapingStaticWebModule();
         $this->writeProcessWebModule();
+        $this->writeProcessRuntimeModule();
     }
 
     /**
@@ -73,6 +80,7 @@ final class ModuleRouteDispatcherTest extends TestCase
      */
     protected function tearDown(): void
     {
+        new ModuleProcessRuntime()->stopAll();
         new ModuleProcessWebRuntime()->stopAll();
 
         parent::tearDown();
@@ -238,6 +246,60 @@ final class ModuleRouteDispatcherTest extends TestCase
     }
 
     /**
+     * Ensures a process-runtime module can execute an on-demand action route.
+     */
+    public function testDispatchesProcessRuntimeActionRoute(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $request = Request::create('http://127.0.0.1:49152/module/vendor.process-runtime-module/index', 'GET', [
+            'token' => 'test-token',
+            'sourceUrl' => 'https://example.com/process-runtime-source',
+            'name' => 'action',
+        ]);
+        $request->attributes->set('babelChromeFileTypes', 'md,json');
+
+        $response = $dispatcher->dispatch('vendor.process-runtime-module', 'index', $request);
+        $content = $response->getContent();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertSame('application/json; charset=utf-8', $response->headers->get('Content-Type'));
+        self::assertIsString($content);
+
+        $payload = json_decode($content, true);
+        self::assertIsArray($payload);
+        self::assertSame('vendor.process-runtime-module', $payload['moduleId'] ?? null);
+        self::assertSame('index', $payload['route'] ?? null);
+        self::assertSame('action', $payload['queryName'] ?? null);
+        self::assertSame('md,json', $payload['fileTypes'] ?? null);
+    }
+
+    /**
+     * Ensures a process-runtime module can handle a lifecycle hook route.
+     */
+    public function testDispatchesProcessRuntimeLifecycleHookRoute(): void
+    {
+        $dispatcher = $this->dispatcher();
+        $response = $dispatcher->dispatch(
+            'vendor.process-runtime-module',
+            'lifecycle',
+            Request::create('http://127.0.0.1:49152/module/vendor.process-runtime-module/lifecycle', 'GET', [
+                'token' => 'test-token',
+                'hook' => 'app.did-start',
+            ]),
+        );
+        $content = $response->getContent();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertIsString($content);
+
+        $payload = json_decode($content, true);
+        self::assertIsArray($payload);
+        self::assertSame('lifecycle', $payload['route'] ?? null);
+        self::assertSame('app.did-start', $payload['hook'] ?? null);
+        self::assertSame('app.did-start', $payload['envHook'] ?? null);
+    }
+
+    /**
      * Ensures a static web module cannot serve an index outside its document root.
      */
     public function testStaticWebRuntimeRejectsIndexTraversal(): void
@@ -267,6 +329,7 @@ final class ModuleRouteDispatcherTest extends TestCase
         return new ModuleRouteDispatcher(
             $moduleRegistry,
             new ModuleRuntimeDispatcher(
+                new ProcessRuntimeHandler(new ModuleProcessRuntime()),
                 new ProcessWebRuntimeHandler(new ModuleProcessWebRuntime()),
                 new PhpWebRuntimeHandler(new ModuleWebRuntime()),
                 new StaticWebRuntimeHandler(),
@@ -627,6 +690,75 @@ final class ModuleRouteDispatcherTest extends TestCase
                 ($_SERVER['HTTP_X_BABELCHROME_FILE_TYPES'] ?? '');
 
             return true;
+            PHP);
+    }
+
+    /**
+     * Writes a small process-runtime module to the test workspace.
+     */
+    private function writeProcessRuntimeModule(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.process-runtime-module';
+        if (!mkdir($moduleDirectory.'/bin', 0o775, true) && !is_dir($moduleDirectory.'/bin')) {
+            self::fail('Unable to create test process-runtime module directory.');
+        }
+
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.process-runtime-module',
+            'name' => 'Process Runtime Module',
+            'version' => '1.0.0',
+            'enabled' => true,
+            'runtime' => [
+                'type' => 'process-runtime',
+                'mode' => 'on-demand',
+                'command' => PHP_BINARY,
+                'args' => [
+                    'bin/runtime.php',
+                    '{{ route }}',
+                ],
+                'cwd' => '.',
+                'timeoutMs' => 5000,
+            ],
+            'hooks' => [
+                'app.did-start',
+            ],
+            'routes' => [
+                [
+                    'scheme' => 'babelchrome',
+                    'host' => 'process-runtime',
+                    'handler' => 'index',
+                ],
+                [
+                    'scheme' => 'babelchrome-internal',
+                    'host' => 'process-runtime-lifecycle',
+                    'handler' => 'lifecycle',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        file_put_contents($moduleDirectory.'/bin/runtime.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            $payload = json_decode((string) stream_get_contents(STDIN), true);
+            if (!is_array($payload)) {
+                $payload = [];
+            }
+
+            echo json_encode([
+                'statusCode' => 200,
+                'contentType' => 'application/json; charset=utf-8',
+                'body' => [
+                    'moduleId' => $payload['module']['id'] ?? '',
+                    'route' => $payload['route'] ?? '',
+                    'hook' => $payload['hook'] ?? '',
+                    'envHook' => $_SERVER['BABELCHROME_HOOK'] ?? '',
+                    'sourceUrl' => $payload['sourceUrl'] ?? '',
+                    'queryName' => $payload['query']['name'] ?? '',
+                    'fileTypes' => $payload['fileTypes'] ?? '',
+                ],
+            ], JSON_THROW_ON_ERROR);
             PHP);
     }
 }

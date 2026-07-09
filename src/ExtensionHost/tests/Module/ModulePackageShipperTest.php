@@ -167,6 +167,51 @@ final class ModulePackageShipperTest extends TestCase
     }
 
     /**
+     * Ensures process runtime modules can ship their own non-PHP runtime files.
+     */
+    public function testShipSupportsProcessRuntimeWithoutComposer(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/vendor.process-runtime-module';
+        self::assertTrue(mkdir($moduleDirectory.'/worker/bin', 0o775, true));
+        self::assertTrue(mkdir($moduleDirectory.'/node_modules/example', 0o775, true));
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.process-runtime-module',
+            'name' => 'Process Runtime Module',
+            'version' => '1.0.0',
+            'runtime' => [
+                'type' => 'process-runtime',
+                'mode' => 'on-demand',
+                'command' => 'node',
+                'args' => [
+                    'worker/index.js',
+                    '{{ route }}',
+                ],
+            ],
+            'routes' => [
+                [
+                    'scheme' => 'babelchrome',
+                    'host' => 'process-runtime',
+                    'handler' => 'index',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+        file_put_contents($moduleDirectory.'/worker/index.js', 'console.log("process-runtime");');
+        file_put_contents($moduleDirectory.'/worker/bin/run', '#!/usr/bin/env node');
+        file_put_contents($moduleDirectory.'/node_modules/example/index.js', 'export default true;');
+        $targetPath = $this->workspaceDirectory.'/dist/process-runtime-module.zip';
+
+        $result = new ModulePackageShipper()->ship($moduleDirectory, $targetPath);
+
+        self::assertSame($targetPath, $result);
+        self::assertFileExists($targetPath);
+        self::assertZipContains($targetPath, 'manifest.json');
+        self::assertZipContains($targetPath, 'worker/index.js');
+        self::assertZipContains($targetPath, 'worker/bin/run');
+        self::assertZipContains($targetPath, 'node_modules/example/index.js');
+        self::assertZipNotContains($targetPath, 'composer.json');
+    }
+
+    /**
      * Ensures a module without vendor cannot be shipped.
      */
     public function testShipRejectsMissingVendor(): void

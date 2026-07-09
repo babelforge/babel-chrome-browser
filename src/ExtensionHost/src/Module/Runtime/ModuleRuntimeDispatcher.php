@@ -20,18 +20,21 @@ final readonly class ModuleRuntimeDispatcher
     private array $handlers;
 
     /**
+     * @param ProcessRuntimeHandler    $processRuntimeHandler    handles process runtime modules
      * @param ProcessWebRuntimeHandler $processWebRuntimeHandler handles process web modules
      * @param PhpWebRuntimeHandler     $phpWebRuntimeHandler     handles PHP web modules
      * @param StaticWebRuntimeHandler  $staticWebRuntimeHandler  handles static web modules
      * @param PhpClassRuntimeHandler   $phpClassRuntimeHandler   handles PHP class modules
      */
     public function __construct(
+        ProcessRuntimeHandler $processRuntimeHandler,
         ProcessWebRuntimeHandler $processWebRuntimeHandler,
         PhpWebRuntimeHandler $phpWebRuntimeHandler,
         StaticWebRuntimeHandler $staticWebRuntimeHandler,
         PhpClassRuntimeHandler $phpClassRuntimeHandler,
     ) {
         $this->handlers = [
+            $processRuntimeHandler,
             $processWebRuntimeHandler,
             $phpWebRuntimeHandler,
             $staticWebRuntimeHandler,

@@ -8,6 +8,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleManifestException;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleAutoloadRegistrar;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleManifest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleMenuItem;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleProcessRuntimeDefinition;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleProcessWebDefinition;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRegistry;
 use BabelForge\BabelChrome\LocalViewer\Module\Runtime\ModuleRuntimeType;
@@ -19,6 +20,7 @@ use PHPUnit\Framework\TestCase;
  */
 #[CoversClass(ModuleManifest::class)]
 #[CoversClass(ModuleMenuItem::class)]
+#[CoversClass(ModuleProcessRuntimeDefinition::class)]
 #[CoversClass(ModuleProcessWebDefinition::class)]
 #[CoversClass(ModuleAutoloadRegistrar::class)]
 #[CoversClass(ModuleRegistry::class)]
@@ -275,6 +277,73 @@ final class ModuleRegistryTest extends TestCase
         self::assertSame(ModuleRuntimeType::PROCESS_WEB, $runtime['type'] ?? null);
         self::assertSame('node', $runtime['command'] ?? null);
         self::assertSame('http://127.0.0.1:{{ port }}/health', $runtime['readyUrl'] ?? null);
+    }
+
+    /**
+     * Ensures process runtime modules do not need PHP-specific requirements.
+     */
+    public function testProcessRuntimeDoesNotRequirePhp(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.process-runtime-module';
+        self::assertTrue(mkdir($moduleDirectory, 0o775, true));
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.process-runtime-module',
+            'name' => 'Process Runtime Module',
+            'version' => '1.0.0',
+            'runtime' => [
+                'type' => 'process-runtime',
+                'mode' => 'on-demand',
+                'command' => 'python3',
+                'args' => [
+                    'worker.py',
+                    '{{ route }}',
+                ],
+                'cwd' => '.',
+                'env' => [
+                    'PYTHONUNBUFFERED' => '1',
+                ],
+                'timeoutMs' => 8000,
+                'commands' => [
+                    'lifecycle' => [
+                        'command' => 'python3',
+                        'args' => [
+                            'lifecycle.py',
+                            '{{ hook }}',
+                        ],
+                    ],
+                ],
+            ],
+            'routes' => [
+                [
+                    'scheme' => 'babelchrome',
+                    'host' => 'process-runtime',
+                    'handler' => 'index',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $registry = new ModuleRegistry($this->workspaceDirectory.'/Catalog', $this->workspaceDirectory.'/Modules');
+        $module = $registry->find('vendor.process-runtime-module');
+
+        self::assertNotNull($module);
+        self::assertSame(ModuleRuntimeType::PROCESS_RUNTIME, $module->runtimeType);
+        self::assertTrue($module->usesProcessRuntime());
+        self::assertSame('', $module->phpRequirement);
+        self::assertNotNull($module->processRuntime);
+        self::assertSame('on-demand', $module->processRuntime->mode);
+        self::assertSame('python3', $module->processRuntime->command->command);
+        self::assertSame(['worker.py', '{{ route }}'], $module->processRuntime->command->args);
+
+        $exportedModule = $module->toArray();
+        $requirements = $exportedModule['requirements'] ?? null;
+        $runtime = $exportedModule['runtime'] ?? null;
+
+        self::assertSame([], $requirements);
+        self::assertIsArray($runtime);
+        self::assertSame(ModuleRuntimeType::PROCESS_RUNTIME, $runtime['type'] ?? null);
+        self::assertSame('python3', $runtime['command'] ?? null);
+        self::assertSame('on-demand', $runtime['mode'] ?? null);
+        self::assertIsArray($runtime['commands'] ?? null);
     }
 
     /**
