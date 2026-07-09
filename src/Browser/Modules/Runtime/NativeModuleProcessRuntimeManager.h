@@ -19,6 +19,38 @@
 - (NSDictionary*)runtimeStatusForModule:(BabelNativeModuleManifest*)module;
 
 /**
+ * Restarts one process-web module runtime.
+ *
+ * @param module The installed module manifest.
+ * @param error The optional error pointer.
+ * @return The runtime status after restart, or nil when the process cannot start.
+ */
+- (NSDictionary*)restartProcessWebRuntimeForModule:(BabelNativeModuleManifest*)module
+                                             error:(NSError**)error;
+
+/**
+ * Stops one module runtime.
+ *
+ * @param module The installed module manifest.
+ * @param error The optional error pointer.
+ * @return The runtime status after stop, or nil when the runtime cannot be stopped.
+ */
+- (NSDictionary*)stopRuntimeForModule:(BabelNativeModuleManifest*)module
+                                error:(NSError**)error;
+
+/**
+ * Stops a module runtime by identifier.
+ *
+ * @param moduleIdentifier The module identifier.
+ */
+- (void)stopRuntimeForModuleIdentifier:(NSString*)moduleIdentifier;
+
+/**
+ * Stops every native runtime process owned by this manager.
+ */
+- (void)stopAllRuntimes;
+
+/**
  * Allocates the local port that a process-web module would receive.
  *
  * @param error The optional error pointer.

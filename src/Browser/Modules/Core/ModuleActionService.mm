@@ -1,6 +1,7 @@
 #import "Browser/Modules/Core/ModuleActionService.h"
 
 #import "Browser/Modules/Installation/NativeModuleInstaller.h"
+#import "Browser/Modules/Registry/NativeModuleManifest.h"
 #import "Browser/Modules/Registry/NativeModuleRegistry.h"
 #import "Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h"
 #import "LocalServices/LocalServiceHost.h"
@@ -185,6 +186,13 @@
 }
 
 - (NSDictionary*)runtimeStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (module && [module.runtimeType isEqualToString:@"process-web"]) {
+    return [nativeProcessRuntimeManager_ runtimeStatusForModule:module];
+  }
+
   NSError* hostError = nil;
   NSDictionary* hostStatus = [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier
                                                                                               error:&hostError];
@@ -192,9 +200,6 @@
     return hostStatus;
   }
 
-  NSError* nativeError = nil;
-  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
-                                                                            error:&nativeError];
   if (module) {
     return [nativeProcessRuntimeManager_ runtimeStatusForModule:module];
   }
@@ -206,10 +211,24 @@
 }
 
 - (NSDictionary*)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (module && [module.runtimeType isEqualToString:@"process-web"]) {
+    return [nativeProcessRuntimeManager_ restartProcessWebRuntimeForModule:module error:error];
+  }
+
   return [BabelLocalServiceHost.sharedHost restartRuntimeForModuleWithIdentifier:moduleIdentifier error:error];
 }
 
 - (NSDictionary*)stopRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (module && [module.runtimeType isEqualToString:@"process-web"]) {
+    return [nativeProcessRuntimeManager_ stopRuntimeForModule:module error:error];
+  }
+
   return [BabelLocalServiceHost.sharedHost stopRuntimeForModuleWithIdentifier:moduleIdentifier error:error];
 }
 
@@ -219,6 +238,7 @@
   }
 
   NSError* stopError = nil;
+  [nativeProcessRuntimeManager_ stopRuntimeForModuleIdentifier:moduleIdentifier];
   [BabelLocalServiceHost.sharedHost stopRuntimeForModuleWithIdentifier:moduleIdentifier error:&stopError];
 }
 

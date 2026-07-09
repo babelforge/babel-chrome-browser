@@ -69,15 +69,15 @@ BabelChrome can route supported document URLs through a local loopback Extension
 
 The native module registry discovers installed manifests directly from the user modules directory. It also parses the `process-web` and `process-runtime` declarations so the browser can reason about commands, routes, runtime metadata, and fallback diagnostics without asking ExtensionHost first.
 
-The native module installer validates and extracts zip packages, preserves enabled state on update, updates enabled state, removes modules, and asks the transitional runtime layer to stop a module process before update, disable, or removal.
+The native module installer validates and extracts zip packages, preserves enabled state on update, updates enabled state, removes modules, and asks the native runtime manager plus the transitional runtime layer to stop a module process before update, disable, or removal.
 
-The native process runtime manager currently prepares non-invasive runtime metadata: stopped/idle diagnostics, local port allocation, process-web command interpolation, readiness URL interpolation, and cwd resolution. Starting processes, proxying process-web routes, and executing process-runtime commands are still handled by the transitional ExtensionHost until the next migration step.
+The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. Proxying process-web routes and executing process-runtime commands are still handled by the transitional ExtensionHost until the next migration step.
 
 `LocalServiceHost` is the transitional runtime process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, source registrations, and runtime state are not written inside `/Applications/BabelChrome.app`.
 
 This Symfony ExtensionHost is a transitional browser implementation detail, not the public module contract. New modules must not declare `php-web` or `php-class`; PHP, if needed, is a module-owned process dependency validated through readiness.
 
-For `process-web` modules, the ExtensionHost allocates a second local port, starts the module command from the installed module directory, waits for the declared readiness URL, and proxies declared module routes to that process. This keeps the user-facing URL stable while allowing the runtime port to change on each app launch.
+For `process-web` modules, the native runtime manager can allocate a second local port, start the module command from the installed module directory, and wait for the declared readiness URL. The transitional ExtensionHost still proxies declared module routes to module HTTP processes until the native local HTTP host replaces that path. This keeps the user-facing URL stable while allowing the runtime port to change on each app launch.
 
 For `process-runtime` modules, the ExtensionHost runs a module-owned command without allocating a port. On-demand commands receive a JSON payload on stdin and can return either plain stdout or JSON stdout. Long-running process-runtime instances are stopped when the module is disabled, removed, updated, or when BabelChrome quits.
 

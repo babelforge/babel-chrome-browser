@@ -296,10 +296,10 @@ The native Settings page links to the internal Modules page:
 babelchrome://modules
 ```
 
-From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed. These package and enabled-state mutations are native filesystem operations; while the native runtime migration continues, BabelChrome still asks LocalServiceHost to stop any running module process before update, disable, or removal.
+From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed. These package and enabled-state mutations are native filesystem operations. BabelChrome stops native `process-web` instances directly before update, disable, or removal, then still asks LocalServiceHost to stop any transitional runtime process while the migration continues.
 The page also displays module-declared `babelchrome://<host>` routes, file type badges, hook badges, installed versions, and a `Settings` action when the module manifest exposes a settings route.
 
-If ExtensionHost is temporarily unavailable, BabelChrome can still derive safe runtime diagnostics from native manifest metadata. These diagnostics report `process-web` modules as stopped and `process-runtime` modules as idle; they do not start or proxy module processes.
+For `process-web` modules, BabelChrome owns native runtime diagnostics, restart, stop, port allocation, command interpolation, environment preparation, readiness waiting, and log capture. Process-web route proxying and process-runtime command execution still use the transitional ExtensionHost until the native local HTTP host is introduced.
 
 Enabled modules that declare routes can also be opened from this page. BabelChrome opens the module through the LocalServiceHost using:
 
