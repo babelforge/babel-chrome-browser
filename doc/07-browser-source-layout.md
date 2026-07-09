@@ -132,16 +132,20 @@ InternalPages
 ```text
 Modules
     |__ Core
+    |__ Installation
     |__ Lifecycle
     |__ Navigation
     |__ Projects
+    |__ Registry
     |__ Updates
 ```
 
 - `Core`: module action service and registry-level operations.
+- `Installation`: native module zip installation, replacement, enabled-state update, and removal.
 - `Lifecycle`: app lifecycle hook dispatch and lifecycle response parsing.
 - `Navigation`: module route resolution and module-aware UI navigation.
 - `Projects`: Project Launcher JSON import helpers.
+- `Registry`: native installed-module manifest loading, validation, snapshots, and file-type header metadata.
 - `Updates`: available module update checks and update metadata resolution.
 
 ## Navigation

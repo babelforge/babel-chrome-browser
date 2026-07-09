@@ -1,16 +1,20 @@
 #import "Browser/Modules/Core/ModuleActionService.h"
 
+#import "Browser/Modules/Installation/NativeModuleInstaller.h"
 #import "Browser/Modules/Registry/NativeModuleRegistry.h"
 #import "LocalServices/LocalServiceHost.h"
 
 @implementation BabelModuleActionService {
   BabelNativeModuleRegistry* nativeModuleRegistry_;
+  BabelNativeModuleInstaller* nativeModuleInstaller_;
 }
 
 - (instancetype)init {
   self = [super init];
   if (self) {
     nativeModuleRegistry_ = [[BabelNativeModuleRegistry alloc] init];
+    nativeModuleInstaller_ =
+        [[BabelNativeModuleInstaller alloc] initWithModulesDirectoryPath:nativeModuleRegistry_.modulesDirectoryPath];
   }
 
   return self;
@@ -131,31 +135,42 @@
 }
 
 - (BOOL)installModuleZipAtPath:(NSString*)zipPath error:(NSError**)error {
-  NSDictionary* response = [BabelLocalServiceHost.sharedHost installModuleZipAtPath:zipPath
-                                                                              error:error];
-  if (response) {
-    [nativeModuleRegistry_ reload];
+  NSString* moduleIdentifier = [nativeModuleInstaller_ moduleIdentifierInZipAtPath:zipPath
+                                                                             error:nil];
+  if (moduleIdentifier.length > 0) {
+    [self stopRuntimeForMutationOfModuleWithIdentifier:moduleIdentifier];
   }
-  return response != nil;
+
+  if ([nativeModuleInstaller_ installModuleZipAtPath:zipPath error:error]) {
+    [nativeModuleRegistry_ reload];
+    return YES;
+  }
+
+  return NO;
 }
 
 - (BOOL)setModuleWithIdentifier:(NSString*)moduleIdentifier enabled:(BOOL)enabled error:(NSError**)error {
-  NSDictionary* response = [BabelLocalServiceHost.sharedHost setModuleWithIdentifier:moduleIdentifier
-                                                                             enabled:enabled
-                                                                               error:error];
-  if (response) {
-    [nativeModuleRegistry_ reload];
+  if (!enabled) {
+    [self stopRuntimeForMutationOfModuleWithIdentifier:moduleIdentifier];
   }
-  return response != nil;
+
+  if ([nativeModuleInstaller_ setModuleWithIdentifier:moduleIdentifier enabled:enabled error:error]) {
+    [nativeModuleRegistry_ reload];
+    return YES;
+  }
+
+  return NO;
 }
 
 - (BOOL)removeModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
-  NSDictionary* response = [BabelLocalServiceHost.sharedHost removeModuleWithIdentifier:moduleIdentifier
-                                                                                  error:error];
-  if (response) {
+  [self stopRuntimeForMutationOfModuleWithIdentifier:moduleIdentifier];
+
+  if ([nativeModuleInstaller_ removeModuleWithIdentifier:moduleIdentifier error:error]) {
     [nativeModuleRegistry_ reload];
+    return YES;
   }
-  return response != nil;
+
+  return NO;
 }
 
 - (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
@@ -176,6 +191,15 @@
 
 - (NSDictionary*)stopRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
   return [BabelLocalServiceHost.sharedHost stopRuntimeForModuleWithIdentifier:moduleIdentifier error:error];
+}
+
+- (void)stopRuntimeForMutationOfModuleWithIdentifier:(NSString*)moduleIdentifier {
+  if (moduleIdentifier.length == 0) {
+    return;
+  }
+
+  NSError* stopError = nil;
+  [BabelLocalServiceHost.sharedHost stopRuntimeForModuleWithIdentifier:moduleIdentifier error:&stopError];
 }
 
 @end

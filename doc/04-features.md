@@ -109,13 +109,13 @@ src/ExtensionHost/resources/
 
 ## Modules
 
-BabelChrome includes the LocalServiceHost module registry.
+BabelChrome includes a native module registry and installer, plus a transitional LocalServiceHost runtime for executing module routes and internal APIs.
 
 No module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
 
 Installed module manifests declare viewer capabilities such as supported file extensions and optional filename fragments. Modules keep their document renderers, view models, error classes, frontend assets, import map metadata, compiled public assets, process commands, and dependencies inside their own module package. Static and process-backed modules keep the files required by their declared runtime.
 
-The native app asks the LocalServiceHost for the matching installed viewer module instead of duplicating Markdown, OpenAPI, or JSON rules in native code. The generic `babelchrome://viewer/...` URLs are preferred for external integrations. Module-owned stable URLs such as `babelchrome://markdown/...`, `babelchrome://openapi/...`, and `babelchrome://json/...` remain compatible when the corresponding module is installed.
+The native app asks the native module registry for the matching installed viewer module instead of duplicating Markdown, OpenAPI, or JSON rules in native code. The generic `babelchrome://viewer/...` URLs are preferred for external integrations. Module-owned stable URLs such as `babelchrome://markdown/...`, `babelchrome://openapi/...`, and `babelchrome://json/...` remain compatible when the corresponding module is installed.
 
 The current Markdown/OpenAPI/JSON modules still reuse LocalServiceHost platform services for source loading and source registration. Viewer-specific PHP, Twig, source frontend assets, import maps, compiled public assets, and Composer vendors live in the modules and run behind the `process-web` contract.
 
@@ -205,7 +205,7 @@ vendor/
 
 Module source directories are development workspaces. They may contain `assets/`, `importmap.php`, `tests/`, `var/`, `ai/`, build files, and other development-only files. `ModulePackageShipper` excludes those development paths from production zips and keeps runtime files such as `manifest.json`, `composer.json`, `composer.lock`, `src/`, `templates/`, `vendor/`, and `public/`.
 
-The LocalServiceHost exposes module metadata through its internal API:
+The transitional LocalServiceHost exposes module runtime and integration metadata through its internal API for module pages and native/runtime bridges:
 
 ```text
 /internal/modules
@@ -296,7 +296,7 @@ The native Settings page links to the internal Modules page:
 babelchrome://modules
 ```
 
-From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed.
+From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed. These package and enabled-state mutations are native filesystem operations; while the native runtime migration continues, BabelChrome still asks LocalServiceHost to stop any running module process before update, disable, or removal.
 The page also displays module-declared `babelchrome://<host>` routes, file type badges, hook badges, installed versions, and a `Settings` action when the module manifest exposes a settings route.
 
 Enabled modules that declare routes can also be opened from this page. BabelChrome opens the module through the LocalServiceHost using:
@@ -341,7 +341,7 @@ Modules can also serve static files from their own `public/` directory through:
 
 The endpoint is token-protected and rejects paths that resolve outside the module `public/` directory.
 
-Zip installation is validated before extraction:
+The native zip installer validates archives before extraction:
 
 - absolute paths are rejected;
 - parent-directory traversal entries are rejected;

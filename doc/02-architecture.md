@@ -16,7 +16,8 @@ BabelChrome owns only the local browser shell for BabelForge. It does not own Ba
 - `BrowserModels` contains the native tab, group, and closed-tab state objects shared by the window controller and browser client.
 - `BrowserViews` contains the reusable AppKit controls used by the browser shell, including tab items, group items, browser host views, resize handles, and hand-cursor buttons.
 - `BrowserClient` receives CEF callbacks for titles, address changes, browser creation, browser close, and load errors.
-- `LocalServiceHost` starts and stops the loopback extension service used by installed modules and optional document viewers.
+- The native module registry and installer load installed manifests, validate module zips, update module enabled state, remove modules, and compute module metadata used by the browser UI.
+- `LocalServiceHost` starts and stops the loopback extension service used by installed module routes and optional document viewers.
 - `Configuration` centralizes application name and profile path.
 
 ## Profile
@@ -66,7 +67,9 @@ The main window state, left panel state, Developer Tools dock settings, tab open
 
 BabelChrome can route supported document URLs through a local loopback ExtensionHost instead of sending them directly to CEF. Viewer support comes from installed and enabled modules. The fresh module contract supports `static-web`, `process-web`, and `process-runtime`; current PHP-based viewers are packaged as `process-web` modules that start their own PHP front controller. The native app itself does not bundle Markdown, OpenAPI, JSON rendering logic, or module-specific server logic.
 
-`LocalServiceHost` is the native process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, source registrations, and installed module state are not written inside `/Applications/BabelChrome.app`.
+The native module registry discovers installed manifests directly from the user modules directory. The native module installer validates and extracts zip packages, preserves enabled state on update, updates enabled state, removes modules, and asks the transitional runtime layer to stop a module process before update, disable, or removal.
+
+`LocalServiceHost` is the transitional runtime process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host passes a writable state directory under Application Support so Symfony cache, logs, source registrations, and runtime state are not written inside `/Applications/BabelChrome.app`.
 
 This Symfony ExtensionHost is a transitional browser implementation detail, not the public module contract. New modules must not declare `php-web` or `php-class`; PHP, if needed, is a module-owned process dependency validated through readiness.
 
@@ -98,7 +101,7 @@ Those module-specific URLs are owned by the installed modules. They remain usefu
 
 The loopback URL `http://127.0.0.1:<port>/...` is only a runtime navigation URL. It is regenerated from the stable source URL when the app starts or when the tab is opened, so a previous random port is never required after restart.
 
-The native shell asks `LocalServiceHost` which enabled viewer module can handle a source URL through manifest capabilities instead of keeping hardcoded Markdown, OpenAPI, or JSON extension lists in Objective-C++. Matching is driven by manifest fields such as `fileTypes`, `file-type-handler.fileTypes`, and `fileNameContains`.
+The native shell asks the native module registry which enabled viewer module can handle a source URL through manifest capabilities instead of keeping hardcoded Markdown, OpenAPI, or JSON extension lists in Objective-C++. Matching is driven by manifest fields such as `fileTypes`, `file-type-handler.fileTypes`, and `fileNameContains`.
 
 Example routing rules provided by the current viewer modules:
 
