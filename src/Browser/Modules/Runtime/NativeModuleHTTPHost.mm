@@ -171,6 +171,11 @@ static NSUInteger const kBabelNativeModuleHTTPHostMaximumHeaderBytes = 65536;
       return;
     }
 
+    int clientFlags = fcntl(clientSocket, F_GETFL, 0);
+    if (clientFlags >= 0) {
+      fcntl(clientSocket, F_SETFL, clientFlags & ~O_NONBLOCK);
+    }
+
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
       [self handleClientSocket:clientSocket];
     });
@@ -522,7 +527,9 @@ static NSUInteger const kBabelNativeModuleHTTPHostMaximumHeaderBytes = 65536;
     return;
   }
 
-  NSURL* targetURL = [self targetURLWithBaseURL:baseURL route:route sourceComponents:components];
+  NSURL* targetURL = [self targetURLWithBaseURL:baseURL
+                                          route:[self processWebTargetRouteForModule:module publicRoute:route]
+                               sourceComponents:components];
   if (!targetURL) {
     [self sendStatus:502
               reason:@"Bad Gateway"
@@ -537,7 +544,15 @@ static NSUInteger const kBabelNativeModuleHTTPHostMaximumHeaderBytes = 65536;
                 route:route
            sourceURL:[self queryValueForName:@"sourceUrl" components:components]
        requestHeaders:headers
-             toSocket:clientSocket];
+            toSocket:clientSocket];
+}
+
+- (NSString*)processWebTargetRouteForModule:(BabelNativeModuleManifest*)module publicRoute:(NSString*)route {
+  if ([module.moduleType isEqualToString:@"viewer"]) {
+    return @"render";
+  }
+
+  return route ?: @"";
 }
 
 - (void)executeProcessRuntimeRouteWithModule:(BabelNativeModuleManifest*)module
