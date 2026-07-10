@@ -108,6 +108,12 @@
     }
     navigationURLString = urlString;
   }
+
+  if ([navigationURLString hasPrefix:@"babelchrome://settings/"]) {
+    [owner_ handleInternalNavigationURLString:navigationURLString];
+    return;
+  }
+
   BabelBrowserTab* existingTab = [owner_ tabWithURLString:requestedURLString inGroup:group] ?:
       [owner_ tabWithURLString:urlString inGroup:group];
   if (existingTab) {

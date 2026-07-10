@@ -7,6 +7,7 @@
 #import "Browser/Modules/Runtime/NativeModulePrewarmCoordinator.h"
 #import "Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h"
 #import "Browser/Modules/Runtime/NativeModuleProcessWebDefinition.h"
+#import "Browser/Modules/Settings/NativeModuleRequiredSettingsService.h"
 #import "Browser/Navigation/StableURLs/StableViewerURLResolver.h"
 #import "Browser/Navigation/Viewer/ViewerSourceRegistry.h"
 #import "LocalServices/LocalServiceHost.h"
@@ -14,6 +15,7 @@
 @implementation BabelModuleActionService {
   BabelNativeModuleRegistry* nativeModuleRegistry_;
   BabelNativeModuleInstaller* nativeModuleInstaller_;
+  BabelNativeModuleRequiredSettingsService* nativeRequiredSettingsService_;
   BabelNativeModuleProcessRuntimeManager* nativeProcessRuntimeManager_;
   BabelNativeModulePrewarmCoordinator* nativePrewarmCoordinator_;
   BabelNativeModuleHTTPHost* nativeModuleHTTPHost_;
@@ -27,7 +29,10 @@
     nativeModuleRegistry_ = [[BabelNativeModuleRegistry alloc] init];
     nativeModuleInstaller_ =
         [[BabelNativeModuleInstaller alloc] initWithModulesDirectoryPath:nativeModuleRegistry_.modulesDirectoryPath];
-    nativeProcessRuntimeManager_ = [[BabelNativeModuleProcessRuntimeManager alloc] init];
+    nativeRequiredSettingsService_ =
+        [[BabelNativeModuleRequiredSettingsService alloc] initWithUserDefaults:NSUserDefaults.standardUserDefaults];
+    nativeProcessRuntimeManager_ =
+        [[BabelNativeModuleProcessRuntimeManager alloc] initWithRequiredSettingsService:nativeRequiredSettingsService_];
     nativePrewarmCoordinator_ =
         [[BabelNativeModulePrewarmCoordinator alloc] initWithRuntimeManager:nativeProcessRuntimeManager_];
     viewerSourceRegistry_ = [[BabelViewerSourceRegistry alloc] init];
@@ -78,12 +83,16 @@
     NSDictionary* readinessStatus = nil;
     NSDictionary* runtimeStatus = nil;
     if (moduleIdentifier.length > 0) {
-      NSDictionary* readinessResponse =
-          [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:moduleIdentifier error:nil];
-      readinessStatus = [self moduleDiagnosticStatusFromResponse:readinessResponse
-                                                             key:@"readinessStatus"
-                                                    failureState:@"failed"
-                                                     booleanName:@"ready"];
+      if (nativeModule) {
+        readinessStatus = [nativeRequiredSettingsService_ statusForModule:nativeModule];
+      } else {
+        NSDictionary* readinessResponse =
+            [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:moduleIdentifier error:nil];
+        readinessStatus = [self moduleDiagnosticStatusFromResponse:readinessResponse
+                                                               key:@"readinessStatus"
+                                                      failureState:@"failed"
+                                                       booleanName:@"ready"];
+      }
     }
     if (nativeModule) {
       runtimeStatus = [nativeProcessRuntimeManager_ runtimeStatusForModule:nativeModule];
@@ -222,6 +231,9 @@
                                                                             error:&nativeError];
   if (module && module.enabled &&
       ([module.runtimeType isEqualToString:@"process-web"] || [module.runtimeType isEqualToString:@"process-runtime"])) {
+    if (![nativeRequiredSettingsService_ requiredSettingsAreSatisfiedForModule:module]) {
+      return [nativeRequiredSettingsService_ settingsURLForModule:module];
+    }
     return [nativeModuleHTTPHost_ moduleURLForIdentifier:moduleIdentifier
                                                    route:route
                                          sourceURLString:sourceURLString
@@ -259,6 +271,11 @@
   NSString* viewerKind = [route[@"viewerKind"] isKindOfClass:NSString.class] ? route[@"viewerKind"] : @"";
   if (moduleIdentifier.length == 0 || handler.length == 0) {
     return nil;
+  }
+
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier error:nil];
+  if (module && ![nativeRequiredSettingsService_ requiredSettingsAreSatisfiedForModule:module]) {
+    return [nativeRequiredSettingsService_ settingsURLForModule:module];
   }
 
   BOOL isRemoteURL = [url.scheme isEqualToString:@"http"] || [url.scheme isEqualToString:@"https"];
@@ -405,19 +422,7 @@
 }
 
 - (BOOL)moduleReadinessAllowsPrewarm:(BabelNativeModuleManifest*)module {
-  if (module.readiness.count == 0) {
-    return YES;
-  }
-
-  NSDictionary* readinessResponse =
-      [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:module.moduleIdentifier
-                                                                         error:nil];
-  NSDictionary* readinessStatus = [self moduleDiagnosticStatusFromResponse:readinessResponse
-                                                                       key:@"readinessStatus"
-                                                              failureState:@"failed"
-                                                               booleanName:@"ready"];
-  NSNumber* ready = [readinessStatus[@"ready"] isKindOfClass:NSNumber.class] ? readinessStatus[@"ready"] : nil;
-  return ready ? [ready boolValue] : NO;
+  return [nativeRequiredSettingsService_ requiredSettingsAreSatisfiedForModule:module];
 }
 
 - (BOOL)installModuleZipAtPath:(NSString*)zipPath error:(NSError**)error {
@@ -464,6 +469,16 @@
 }
 
 - (NSDictionary*)readinessStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (module) {
+    return @{
+      @"ok" : @YES,
+      @"readinessStatus" : [nativeRequiredSettingsService_ statusForModule:module]
+    };
+  }
+
   return [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:moduleIdentifier error:error];
 }
 
@@ -491,6 +506,42 @@
     *error = nativeError ?: hostError;
   }
   return nil;
+}
+
+- (NSDictionary*)requiredSettingsStatusForModuleWithIdentifier:(NSString*)moduleIdentifier
+                                                        error:(NSError**)error {
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (!module) {
+    if (error) {
+      *error = nativeError;
+    }
+    return nil;
+  }
+
+  return [nativeRequiredSettingsService_ statusForModule:module];
+}
+
+- (BOOL)setRequiredSettingValue:(NSString*)value
+                         forKey:(NSString*)key
+           moduleWithIdentifier:(NSString*)moduleIdentifier
+                          error:(NSError**)error {
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (!module) {
+    if (error) {
+      *error = nativeError;
+    }
+    return NO;
+  }
+
+  BOOL didSave = [nativeRequiredSettingsService_ setValue:value forKey:key module:module error:error];
+  if (didSave) {
+    [nativeProcessRuntimeManager_ stopRuntimeForModuleIdentifier:moduleIdentifier];
+  }
+  return didSave;
 }
 
 - (NSDictionary*)restartRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {

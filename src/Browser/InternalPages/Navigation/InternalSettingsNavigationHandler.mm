@@ -1,5 +1,6 @@
 #import "Browser/InternalPages/Navigation/InternalSettingsNavigationHandler.h"
 
+#import "Browser/Modules/Core/ModuleActionService.h"
 #import "Browser/State/Settings/BrowserSettingsStore.h"
 #import "Browser/UI/Theme/BrowserTheme.h"
 
@@ -12,14 +13,17 @@
 
 @implementation BabelInternalSettingsNavigationHandler {
   BabelBrowserSettingsStore* settingsStore_;
+  BabelModuleActionService* moduleActionService_;
   NSUserDefaults* userDefaults_;
 }
 
 - (instancetype)initWithSettingsStore:(BabelBrowserSettingsStore*)settingsStore
+                   moduleActionService:(BabelModuleActionService*)moduleActionService
                          userDefaults:(NSUserDefaults*)userDefaults {
   self = [super init];
   if (self) {
     settingsStore_ = settingsStore;
+    moduleActionService_ = moduleActionService;
     userDefaults_ = userDefaults ?: NSUserDefaults.standardUserDefaults;
   }
   return self;
@@ -28,6 +32,8 @@
 - (BabelInternalSettingsNavigationResult*)applyModuleSettingsComponents:(NSURLComponents*)components
                                                        moduleIdentifier:(NSString*)moduleIdentifier {
   BabelInternalSettingsNavigationResult* result = [[BabelInternalSettingsNavigationResult alloc] init];
+  [self applyRequiredRuntimeSettingComponents:components moduleIdentifier:moduleIdentifier];
+
   if (![moduleIdentifier isEqualToString:@"babelforge.markdown-viewer"]) {
     return result;
   }
@@ -45,6 +51,30 @@
   }
 
   return result;
+}
+
+- (void)applyRequiredRuntimeSettingComponents:(NSURLComponents*)components
+                             moduleIdentifier:(NSString*)moduleIdentifier {
+  NSString* settingKey = @"";
+  NSString* settingValue = nil;
+  for (NSURLQueryItem* item in components.queryItems ?: @[]) {
+    if ([item.name isEqualToString:@"runtimeSettingKey"]) {
+      settingKey = item.value ?: @"";
+    }
+    if ([item.name isEqualToString:@"runtimeSettingValue"]) {
+      settingValue = item.value ?: @"";
+    }
+  }
+
+  if (settingKey.length == 0 || !settingValue) {
+    return;
+  }
+
+  NSError* error = nil;
+  [moduleActionService_ setRequiredSettingValue:settingValue
+                                         forKey:settingKey
+                           moduleWithIdentifier:moduleIdentifier
+                                          error:&error];
 }
 
 - (BabelInternalSettingsNavigationResult*)applyApplicationSettingsComponents:(NSURLComponents*)components {

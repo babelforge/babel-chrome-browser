@@ -8,6 +8,7 @@ use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleDispatchException;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleManifest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleProcessRuntimeCommand;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleProcessRuntimeDefinition;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleRequiredSettingsResolver;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRuntimeContext;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -211,10 +212,12 @@ final class ModuleProcessRuntime
     private function startLongRunning(ModuleManifest $module, string $route, Request $request, ModuleProcessRuntimeDefinition $definition): ModuleProcessRuntimeInstance
     {
         $command = $definition->commandForRoute($route);
+        $settingsResolver = new ModuleRequiredSettingsResolver();
+        $settings = $settingsResolver->resolve($module);
         $cwd = $this->resolvedWorkingDirectory($module, $definition);
         $payload = $this->payload($module, $route, $request);
-        $resolvedCommand = $this->resolvedCommand($command, $module, $route, $request);
-        $env = $this->resolvedEnvironment($definition, $module, $route, $request);
+        $resolvedCommand = $this->resolvedCommand($command, $module, $route, $request, $settings, $settingsResolver);
+        $env = $this->resolvedEnvironment($definition, $module, $route, $request, $settings, $settingsResolver);
         $process = proc_open($resolvedCommand, [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
@@ -266,11 +269,13 @@ final class ModuleProcessRuntime
         ModuleProcessRuntimeCommand $command,
     ): array {
         $cwd = $this->resolvedWorkingDirectory($module, $definition);
-        $process = proc_open($this->resolvedCommand($command, $module, $route, $request), [
+        $settingsResolver = new ModuleRequiredSettingsResolver();
+        $settings = $settingsResolver->resolve($module);
+        $process = proc_open($this->resolvedCommand($command, $module, $route, $request, $settings, $settingsResolver), [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
             2 => ['pipe', 'w'],
-        ], $pipes, $cwd, $this->resolvedEnvironment($definition, $module, $route, $request), [
+        ], $pipes, $cwd, $this->resolvedEnvironment($definition, $module, $route, $request, $settings, $settingsResolver), [
             'bypass_shell' => true,
         ]);
 
@@ -449,21 +454,29 @@ final class ModuleProcessRuntime
     /**
      * Resolves the command and its interpolated arguments.
      *
-     * @param ModuleProcessRuntimeCommand $command the command declaration
-     * @param ModuleManifest              $module  the module manifest
-     * @param string                      $route   the requested route
-     * @param Request                     $request the current HTTP request
+     * @param ModuleProcessRuntimeCommand    $command          the command declaration
+     * @param ModuleManifest                 $module           the module manifest
+     * @param string                         $route            the requested route
+     * @param Request                        $request          the current HTTP request
+     * @param array<string, string>          $settings         the resolved required settings
+     * @param ModuleRequiredSettingsResolver $settingsResolver the required settings resolver
      *
      * @return list<string> the resolved command
      */
-    private function resolvedCommand(ModuleProcessRuntimeCommand $command, ModuleManifest $module, string $route, Request $request): array
-    {
+    private function resolvedCommand(
+        ModuleProcessRuntimeCommand $command,
+        ModuleManifest $module,
+        string $route,
+        Request $request,
+        array $settings,
+        ModuleRequiredSettingsResolver $settingsResolver,
+    ): array {
         $resolved = [
-            $this->interpolate($command->command, $module, $route, $request),
+            $this->interpolate($command->command, $module, $route, $request, $settings, $settingsResolver),
         ];
 
         foreach ($command->args as $arg) {
-            $resolved[] = $this->interpolate($arg, $module, $route, $request);
+            $resolved[] = $this->interpolate($arg, $module, $route, $request, $settings, $settingsResolver);
         }
 
         return $resolved;
@@ -472,15 +485,23 @@ final class ModuleProcessRuntime
     /**
      * Resolves the process environment.
      *
-     * @param ModuleProcessRuntimeDefinition $definition the process runtime definition
-     * @param ModuleManifest                 $module     the module manifest
-     * @param string                         $route      the requested route
-     * @param Request                        $request    the current HTTP request
+     * @param ModuleProcessRuntimeDefinition $definition       the process runtime definition
+     * @param ModuleManifest                 $module           the module manifest
+     * @param string                         $route            the requested route
+     * @param Request                        $request          the current HTTP request
+     * @param array<string, string>          $settings         the resolved required settings
+     * @param ModuleRequiredSettingsResolver $settingsResolver the required settings resolver
      *
      * @return array<string, string> the resolved environment
      */
-    private function resolvedEnvironment(ModuleProcessRuntimeDefinition $definition, ModuleManifest $module, string $route, Request $request): array
-    {
+    private function resolvedEnvironment(
+        ModuleProcessRuntimeDefinition $definition,
+        ModuleManifest $module,
+        string $route,
+        Request $request,
+        array $settings,
+        ModuleRequiredSettingsResolver $settingsResolver,
+    ): array {
         $environment = [];
         foreach (['PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'SHELL'] as $name) {
             $value = getenv($name);
@@ -490,7 +511,11 @@ final class ModuleProcessRuntime
         }
 
         foreach ($definition->env as $key => $value) {
-            $environment[$key] = $this->interpolate($value, $module, $route, $request);
+            $environment[$key] = $this->interpolate($value, $module, $route, $request, $settings, $settingsResolver);
+        }
+
+        foreach ($settingsResolver->environmentVariables($settings) as $key => $value) {
+            $environment[$key] = $value;
         }
 
         $context = ModuleRuntimeContext::fromRequest($request);
@@ -530,22 +555,30 @@ final class ModuleProcessRuntime
     /**
      * Interpolates process definition placeholders.
      *
-     * @param string         $value   the value to interpolate
-     * @param ModuleManifest $module  the module manifest
-     * @param string         $route   the requested route
-     * @param Request        $request the current HTTP request
+     * @param string                         $value            the value to interpolate
+     * @param ModuleManifest                 $module           the module manifest
+     * @param string                         $route            the requested route
+     * @param Request                        $request          the current HTTP request
+     * @param array<string, string>          $settings         the resolved required settings
+     * @param ModuleRequiredSettingsResolver $settingsResolver the required settings resolver
      *
      * @return string the interpolated value
      */
-    private function interpolate(string $value, ModuleManifest $module, string $route, Request $request): string
-    {
+    private function interpolate(
+        string $value,
+        ModuleManifest $module,
+        string $route,
+        Request $request,
+        array $settings,
+        ModuleRequiredSettingsResolver $settingsResolver,
+    ): string {
         return strtr($value, [
             '{{ moduleId }}' => $module->id,
             '{{ moduleDir }}' => $module->path,
             '{{ route }}' => $route,
             '{{ hook }}' => $this->hook($request),
             '{{ sourceUrl }}' => ModuleRuntimeContext::fromRequest($request)->sourceUrl,
-        ]);
+        ] + $settingsResolver->interpolationMap($settings));
     }
 
     /**

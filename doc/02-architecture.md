@@ -75,7 +75,7 @@ The native process runtime manager owns `process-web` runtime diagnostics, resta
 
 `LocalServiceHost` is the transitional runtime process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host and transitional host share a writable state directory under Application Support so cache, logs, source registrations, and runtime state are not written inside `/Applications/BabelChrome.app`.
 
-This Symfony ExtensionHost is a transitional browser implementation detail, not the public module contract. New modules must not declare `php-web` or `php-class`; PHP, if needed, is a module-owned process dependency validated through readiness.
+This Symfony ExtensionHost is a transitional browser implementation detail, not the public module contract. New modules must not declare `php-web` or `php-class`; PHP, if needed, is a module-owned process dependency declared through `requiredSettings` and used by the module's `process-web` command.
 
 For `process-web` modules, the native runtime manager allocates a module-local port, starts the module command from the installed module directory, and waits for the declared readiness URL. The native local HTTP host exposes the stable tokenized `/module/<module-id>/<route>` URL that Chromium loads, then proxies the request to the current runtime port. This keeps the user-facing `babelchrome://...` URL stable while allowing the process port to change on each app launch.
 

@@ -104,6 +104,11 @@
     return;
   }
 
+  if ([moduleURL.scheme isEqualToString:@"babelchrome"]) {
+    [owner_ handleInternalNavigationURLString:moduleURL.absoluteString];
+    return;
+  }
+
   BabelBrowserGroup* group = [owner_ targetGroupForModuleIdentifier:moduleIdentifier
                                                     fallbackGroup:owner_->selectedGroup_];
   [owner_ selectGroup:group];
@@ -339,6 +344,12 @@
     return;
   }
 
+  if ([navigationURLString hasPrefix:@"babelchrome://settings/"]) {
+    [owner_ handleInternalNavigationURLString:navigationURLString
+                                      browser:owner_->selectedTab_ ? [owner_->selectedTab_ browser] : nullptr];
+    return;
+  }
+
   BabelBrowserGroup* group = owner_->selectedGroup_ ?: [owner_ ensureGroupNamed:kDefaultGroupName];
   [owner_ selectGroup:group];
 
@@ -399,9 +410,14 @@
 - (NSString*)moduleSettingsPageHTMLForIdentifier:(NSString*)moduleIdentifier {
   NSString* normalizedIdentifier = [owner_->moduleSettingsRouteResolver_ normalizedModuleIdentifier:moduleIdentifier];
   NSString* moduleName = [owner_->moduleSettingsRouteResolver_ moduleNameForIdentifier:normalizedIdentifier] ?: normalizedIdentifier;
+  NSDictionary* requiredSettingsStatus =
+      [owner_->moduleActionService_ requiredSettingsStatusForModuleWithIdentifier:normalizedIdentifier
+                                                                            error:nil] ?:
+      @{};
   return [owner_->internalPageHTMLComposer_ moduleSettingsPageHTMLForIdentifier:normalizedIdentifier
                                                              moduleName:moduleName
-                                                          markdownTheme:[owner_ markdownTheme]];
+                                                          markdownTheme:[owner_ markdownTheme]
+                                                 requiredSettingsStatus:requiredSettingsStatus];
 }
 
 - (NSString*)extensionsPageHTML {

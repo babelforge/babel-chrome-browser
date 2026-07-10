@@ -4,11 +4,20 @@
 #import <Foundation/Foundation.h>
 
 @class BabelNativeModuleManifest;
+@class BabelNativeModuleRequiredSettingsService;
 
 /**
  * Prepares native process runtime diagnostics and process launch inputs.
  */
 @interface BabelNativeModuleProcessRuntimeManager : NSObject
+
+/**
+ * Creates a process runtime manager.
+ *
+ * @param requiredSettingsService The service resolving host-rendered module runtime settings.
+ * @return The initialized runtime manager.
+ */
+- (instancetype)initWithRequiredSettingsService:(BabelNativeModuleRequiredSettingsService*)requiredSettingsService;
 
 /**
  * Returns runtime diagnostics for one manifest without starting processes.

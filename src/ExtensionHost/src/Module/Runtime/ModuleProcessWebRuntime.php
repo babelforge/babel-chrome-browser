@@ -7,6 +7,7 @@ namespace BabelForge\BabelChrome\LocalViewer\Module\Runtime;
 use BabelForge\BabelChrome\LocalViewer\Module\Exception\ModuleDispatchException;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleManifest;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleProcessWebDefinition;
+use BabelForge\BabelChrome\LocalViewer\Module\ModuleRequiredSettingsResolver;
 use BabelForge\BabelChrome\LocalViewer\Module\ModuleRuntimeContext;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -189,10 +190,12 @@ final class ModuleProcessWebRuntime
         }
 
         $port = $this->availablePort();
+        $settingsResolver = new ModuleRequiredSettingsResolver();
+        $settings = $settingsResolver->resolve($module);
         $cwd = $this->resolvedWorkingDirectory($module, $definition);
-        $command = $this->resolvedCommand($definition, $module, $port);
-        $env = $this->resolvedEnvironment($definition, $module, $port);
-        $readyUrl = $this->interpolate($definition->readyUrl, $module, $port);
+        $command = $this->resolvedCommand($definition, $module, $port, $settings, $settingsResolver);
+        $env = $this->resolvedEnvironment($definition, $module, $port, $settings, $settingsResolver);
+        $readyUrl = $this->interpolate($definition->readyUrl, $module, $port, $settings, $settingsResolver);
         $baseUrl = sprintf('http://127.0.0.1:%d', $port);
         $descriptors = [
             0 => ['pipe', 'r'],
@@ -389,20 +392,27 @@ final class ModuleProcessWebRuntime
     /**
      * Resolves the command and its interpolated arguments.
      *
-     * @param ModuleProcessWebDefinition $definition the process web definition
-     * @param ModuleManifest             $module     the module manifest
-     * @param int                        $port       the assigned local port
+     * @param ModuleProcessWebDefinition     $definition       the process web definition
+     * @param ModuleManifest                 $module           the module manifest
+     * @param int                            $port             the assigned local port
+     * @param array<string, string>          $settings         the resolved required settings
+     * @param ModuleRequiredSettingsResolver $settingsResolver the required settings resolver
      *
      * @return list<string> the resolved command
      */
-    private function resolvedCommand(ModuleProcessWebDefinition $definition, ModuleManifest $module, int $port): array
-    {
+    private function resolvedCommand(
+        ModuleProcessWebDefinition $definition,
+        ModuleManifest $module,
+        int $port,
+        array $settings,
+        ModuleRequiredSettingsResolver $settingsResolver,
+    ): array {
         $command = [
-            $this->interpolate($definition->command, $module, $port),
+            $this->interpolate($definition->command, $module, $port, $settings, $settingsResolver),
         ];
 
         foreach ($definition->args as $arg) {
-            $command[] = $this->interpolate($arg, $module, $port);
+            $command[] = $this->interpolate($arg, $module, $port, $settings, $settingsResolver);
         }
 
         return $command;
@@ -411,14 +421,21 @@ final class ModuleProcessWebRuntime
     /**
      * Resolves the process environment.
      *
-     * @param ModuleProcessWebDefinition $definition the process web definition
-     * @param ModuleManifest             $module     the module manifest
-     * @param int                        $port       the assigned local port
+     * @param ModuleProcessWebDefinition     $definition       the process web definition
+     * @param ModuleManifest                 $module           the module manifest
+     * @param int                            $port             the assigned local port
+     * @param array<string, string>          $settings         the resolved required settings
+     * @param ModuleRequiredSettingsResolver $settingsResolver the required settings resolver
      *
      * @return array<string, string> the resolved environment
      */
-    private function resolvedEnvironment(ModuleProcessWebDefinition $definition, ModuleManifest $module, int $port): array
-    {
+    private function resolvedEnvironment(
+        ModuleProcessWebDefinition $definition,
+        ModuleManifest $module,
+        int $port,
+        array $settings,
+        ModuleRequiredSettingsResolver $settingsResolver,
+    ): array {
         $environment = getenv();
         if (!is_array($environment)) {
             $environment = [];
@@ -430,7 +447,11 @@ final class ModuleProcessWebRuntime
         }
 
         foreach ($definition->env as $key => $value) {
-            $resolved[$key] = $this->interpolate($value, $module, $port);
+            $resolved[$key] = $this->interpolate($value, $module, $port, $settings, $settingsResolver);
+        }
+
+        foreach ($settingsResolver->environmentVariables($settings) as $key => $value) {
+            $resolved[$key] = $value;
         }
 
         $resolved['BABELCHROME_MODULE_ID'] = $module->id;
@@ -465,19 +486,26 @@ final class ModuleProcessWebRuntime
     /**
      * Interpolates process definition placeholders.
      *
-     * @param string         $value  the value to interpolate
-     * @param ModuleManifest $module the module manifest
-     * @param int            $port   the assigned local port
+     * @param string                         $value            the value to interpolate
+     * @param ModuleManifest                 $module           the module manifest
+     * @param int                            $port             the assigned local port
+     * @param array<string, string>          $settings         the resolved required settings
+     * @param ModuleRequiredSettingsResolver $settingsResolver the required settings resolver
      *
      * @return string the interpolated value
      */
-    private function interpolate(string $value, ModuleManifest $module, int $port): string
-    {
+    private function interpolate(
+        string $value,
+        ModuleManifest $module,
+        int $port,
+        array $settings,
+        ModuleRequiredSettingsResolver $settingsResolver,
+    ): string {
         return strtr($value, [
             '{{ port }}' => (string) $port,
             '{{ moduleId }}' => $module->id,
             '{{ moduleDir }}' => $module->path,
-        ]);
+        ] + $settingsResolver->interpolationMap($settings));
     }
 
     /**

@@ -38,6 +38,7 @@ final readonly class ModuleManifest
      * @param string|null                         $defaultGroup             the optional preferred browser group
      * @param ModuleCommandDefinition|null        $readiness                the optional readiness command
      * @param ModuleCommandDefinition|null        $setup                    the optional setup command
+     * @param array<string, array<string, mixed>> $requiredSettings         the required runtime settings
      * @param ModuleProcessWebDefinition|null     $processWeb               the optional process web runtime definition
      * @param ModuleProcessRuntimeDefinition|null $processRuntime           the optional process runtime definition
      * @param string                              $currentPhpVersion        the PHP version used to validate this manifest
@@ -68,6 +69,7 @@ final readonly class ModuleManifest
         public ?string $defaultGroup,
         public ?ModuleCommandDefinition $readiness,
         public ?ModuleCommandDefinition $setup,
+        public array $requiredSettings,
         public ?ModuleProcessWebDefinition $processWeb,
         public ?ModuleProcessRuntimeDefinition $processRuntime,
         public string $currentPhpVersion = PHP_VERSION,
@@ -143,6 +145,7 @@ final readonly class ModuleManifest
             self::defaultGroup($data),
             self::readiness($data),
             self::setup($data),
+            self::requiredSettings($data),
             self::processWeb($data, $runtimeType),
             self::processRuntime($data, $runtimeType),
         );
@@ -188,6 +191,7 @@ final readonly class ModuleManifest
             'defaultGroup' => $this->defaultGroup,
             'readiness' => $this->readiness?->toArray(),
             'setup' => $this->setup?->toArray(),
+            'requiredSettings' => $this->requiredSettings,
             'hasIsolatedVendor' => $this->hasIsolatedVendor(),
         ];
     }
@@ -378,6 +382,32 @@ final readonly class ModuleManifest
     private static function setup(array $data): ?ModuleCommandDefinition
     {
         return ModuleCommandDefinition::fromManifestValue($data['setup'] ?? null, 600000, true);
+    }
+
+    /**
+     * Reads required runtime settings from the manifest.
+     *
+     * @param array<string, mixed> $data the source data
+     *
+     * @return array<string, array<string, mixed>> the required settings indexed by key
+     */
+    private static function requiredSettings(array $data): array
+    {
+        $value = $data['requiredSettings'] ?? [];
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $settings = [];
+        foreach ($value as $key => $definition) {
+            if (!is_string($key) || '' === trim($key) || !is_array($definition)) {
+                continue;
+            }
+
+            $settings[trim($key)] = self::stringKeyedArray($definition);
+        }
+
+        return $settings;
     }
 
     /**
@@ -615,6 +645,25 @@ final readonly class ModuleManifest
         return [
             'php' => $phpRequirement,
         ];
+    }
+
+    /**
+     * Keeps only string-keyed values from a decoded manifest array.
+     *
+     * @param array<mixed> $value the decoded manifest array
+     *
+     * @return array<string, mixed> the string-keyed array
+     */
+    private static function stringKeyedArray(array $value): array
+    {
+        $items = [];
+        foreach ($value as $key => $item) {
+            if (is_string($key)) {
+                $items[$key] = $item;
+            }
+        }
+
+        return $items;
     }
 
     /**

@@ -31,6 +31,7 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
 @synthesize processWeb = _processWeb;
 @synthesize processRuntime = _processRuntime;
 @synthesize requirements = _requirements;
+@synthesize requiredSettings = _requiredSettings;
 
 + (instancetype)manifestWithDictionary:(NSDictionary*)data
                             modulePath:(NSString*)modulePath
@@ -117,9 +118,12 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
                                       readiness:[data[@"readiness"] isKindOfClass:NSDictionary.class] ? data[@"readiness"] : @{}
                                         setup:[data[@"setup"] isKindOfClass:NSDictionary.class] ? data[@"setup"] : @{}
                                         runtime:runtime
-                                     processWeb:processWeb
-                                 processRuntime:processRuntime
-                                   requirements:[data[@"requirements"] isKindOfClass:NSDictionary.class] ? data[@"requirements"] : @{}];
+                                 processWeb:processWeb
+                             processRuntime:processRuntime
+                               requirements:[data[@"requirements"] isKindOfClass:NSDictionary.class] ? data[@"requirements"] : @{}
+                           requiredSettings:[data[@"requiredSettings"] isKindOfClass:NSDictionary.class]
+                                                ? data[@"requiredSettings"]
+                                                : @{}];
 }
 
 - (NSDictionary*)dictionaryRepresentation {
@@ -133,6 +137,7 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
     @"runtimeType" : self.runtimeType,
     @"runtime" : self.runtime,
     @"requirements" : self.requirements,
+    @"requiredSettings" : self.requiredSettings,
     @"currentPhpVersion" : @"",
     @"path" : self.path,
     @"routes" : self.routes,
@@ -181,7 +186,8 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
                                  runtime:(NSDictionary*)runtime
                               processWeb:(BabelNativeModuleProcessWebDefinition*)processWeb
                           processRuntime:(BabelNativeModuleProcessRuntimeDefinition*)processRuntime
-                            requirements:(NSDictionary*)requirements {
+                            requirements:(NSDictionary*)requirements
+                        requiredSettings:(NSDictionary*)requiredSettings {
   self = [super init];
   if (self) {
     _moduleIdentifier = [moduleIdentifier copy];
@@ -208,6 +214,7 @@ static NSString* const kBabelNativeModuleManifestErrorDomain = @"fr.babelforge.b
     _processWeb = processWeb;
     _processRuntime = processRuntime;
     _requirements = [requirements copy];
+    _requiredSettings = [requiredSettings copy];
   }
 
   return self;

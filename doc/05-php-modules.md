@@ -95,7 +95,7 @@ Every module has a root `manifest.json`. The host reads this manifest to discove
 
 When `defaultGroup` is present, BabelChrome opens or recreates that module's tab in the named group by default. The user can still move the tab afterward; closing and opening the module again reapplies the manifest preference.
 
-PHP is not a browser-level runtime in the fresh module contract. A Symfony, Laravel, or plain PHP module declares `process-web`, starts its own PHP front controller, and validates its PHP requirement through `readiness`. Older `php-web`, `php-class`, `web`, or implicit-class manifests are intentionally outside the supported contract and should be rebuilt.
+PHP is not a browser-level runtime in the fresh module contract. A Symfony, Laravel, or plain PHP module declares `process-web`, declares its PHP executable through `requiredSettings`, and starts its own PHP front controller with `{{ settings.phpPath }}`. Older `php-web`, `php-class`, `web`, or implicit-class manifests are intentionally outside the supported contract and should be rebuilt.
 
 A static web module can declare a static document root instead of PHP code:
 
@@ -121,11 +121,25 @@ A process web module declares a command that starts a local HTTP server:
 
 ```json
 {
+  "requiredSettings": {
+    "phpPath": {
+      "type": "executable",
+      "label": "PHP executable",
+      "binary": "php",
+      "minVersion": "8.4",
+      "autoDetectPaths": [
+        "/opt/homebrew/opt/php@8.4/bin/php",
+        "/usr/local/opt/php@8.4/bin/php",
+        "/usr/local/bin/php"
+      ],
+      "versionArgs": ["-v"]
+    }
+  },
   "runtime": {
     "type": "process-web",
     "startPolicy": "lazy",
-    "command": "node",
-    "args": ["server/index.js", "--port={{ port }}"],
+    "command": "{{ settings.phpPath }}",
+    "args": ["-S", "127.0.0.1:{{ port }}", "-t", "public", "public/index.php"],
     "cwd": ".",
     "readyUrl": "http://127.0.0.1:{{ port }}/health",
     "timeoutMs": 10000,
@@ -137,7 +151,9 @@ A process web module declares a command that starts a local HTTP server:
 }
 ```
 
-`process-web` modules do not need a browser-owned PHP adapter, `requirements.php`, `composer.json`, or a Composer `vendor/` directory. BabelChrome assigns a local port, starts the process on first route access, waits for `readyUrl`, then proxies declared module routes to the process. Supported placeholders in `command`, `args`, `env`, and `readyUrl` are `{{ port }}`, `{{ moduleId }}`, and `{{ moduleDir }}`.
+`process-web` modules do not need a browser-owned PHP adapter, `requirements.php`, `composer.json`, or a Composer `vendor/` directory. BabelChrome assigns a local port, starts the process on first route access, waits for `readyUrl`, then proxies declared module routes to the process. Supported placeholders in `command`, `args`, `env`, and `readyUrl` are `{{ port }}`, `{{ moduleId }}`, `{{ moduleDir }}`, and `{{ settings.<key> }}`.
+
+`requiredSettings` are rendered by the host, not by the module. This matters when the missing dependency is needed to start the module itself. For executable settings, BabelChrome can auto-detect candidate paths, validate executable permissions, check an optional minimum version, persist a manual value per module, and expose the resolved value as both `{{ settings.<key> }}` and `BABELCHROME_SETTING_<KEY>`. If a required setting is invalid, opening the module redirects to `babelchrome://settings/<module-id>?runtimeSettings=1` instead of starting the runtime.
 
 `runtime.startPolicy` is optional and defaults to `lazy`. A `prewarm` value asks BabelChrome to start the module process ahead of first use when possible. During session restore, the module needed by the active restored tab is started before the first browser view is created. Other enabled `prewarm` modules are then started in the background with a serial queue.
 
@@ -172,7 +188,7 @@ Supported modes are `on-demand` and `long-running`. On-demand commands receive a
 
 ## Readiness And Setup
 
-Modules may declare a read-only readiness command:
+Modules may declare a read-only readiness command after their required runtime settings are already valid:
 
 ```json
 {
@@ -184,7 +200,7 @@ Modules may declare a read-only readiness command:
 }
 ```
 
-The command runs from the module root and should return JSON:
+The command runs from the module root and should return JSON. It should be used for optional health checks, not for dependencies that are required before the module process can start:
 
 ```json
 {

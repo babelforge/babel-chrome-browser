@@ -189,6 +189,30 @@
 - (NSDictionary*)runtimeStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
 
 /**
+ * Returns host-rendered required runtime settings diagnostics for one installed module.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error The optional error pointer.
+ * @return The required settings status response, or nil on failure.
+ */
+- (NSDictionary*)requiredSettingsStatusForModuleWithIdentifier:(NSString*)moduleIdentifier
+                                                        error:(NSError**)error;
+
+/**
+ * Persists one host-rendered required runtime setting value.
+ *
+ * @param value The value to persist.
+ * @param key The setting key.
+ * @param moduleIdentifier The module identifier.
+ * @param error The optional error pointer.
+ * @return YES when the setting was persisted.
+ */
+- (BOOL)setRequiredSettingValue:(NSString*)value
+                         forKey:(NSString*)key
+           moduleWithIdentifier:(NSString*)moduleIdentifier
+                          error:(NSError**)error;
+
+/**
  * Restarts one module runtime when supported.
  *
  * @param moduleIdentifier The module identifier.

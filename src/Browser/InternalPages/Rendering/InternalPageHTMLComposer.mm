@@ -60,13 +60,15 @@
 
 - (NSString*)moduleSettingsPageHTMLForIdentifier:(NSString*)moduleIdentifier
                                       moduleName:(NSString*)moduleName
-                                   markdownTheme:(NSString*)markdownTheme {
+                                   markdownTheme:(NSString*)markdownTheme
+                          requiredSettingsStatus:(NSDictionary*)requiredSettingsStatus {
   NSString* pageTitle = [moduleIdentifier isEqualToString:@"babelforge.markdown-viewer"]
       ? @"Markdown Viewer Settings"
       : [NSString stringWithFormat:@"%@ Settings", moduleName];
   NSString* body = [moduleSettingsPageRenderer_ moduleSettingsPageBodyForIdentifier:moduleIdentifier
                                                                          moduleName:moduleName
-                                                                      markdownTheme:markdownTheme];
+                                                                      markdownTheme:markdownTheme
+                                                             requiredSettingsStatus:requiredSettingsStatus];
   return [internalPageRenderer_ internalPageHTMLWithTitle:pageTitle body:body];
 }
 

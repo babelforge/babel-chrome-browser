@@ -35,6 +35,7 @@
 @property(nonatomic, readonly, strong) BabelNativeModuleProcessWebDefinition* processWeb;
 @property(nonatomic, readonly, strong) BabelNativeModuleProcessRuntimeDefinition* processRuntime;
 @property(nonatomic, readonly, strong) NSDictionary* requirements;
+@property(nonatomic, readonly, strong) NSDictionary* requiredSettings;
 
 /**
  * Creates a native module manifest from decoded JSON.

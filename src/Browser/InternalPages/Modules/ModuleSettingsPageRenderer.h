@@ -24,11 +24,13 @@
  * @param moduleIdentifier The normalized module identifier.
  * @param moduleName The display name for the module.
  * @param markdownTheme The currently selected Markdown theme.
+ * @param requiredSettingsStatus The host-rendered runtime requirements status.
  * @return The rendered module Settings page body HTML.
  */
 - (NSString*)moduleSettingsPageBodyForIdentifier:(NSString*)moduleIdentifier
                                       moduleName:(NSString*)moduleName
-                                   markdownTheme:(NSString*)markdownTheme;
+                                   markdownTheme:(NSString*)markdownTheme
+                          requiredSettingsStatus:(NSDictionary*)requiredSettingsStatus;
 
 @end
 

@@ -234,8 +234,10 @@ pendingProfileExtensionRestartStatesDefaultsKey:BabelChromeConfiguration.pending
               kExtensionsPageURLString,
               kModulesPageURLString
             ]];
+    moduleActionService_ = [[BabelModuleActionService alloc] init];
     internalSettingsNavigationHandler_ =
         [[BabelInternalSettingsNavigationHandler alloc] initWithSettingsStore:browserSettingsStore_
+                                                          moduleActionService:moduleActionService_
                                                                  userDefaults:NSUserDefaults.standardUserDefaults];
     linkStatusBarController_ = [[BabelLinkStatusBarController alloc] init];
     tabs_ = [NSMutableArray array];
@@ -279,7 +281,6 @@ enforceLiveBrowserLimitHandler:^{
     localDropPayloadBuilder_ = [[BabelLocalDropPayloadBuilder alloc] init];
     localServiceURLClassifier_ = [[BabelLocalServiceURLClassifier alloc] init];
     mainWindowViewFactory_ = [[BabelMainWindowViewFactory alloc] init];
-    moduleActionService_ = [[BabelModuleActionService alloc] init];
     moduleNavigationURLResolver_ =
         [[BabelModuleNavigationURLResolver alloc] initWithModuleActionService:moduleActionService_];
     localDropSupportResolver_ =

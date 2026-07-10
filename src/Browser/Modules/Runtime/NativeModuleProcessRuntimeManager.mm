@@ -6,6 +6,7 @@
 #import "Browser/Modules/Runtime/NativeModuleProcessWebDefinition.h"
 #import "Browser/Modules/Runtime/NativeModuleRuntimeCommand.h"
 #import "Browser/Modules/Runtime/NativeModuleRuntimeStatusProvider.h"
+#import "Browser/Modules/Settings/NativeModuleRequiredSettingsService.h"
 
 #include <signal.h>
 #include <unistd.h>
@@ -209,14 +210,21 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 @implementation BabelNativeModuleProcessRuntimeManager {
   BabelNativeModulePortAllocator* portAllocator_;
   BabelNativeModuleRuntimeStatusProvider* statusProvider_;
+  BabelNativeModuleRequiredSettingsService* requiredSettingsService_;
   NSMutableDictionary<NSString*, BabelNativeModuleProcessWebInstance*>* processWebInstances_;
 }
 
 - (instancetype)init {
+  return [self initWithRequiredSettingsService:nil];
+}
+
+- (instancetype)initWithRequiredSettingsService:(BabelNativeModuleRequiredSettingsService*)requiredSettingsService {
   self = [super init];
   if (self) {
     portAllocator_ = [[BabelNativeModulePortAllocator alloc] init];
     statusProvider_ = [[BabelNativeModuleRuntimeStatusProvider alloc] init];
+    requiredSettingsService_ =
+        requiredSettingsService ?: [[BabelNativeModuleRequiredSettingsService alloc] initWithUserDefaults:nil];
     processWebInstances_ = [NSMutableDictionary dictionary];
   }
 
@@ -249,6 +257,10 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
       [self assignError:error
             description:[NSString stringWithFormat:@"Module \"%@\" does not declare a process-web runtime.",
                                                    module.moduleIdentifier ?: @""]];
+      return nil;
+    }
+
+    if (![self requiredSettingsAreSatisfiedForModule:module error:error]) {
       return nil;
     }
 
@@ -379,6 +391,10 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     [self assignError:error
           description:[NSString stringWithFormat:@"Module \"%@\" does not declare a process-runtime runtime.",
                                                  module.moduleIdentifier ?: @""]];
+    return nil;
+  }
+
+  if (![self requiredSettingsAreSatisfiedForModule:module error:error]) {
     return nil;
   }
 
@@ -572,6 +588,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   for (NSString* key in additionalEnvironment ?: @{}) {
     environment[key] = additionalEnvironment[key] ?: @"";
   }
+  [environment addEntriesFromDictionary:[requiredSettingsService_ runtimeEnvironmentForModule:module]];
 
   return environment;
 }
@@ -627,6 +644,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   environment[@"BABELCHROME_FILE_TYPES"] = fileTypes ?: @"";
   environment[@"BABELCHROME_LOCAL_SERVICE_BASE_URL"] = localServiceBaseURL ?: @"";
   environment[@"BABELCHROME_LOCAL_SERVICE_TOKEN"] = localServiceToken ?: @"";
+  [environment addEntriesFromDictionary:[requiredSettingsService_ runtimeEnvironmentForModule:module]];
 
   return environment;
 }
@@ -941,7 +959,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     interpolated = [interpolated stringByReplacingOccurrencesOfString:token withString:replacements[token]];
   }
 
-  return interpolated;
+  return [self stringByInterpolatingRequiredSettingsInString:interpolated module:module];
 }
 
 - (NSString*)interpolate:(NSString*)value
@@ -962,7 +980,36 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     interpolated = [interpolated stringByReplacingOccurrencesOfString:token withString:replacements[token]];
   }
 
+  return [self stringByInterpolatingRequiredSettingsInString:interpolated module:module];
+}
+
+- (NSString*)stringByInterpolatingRequiredSettingsInString:(NSString*)value
+                                                    module:(BabelNativeModuleManifest*)module {
+  NSString* interpolated = value ?: @"";
+  NSDictionary<NSString*, NSString*>* settings = [requiredSettingsService_ resolvedValuesForModule:module];
+  for (NSString* key in settings) {
+    NSString* token = [NSString stringWithFormat:@"{{ settings.%@ }}", key];
+    interpolated = [interpolated stringByReplacingOccurrencesOfString:token
+                                                           withString:settings[key] ?: @""];
+  }
   return interpolated;
+}
+
+- (BOOL)requiredSettingsAreSatisfiedForModule:(BabelNativeModuleManifest*)module error:(NSError**)error {
+  NSDictionary* status = [requiredSettingsService_ statusForModule:module];
+  if ([status[@"ready"] boolValue]) {
+    return YES;
+  }
+
+  NSArray* messages = [status[@"messages"] isKindOfClass:NSArray.class] ? status[@"messages"] : @[];
+  NSString* message = messages.count > 0
+      ? [messages componentsJoinedByString:@"\n"]
+      : @"Module runtime settings are incomplete.";
+  [self assignError:error
+        description:[NSString stringWithFormat:@"Module \"%@\" requires runtime settings before it can start.\n%@",
+                                               module.moduleIdentifier ?: @"",
+                                               message]];
+  return NO;
 }
 
 - (void)assignError:(NSError**)error description:(NSString*)description {

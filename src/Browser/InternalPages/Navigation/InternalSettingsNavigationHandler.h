@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 
 @class BabelBrowserSettingsStore;
+@class BabelModuleActionService;
 
 /**
  * Describes side effects produced by internal settings URL handling.
@@ -31,10 +32,12 @@
  * Creates the settings navigation handler.
  *
  * @param settingsStore The browser settings store to mutate.
+ * @param moduleActionService The service used to persist host-rendered module runtime settings.
  * @param userDefaults The defaults store used for theme appearance settings.
  * @return The initialized handler.
  */
 - (instancetype)initWithSettingsStore:(BabelBrowserSettingsStore*)settingsStore
+                   moduleActionService:(BabelModuleActionService*)moduleActionService
                          userDefaults:(NSUserDefaults*)userDefaults;
 
 /**
