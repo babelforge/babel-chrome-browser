@@ -1,7 +1,6 @@
 #import "Browser/DragDrop/Session/LocalDropSupportResolver.h"
 
 #import "Browser/Modules/Core/ModuleActionService.h"
-#import "LocalServices/LocalServiceHost.h"
 
 @implementation BabelLocalDropSupportResolver {
   BabelModuleActionService* moduleActionService_;
@@ -26,7 +25,7 @@
   }
 
   NSError* error = nil;
-  NSDictionary* snapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&error];
+  NSDictionary* snapshot = [moduleActionService_ modulesSnapshotWithError:&error];
   if (!snapshot || error) {
     return NO;
   }

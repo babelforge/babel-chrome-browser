@@ -391,7 +391,6 @@
   owner_->isTerminating_ = YES;
   [owner_ saveMainWindowState];
   [owner_ dispatchApplicationWillQuitModuleLifecycleHook];
-  [BabelLocalServiceHost.sharedHost stop];
   [owner_->browserPageLifecycleController_ reset];
 
   if ([owner_ totalTabCount] == 0) {

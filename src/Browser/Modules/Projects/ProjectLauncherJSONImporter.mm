@@ -1,18 +1,21 @@
 #import "Browser/Modules/Projects/ProjectLauncherJSONImporter.h"
 
-#import "LocalServices/LocalServiceHost.h"
+#import "Browser/Modules/Core/ModuleActionService.h"
 
 #import <Cocoa/Cocoa.h>
 
 static NSString* const kProjectLauncherModuleIdentifier = @"babelforge.project-launcher";
 
 @implementation BabelProjectLauncherJSONImporter {
+  BabelModuleActionService* moduleActionService_;
   BabelProjectLauncherImportLogHandler logHandler_;
 }
 
-- (instancetype)initWithLogHandler:(BabelProjectLauncherImportLogHandler)logHandler {
+- (instancetype)initWithModuleActionService:(BabelModuleActionService*)moduleActionService
+                                  logHandler:(BabelProjectLauncherImportLogHandler)logHandler {
   self = [super init];
   if (self) {
+    moduleActionService_ = moduleActionService;
     logHandler_ = [logHandler copy];
   }
   return self;
@@ -37,10 +40,10 @@ static NSString* const kProjectLauncherModuleIdentifier = @"babelforge.project-l
   }
 
   [self logLine:[NSString stringWithFormat:@"Project Launcher JSON panel selected path=%@", path]];
-  NSURL* moduleURL = [BabelLocalServiceHost.sharedHost moduleURLForIdentifier:kProjectLauncherModuleIdentifier
-                                                                       route:@"index"
-                                                             sourceURLString:nil
-                                                                       error:nil];
+  NSURL* moduleURL = [moduleActionService_ moduleURLForIdentifier:kProjectLauncherModuleIdentifier
+                                                            route:@"index"
+                                                  sourceURLString:nil
+                                                            error:nil];
   if (!moduleURL || path.length == 0) {
     [self logLine:@"Project Launcher JSON panel could not build module URL."];
     return nil;

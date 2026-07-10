@@ -10,7 +10,9 @@
 #import "Browser/Modules/Settings/NativeModuleRequiredSettingsService.h"
 #import "Browser/Navigation/StableURLs/StableViewerURLResolver.h"
 #import "Browser/Navigation/Viewer/ViewerSourceRegistry.h"
-#import "LocalServices/LocalServiceHost.h"
+
+static NSString* const kBabelModuleActionServiceErrorDomain =
+    @"fr.babelforge.babel-chrome.module-action-service";
 
 @implementation BabelModuleActionService {
   BabelNativeModuleRegistry* nativeModuleRegistry_;
@@ -57,14 +59,8 @@
     return [self snapshotByAddingDiagnosticsToNativeSnapshot:nativeSnapshot];
   }
 
-  NSError* hostError = nil;
-  NSDictionary* hostSnapshot = [BabelLocalServiceHost.sharedHost modulesSnapshotWithError:&hostError];
-  if (hostSnapshot) {
-    return hostSnapshot;
-  }
-
   if (error) {
-    *error = nativeError ?: hostError;
+    *error = nativeError;
   }
   return nil;
 }
@@ -84,10 +80,7 @@
     NSDictionary* runtimeStatus = nil;
     if (moduleIdentifier.length > 0) {
       if (nativeModule) {
-        readinessStatus = [nativeRequiredSettingsService_ statusForModule:nativeModule];
-      } else {
-        NSDictionary* readinessResponse =
-            [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:moduleIdentifier error:nil];
+        NSDictionary* readinessResponse = [self readinessStatusForNativeModule:nativeModule error:nil];
         readinessStatus = [self moduleDiagnosticStatusFromResponse:readinessResponse
                                                                key:@"readinessStatus"
                                                       failureState:@"failed"
@@ -98,15 +91,6 @@
       runtimeStatus = [nativeProcessRuntimeManager_ runtimeStatusForModule:nativeModule];
       runtimeStatus = [self runtimeStatusByAddingPrewarmStatus:runtimeStatus
                                               moduleIdentifier:moduleIdentifier];
-    }
-    if (!runtimeStatus && moduleIdentifier.length > 0) {
-      NSDictionary* runtimeResponse =
-          [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier
-                                                                           error:nil];
-      runtimeStatus = [self moduleDiagnosticStatusFromResponse:runtimeResponse
-                                                           key:@"runtimeStatus"
-                                                  failureState:@"unavailable"
-                                                   booleanName:@"running"];
     }
 
     enrichedModule[@"readinessStatus"] = readinessStatus ?: @{@"ready" : @NO, @"state" : @"unknown"};
@@ -167,10 +151,9 @@
   NSError* nativeError = nil;
   NSDictionary* snapshot = [nativeModuleRegistry_ modulesSnapshotWithError:&nativeError];
   if (!snapshot) {
-    snapshot = [self modulesSnapshotWithError:error];
-  }
-
-  if (!snapshot) {
+    if (error) {
+      *error = nativeError;
+    }
     return nil;
   }
 
@@ -240,10 +223,11 @@
                                                    error:error];
   }
 
-  return [BabelLocalServiceHost.sharedHost moduleURLForIdentifier:moduleIdentifier
-                                                           route:route
-                                                 sourceURLString:sourceURLString
-                                                           error:error];
+  [self assignError:error
+        description:[NSString stringWithFormat:@"Module \"%@\" runtime \"%@\" cannot expose native module URLs.",
+                                               moduleIdentifier ?: @"",
+                                               module.runtimeType ?: @"unknown"]];
+  return nil;
 }
 
 - (BOOL)supportsViewerURL:(NSURL*)url {
@@ -481,7 +465,26 @@
 }
 
 - (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
-  return [BabelLocalServiceHost.sharedHost setupModuleWithIdentifier:moduleIdentifier error:error];
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (!module) {
+    if (error) {
+      *error = nativeError;
+    }
+    return nil;
+  }
+
+  NSDictionary* setupResult = [self setupResultForNativeModule:module error:error];
+  if (!setupResult) {
+    return nil;
+  }
+
+  return @{
+    @"ok" : @YES,
+    @"setup" : setupResult,
+    @"readinessStatus" : [self readinessStatusForNativeModule:module error:nil][@"readinessStatus"] ?: @{}
+  };
 }
 
 - (NSDictionary*)readinessStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
@@ -489,13 +492,13 @@
   BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
                                                                             error:&nativeError];
   if (module) {
-    return @{
-      @"ok" : @YES,
-      @"readinessStatus" : [nativeRequiredSettingsService_ statusForModule:module]
-    };
+    return [self readinessStatusForNativeModule:module error:error];
   }
 
-  return [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:moduleIdentifier error:error];
+  if (error) {
+    *error = nativeError;
+  }
+  return nil;
 }
 
 - (NSDictionary*)runtimeStatusForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
@@ -507,19 +510,12 @@
     return [nativeProcessRuntimeManager_ runtimeStatusForModule:module];
   }
 
-  NSError* hostError = nil;
-  NSDictionary* hostStatus = [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier
-                                                                                              error:&hostError];
-  if (hostStatus) {
-    return hostStatus;
-  }
-
   if (module) {
     return [nativeProcessRuntimeManager_ runtimeStatusForModule:module];
   }
 
   if (error) {
-    *error = nativeError ?: hostError;
+    *error = nativeError;
   }
   return nil;
 }
@@ -568,7 +564,10 @@
     return [nativeProcessRuntimeManager_ restartProcessWebRuntimeForModule:module error:error];
   }
 
-  return [BabelLocalServiceHost.sharedHost restartRuntimeForModuleWithIdentifier:moduleIdentifier error:error];
+  [self assignError:error
+        description:[NSString stringWithFormat:@"Module \"%@\" runtime cannot be restarted natively.",
+                                               moduleIdentifier ?: @""]];
+  return nil;
 }
 
 - (NSDictionary*)stopRuntimeForModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error {
@@ -580,7 +579,10 @@
     return [nativeProcessRuntimeManager_ stopRuntimeForModule:module error:error];
   }
 
-  return [BabelLocalServiceHost.sharedHost stopRuntimeForModuleWithIdentifier:moduleIdentifier error:error];
+  [self assignError:error
+        description:[NSString stringWithFormat:@"Module \"%@\" runtime cannot be stopped natively.",
+                                               moduleIdentifier ?: @""]];
+  return nil;
 }
 
 - (void)stopRuntimeForMutationOfModuleWithIdentifier:(NSString*)moduleIdentifier {
@@ -588,9 +590,309 @@
     return;
   }
 
-  NSError* stopError = nil;
   [nativeProcessRuntimeManager_ stopRuntimeForModuleIdentifier:moduleIdentifier];
-  [BabelLocalServiceHost.sharedHost stopRuntimeForModuleWithIdentifier:moduleIdentifier error:&stopError];
+}
+
+- (NSDictionary*)dispatchModuleLifecycleHook:(NSString*)hook error:(NSError**)error {
+  NSString* normalizedHook =
+      [hook stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  if (normalizedHook.length == 0) {
+    [self assignError:error description:@"Missing module lifecycle hook."];
+    return nil;
+  }
+
+  NSError* nativeError = nil;
+  NSArray<BabelNativeModuleManifest*>* modules = [nativeModuleRegistry_ enabledModulesWithError:&nativeError];
+  if (!modules) {
+    if (error) {
+      *error = nativeError;
+    }
+    return nil;
+  }
+
+  NSMutableArray<NSDictionary*>* results = [NSMutableArray array];
+  for (BabelNativeModuleManifest* module in modules) {
+    if (![module.hooks containsObject:normalizedHook]) {
+      continue;
+    }
+
+    NSString* route = [self lifecycleRouteForModule:module];
+    if (route.length == 0) {
+      [results addObject:@{
+        @"moduleId" : module.moduleIdentifier ?: @"",
+        @"ok" : @NO,
+        @"error" : @"Module declares the lifecycle hook but no internal lifecycle route."
+      }];
+      continue;
+    }
+
+    NSError* routeError = nil;
+    NSURL* url = [nativeModuleHTTPHost_ moduleURLForIdentifier:module.moduleIdentifier
+                                                         route:route
+                                               sourceURLString:nil
+                                                    queryItems:@[
+                                                      [NSURLQueryItem queryItemWithName:@"hook"
+                                                                                 value:normalizedHook]
+                                                    ]
+                                                         error:&routeError];
+    NSDictionary* payload = url ? [self JSONDictionaryFromURL:url error:&routeError] : nil;
+    if (!payload) {
+      [results addObject:@{
+        @"moduleId" : module.moduleIdentifier ?: @"",
+        @"ok" : @NO,
+        @"error" : routeError.localizedDescription ?: @"Lifecycle route failed."
+      }];
+      continue;
+    }
+
+    [results addObject:@{
+      @"moduleId" : module.moduleIdentifier ?: @"",
+      @"ok" : @YES,
+      @"payload" : payload
+    }];
+  }
+
+  return @{
+    @"ok" : @YES,
+    @"hook" : normalizedHook,
+    @"results" : results
+  };
+}
+
+- (NSDictionary*)readinessStatusForNativeModule:(BabelNativeModuleManifest*)module error:(NSError**)error {
+  NSDictionary* requiredSettingsStatus = [nativeRequiredSettingsService_ statusForModule:module];
+  NSMutableDictionary* status = [requiredSettingsStatus mutableCopy];
+  status[@"canSetup"] = @(module.setup.count > 0);
+
+  if (![requiredSettingsStatus[@"ready"] boolValue]) {
+    return @{
+      @"ok" : @YES,
+      @"readinessStatus" : status
+    };
+  }
+
+  if (module.readiness.count == 0) {
+    return @{
+      @"ok" : @YES,
+      @"readinessStatus" : status
+    };
+  }
+
+  NSDictionary* readiness = module.readiness;
+  NSString* type = [readiness[@"type"] isKindOfClass:NSString.class] ? readiness[@"type"] : @"";
+  if (![type isEqualToString:@"command"]) {
+    status[@"ready"] = @NO;
+    status[@"state"] = @"unsupported";
+    status[@"messages"] = @[ [NSString stringWithFormat:@"Unsupported readiness type \"%@\".", type ?: @""] ];
+    return @{
+      @"ok" : @YES,
+      @"readinessStatus" : status
+    };
+  }
+
+  NSError* commandError = nil;
+  NSDictionary* execution = [nativeProcessRuntimeManager_ runManifestCommand:readiness
+                                                                    forModule:module
+                                                             defaultTimeoutMs:5000
+                                                                         error:&commandError];
+  if (!execution) {
+    status[@"ready"] = @NO;
+    status[@"state"] = @"failed";
+    status[@"messages"] = @[ commandError.localizedDescription ?: @"Readiness command failed." ];
+    return @{
+      @"ok" : @YES,
+      @"readinessStatus" : status
+    };
+  }
+
+  NSDictionary* commandStatus = [self readinessStatusFromCommandExecution:execution
+                                                                 module:module
+                                                              readiness:readiness];
+  return @{
+    @"ok" : @YES,
+    @"readinessStatus" : commandStatus
+  };
+}
+
+- (NSDictionary*)setupResultForNativeModule:(BabelNativeModuleManifest*)module error:(NSError**)error {
+  if (module.setup.count == 0) {
+    return @{
+      @"ok" : @NO,
+      @"state" : @"missing-setup",
+      @"messages" : @[ @"Module does not declare a setup command." ],
+      @"stdout" : @"",
+      @"stderr" : @"",
+      @"exitCode" : [NSNull null],
+      @"timedOut" : @NO
+    };
+  }
+
+  NSError* commandError = nil;
+  NSDictionary* execution = [nativeProcessRuntimeManager_ runManifestCommand:module.setup
+                                                                    forModule:module
+                                                             defaultTimeoutMs:600000
+                                                                         error:&commandError];
+  if (!execution) {
+    if (error) {
+      *error = commandError;
+    }
+    return nil;
+  }
+
+  return [self setupResultFromCommandExecution:execution setup:module.setup];
+}
+
+- (NSDictionary*)readinessStatusFromCommandExecution:(NSDictionary*)execution
+                                              module:(BabelNativeModuleManifest*)module
+                                           readiness:(NSDictionary*)readiness {
+  if ([execution[@"timedOut"] boolValue]) {
+    NSInteger timeoutMs = [readiness[@"timeoutMs"] isKindOfClass:NSNumber.class] ? [readiness[@"timeoutMs"] integerValue] : 5000;
+    return @{
+      @"state" : @"timeout",
+      @"ready" : @NO,
+      @"messages" : @[ [NSString stringWithFormat:@"Readiness command timed out after %ld ms.",
+                                                  static_cast<long>(timeoutMs)] ],
+      @"canSetup" : @(module.setup.count > 0),
+      @"exitCode" : execution[@"exitCode"] ?: [NSNull null],
+      @"stderr" : execution[@"stderr"] ?: @""
+    };
+  }
+
+  NSString* stdoutText = [execution[@"stdout"] isKindOfClass:NSString.class] ? execution[@"stdout"] : @"";
+  NSDictionary* decoded = [self JSONDictionaryFromString:stdoutText];
+  if (!decoded) {
+    NSInteger exitCode = [execution[@"exitCode"] isKindOfClass:NSNumber.class] ? [execution[@"exitCode"] integerValue] : -1;
+    return @{
+      @"state" : exitCode == 0 ? @"invalid-output" : @"failed",
+      @"ready" : @NO,
+      @"messages" : @[ @"Readiness command did not return a JSON object." ],
+      @"canSetup" : @(module.setup.count > 0),
+      @"exitCode" : execution[@"exitCode"] ?: [NSNull null],
+      @"stderr" : execution[@"stderr"] ?: @""
+    };
+  }
+
+  BOOL ready = [decoded[@"ready"] boolValue];
+  NSString* state = [decoded[@"status"] isKindOfClass:NSString.class]
+      ? decoded[@"status"]
+      : ready ? @"ready" : @"not-ready";
+  NSArray* messages = [decoded[@"messages"] isKindOfClass:NSArray.class] ? decoded[@"messages"] : @[];
+  id canSetup = [decoded[@"canSetup"] isKindOfClass:NSNumber.class] ? decoded[@"canSetup"] : @(module.setup.count > 0);
+
+  return @{
+    @"state" : state.length > 0 ? state : @"unknown",
+    @"ready" : @(ready),
+    @"messages" : [self stringListFromArray:messages],
+    @"canSetup" : canSetup,
+    @"exitCode" : execution[@"exitCode"] ?: [NSNull null],
+    @"stderr" : execution[@"stderr"] ?: @""
+  };
+}
+
+- (NSDictionary*)setupResultFromCommandExecution:(NSDictionary*)execution setup:(NSDictionary*)setup {
+  if ([execution[@"timedOut"] boolValue]) {
+    NSInteger timeoutMs = [setup[@"timeoutMs"] isKindOfClass:NSNumber.class] ? [setup[@"timeoutMs"] integerValue] : 600000;
+    return @{
+      @"ok" : @NO,
+      @"state" : @"timeout",
+      @"messages" : @[ [NSString stringWithFormat:@"Setup command timed out after %ld ms.",
+                                                  static_cast<long>(timeoutMs)] ],
+      @"stdout" : execution[@"stdout"] ?: @"",
+      @"stderr" : execution[@"stderr"] ?: @"",
+      @"exitCode" : execution[@"exitCode"] ?: [NSNull null],
+      @"timedOut" : @YES
+    };
+  }
+
+  NSString* stdoutText = [execution[@"stdout"] isKindOfClass:NSString.class] ? execution[@"stdout"] : @"";
+  NSDictionary* decoded = [self JSONDictionaryFromString:stdoutText];
+  if (decoded) {
+    BOOL ok = [decoded[@"ok"] isKindOfClass:NSNumber.class]
+        ? [decoded[@"ok"] boolValue]
+        : [execution[@"exitCode"] integerValue] == 0;
+    NSString* state = [decoded[@"status"] isKindOfClass:NSString.class]
+        ? decoded[@"status"]
+        : ok ? @"completed" : @"failed";
+    NSArray* messages = [decoded[@"messages"] isKindOfClass:NSArray.class] ? decoded[@"messages"] : @[];
+    return @{
+      @"ok" : @(ok),
+      @"state" : state.length > 0 ? state : @"unknown",
+      @"messages" : [self stringListFromArray:messages],
+      @"stdout" : execution[@"stdout"] ?: @"",
+      @"stderr" : execution[@"stderr"] ?: @"",
+      @"exitCode" : execution[@"exitCode"] ?: [NSNull null],
+      @"timedOut" : @NO
+    };
+  }
+
+  BOOL ok = [execution[@"exitCode"] integerValue] == 0;
+  return @{
+    @"ok" : @(ok),
+    @"state" : ok ? @"completed" : @"failed",
+    @"messages" : @[ ok ? @"Setup command completed." : @"Setup command failed." ],
+    @"stdout" : execution[@"stdout"] ?: @"",
+    @"stderr" : execution[@"stderr"] ?: @"",
+    @"exitCode" : execution[@"exitCode"] ?: [NSNull null],
+    @"timedOut" : @NO
+  };
+}
+
+- (NSString*)lifecycleRouteForModule:(BabelNativeModuleManifest*)module {
+  for (NSDictionary* route in module.routes) {
+    NSString* scheme = [route[@"scheme"] isKindOfClass:NSString.class] ? route[@"scheme"] : @"";
+    NSString* handler = [route[@"handler"] isKindOfClass:NSString.class] ? route[@"handler"] : @"";
+    if ([scheme isEqualToString:@"babelchrome-internal"] && handler.length > 0) {
+      return handler;
+    }
+  }
+
+  return @"";
+}
+
+- (NSDictionary*)JSONDictionaryFromURL:(NSURL*)url error:(NSError**)error {
+  NSData* data = [NSData dataWithContentsOfURL:url options:0 error:error];
+  if (data.length == 0) {
+    [self assignError:error description:@"Module route returned an empty response."];
+    return nil;
+  }
+
+  id decoded = [NSJSONSerialization JSONObjectWithData:data options:0 error:error];
+  if (![decoded isKindOfClass:NSDictionary.class]) {
+    [self assignError:error description:@"Module route returned an invalid JSON response."];
+    return nil;
+  }
+
+  return decoded;
+}
+
+- (NSDictionary*)JSONDictionaryFromString:(NSString*)string {
+  NSData* data = [string dataUsingEncoding:NSUTF8StringEncoding];
+  if (!data) {
+    return nil;
+  }
+
+  id decoded = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+  return [decoded isKindOfClass:NSDictionary.class] ? decoded : nil;
+}
+
+- (NSArray<NSString*>*)stringListFromArray:(NSArray*)array {
+  NSMutableArray<NSString*>* strings = [NSMutableArray array];
+  for (id item in array ?: @[]) {
+    if ([item isKindOfClass:NSString.class] && [item length] > 0) {
+      [strings addObject:item];
+    }
+  }
+  return strings;
+}
+
+- (void)assignError:(NSError**)error description:(NSString*)description {
+  if (!error) {
+    return;
+  }
+
+  *error = [NSError errorWithDomain:kBabelModuleActionServiceErrorDomain
+                               code:1
+                           userInfo:@{NSLocalizedDescriptionKey : description ?: @"Module action failed."}];
 }
 
 @end

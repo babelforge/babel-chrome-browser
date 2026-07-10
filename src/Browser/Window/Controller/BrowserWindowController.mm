@@ -339,14 +339,16 @@ enforceLiveBrowserLimitHandler:^{
     omniboxLocalSuggestionBuilder_ = [[BabelOmniboxLocalSuggestionBuilder alloc] init];
     omniboxSuggestionContextBuilder_ = [[BabelOmniboxSuggestionContextBuilder alloc] init];
     projectLauncherJSONImporter_ =
-        [[BabelProjectLauncherJSONImporter alloc] initWithLogHandler:^(NSString* line) {
+        [[BabelProjectLauncherJSONImporter alloc] initWithModuleActionService:moduleActionService_
+                                                                   logHandler:^(NSString* line) {
           [weakSelf appendLocalDropLogLine:line];
         }];
     BabelProjectLifecycleResponseParser* projectLifecycleResponseParser =
         [[BabelProjectLifecycleResponseParser alloc] init];
     moduleLifecycleDispatcher_ =
         [[BabelModuleLifecycleDispatcher alloc]
-            initWithProjectLifecycleResponseParser:projectLifecycleResponseParser];
+            initWithModuleActionService:moduleActionService_
+          projectLifecycleResponseParser:projectLifecycleResponseParser];
     recentlyClosedTabStore_ = [[BabelRecentlyClosedTabStore alloc] init];
     closedTabReopenCoordinator_ =
         [[BabelClosedTabReopenCoordinator alloc]

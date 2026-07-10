@@ -75,6 +75,20 @@
                                           error:(NSError**)error;
 
 /**
+ * Runs a manifest-declared command for setup or readiness checks.
+ *
+ * @param commandDeclaration The manifest command declaration.
+ * @param module The installed module manifest.
+ * @param defaultTimeoutMs The fallback timeout in milliseconds.
+ * @param error The optional error pointer.
+ * @return The command execution dictionary, or nil when the command cannot run.
+ */
+- (NSDictionary*)runManifestCommand:(NSDictionary*)commandDeclaration
+                           forModule:(BabelNativeModuleManifest*)module
+                    defaultTimeoutMs:(NSInteger)defaultTimeoutMs
+                                error:(NSError**)error;
+
+/**
  * Stops one module runtime.
  *
  * @param module The installed module manifest.

@@ -474,6 +474,51 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   return [self responseFromProcessRuntimeStdout:stdoutText];
 }
 
+- (NSDictionary*)runManifestCommand:(NSDictionary*)commandDeclaration
+                           forModule:(BabelNativeModuleManifest*)module
+                    defaultTimeoutMs:(NSInteger)defaultTimeoutMs
+                                error:(NSError**)error {
+  NSDictionary* command = [commandDeclaration isKindOfClass:NSDictionary.class] ? commandDeclaration : @{};
+  if (command.count == 0) {
+    [self assignError:error description:@"Module does not declare a command."];
+    return nil;
+  }
+
+  NSString* type = [command[@"type"] isKindOfClass:NSString.class] ? command[@"type"] : @"";
+  if (![type isEqualToString:@"command"]) {
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Unsupported module command type \"%@\".", type ?: @""]];
+    return nil;
+  }
+
+  if (![self requiredSettingsAreSatisfiedForModule:module error:error]) {
+    return nil;
+  }
+
+  NSString* commandString = [command[@"command"] isKindOfClass:NSString.class] ? command[@"command"] : @"";
+  commandString = [self interpolate:commandString module:module route:@"" sourceURL:@"" hook:@""];
+  if (commandString.length == 0) {
+    [self assignError:error description:@"Module command is empty."];
+    return nil;
+  }
+
+  NSString* cwdValue = [command[@"cwd"] isKindOfClass:NSString.class] ? command[@"cwd"] : @".";
+  NSString* cwd = [self resolvedWorkingDirectoryForModule:module cwd:cwdValue error:error];
+  if (cwd.length == 0) {
+    return nil;
+  }
+
+  NSInteger timeoutMs = [command[@"timeoutMs"] isKindOfClass:NSNumber.class]
+      ? [command[@"timeoutMs"] integerValue]
+      : defaultTimeoutMs;
+  return [self runCommandLine:@[ @"/bin/sh", @"-lc", commandString ]
+                          cwd:cwd
+                  environment:[self resolvedManifestCommandEnvironmentForModule:module]
+                standardInput:nil
+                    timeoutMs:timeoutMs
+                        error:error];
+}
+
 - (NSDictionary*)stopRuntimeForModule:(BabelNativeModuleManifest*)module
                                 error:(NSError**)error {
   @synchronized(self) {
@@ -690,15 +735,29 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
                                       payload:(NSDictionary*)payload
                                     timeoutMs:(NSInteger)timeoutMs
                                         error:(NSError**)error {
-  if (commandLine.count == 0) {
-    [self assignError:error description:@"Process-runtime command is empty."];
-    return nil;
-  }
-
   NSData* payloadData = [NSJSONSerialization dataWithJSONObject:payload ?: @{}
                                                        options:0
                                                          error:error];
   if (!payloadData) {
+    return nil;
+  }
+
+  return [self runCommandLine:commandLine
+                          cwd:cwd
+                  environment:environment
+                standardInput:payloadData
+                    timeoutMs:timeoutMs
+                        error:error];
+}
+
+- (NSDictionary*)runCommandLine:(NSArray<NSString*>*)commandLine
+                            cwd:(NSString*)cwd
+                    environment:(NSDictionary<NSString*, NSString*>*)environment
+                  standardInput:(NSData*)standardInput
+                      timeoutMs:(NSInteger)timeoutMs
+                          error:(NSError**)error {
+  if (commandLine.count == 0) {
+    [self assignError:error description:@"Module command is empty."];
     return nil;
   }
 
@@ -754,7 +813,9 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     return nil;
   }
 
-  [stdinPipe.fileHandleForWriting writeData:payloadData];
+  if (standardInput.length > 0) {
+    [stdinPipe.fileHandleForWriting writeData:standardInput];
+  }
   [stdinPipe.fileHandleForWriting closeFile];
 
   NSInteger timeout = timeoutMs > 0 ? timeoutMs : 10000;
@@ -783,6 +844,25 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     @"stderr" : stderrText,
     @"timedOut" : @(timedOut)
   };
+}
+
+- (NSDictionary<NSString*, NSString*>*)resolvedManifestCommandEnvironmentForModule:(BabelNativeModuleManifest*)module {
+  NSMutableDictionary<NSString*, NSString*>* environment = [NSMutableDictionary dictionary];
+  NSDictionary<NSString*, NSString*>* currentEnvironment = NSProcessInfo.processInfo.environment;
+  for (NSString* key in @[ @"PATH", @"HOME", @"TMPDIR", @"TMP", @"TEMP", @"SHELL" ]) {
+    NSString* value = currentEnvironment[key];
+    if (value.length > 0) {
+      environment[key] = value;
+    }
+  }
+
+  environment[@"BABELCHROME_MODULE_ID"] = module.moduleIdentifier ?: @"";
+  environment[@"BABELCHROME_MODULE_NAME"] = module.name ?: @"";
+  environment[@"BABELCHROME_MODULE_VERSION"] = module.version ?: @"";
+  environment[@"BABELCHROME_MODULE_DIR"] = module.path ?: @"";
+  [environment addEntriesFromDictionary:[requiredSettingsService_ runtimeEnvironmentForModule:module]];
+
+  return environment;
 }
 
 - (NSDictionary*)responseFromProcessRuntimeStdout:(NSString*)stdoutText {

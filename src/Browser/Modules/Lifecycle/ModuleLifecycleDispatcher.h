@@ -3,6 +3,7 @@
 
 #import <Foundation/Foundation.h>
 
+@class BabelModuleActionService;
 @class BabelProjectLifecycleResponseParser;
 
 typedef void (^BabelModuleLifecycleRestoredProjectsHandler)(NSArray<NSString*>* projectIdentifiers);
@@ -15,10 +16,12 @@ typedef void (^BabelModuleLifecycleRestoredProjectsHandler)(NSArray<NSString*>* 
 /**
  * Creates a module lifecycle dispatcher.
  *
+ * @param moduleActionService The module action service used to dispatch lifecycle hooks.
  * @param projectLifecycleResponseParser The parser used to extract project lifecycle data.
  * @return The initialized module lifecycle dispatcher.
  */
-- (instancetype)initWithProjectLifecycleResponseParser:
+- (instancetype)initWithModuleActionService:(BabelModuleActionService*)moduleActionService
+             projectLifecycleResponseParser:
     (BabelProjectLifecycleResponseParser*)projectLifecycleResponseParser;
 
 /**

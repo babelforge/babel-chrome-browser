@@ -1,16 +1,19 @@
 #import "Browser/Modules/Lifecycle/ModuleLifecycleDispatcher.h"
 
+#import "Browser/Modules/Core/ModuleActionService.h"
 #import "Browser/Modules/Lifecycle/ProjectLifecycleResponseParser.h"
-#import "LocalServices/LocalServiceHost.h"
 
 @implementation BabelModuleLifecycleDispatcher {
+  BabelModuleActionService* moduleActionService_;
   BabelProjectLifecycleResponseParser* projectLifecycleResponseParser_;
 }
 
-- (instancetype)initWithProjectLifecycleResponseParser:
+- (instancetype)initWithModuleActionService:(BabelModuleActionService*)moduleActionService
+             projectLifecycleResponseParser:
     (BabelProjectLifecycleResponseParser*)projectLifecycleResponseParser {
   self = [super init];
   if (self) {
+    moduleActionService_ = moduleActionService;
     projectLifecycleResponseParser_ = projectLifecycleResponseParser;
   }
   return self;
@@ -21,7 +24,7 @@
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
     NSError* error = nil;
     NSDictionary* response =
-        [BabelLocalServiceHost.sharedHost dispatchModuleLifecycleHook:@"app.did-start" error:&error];
+        [moduleActionService_ dispatchModuleLifecycleHook:@"app.did-start" error:&error];
     if (error) {
       NSLog(@"BabelChrome module lifecycle app.did-start failed: %@", error.localizedDescription);
     }
@@ -40,7 +43,7 @@
 
 - (void)dispatchApplicationWillQuit {
   NSError* error = nil;
-  [BabelLocalServiceHost.sharedHost dispatchModuleLifecycleHook:@"app.will-quit" error:&error];
+  [moduleActionService_ dispatchModuleLifecycleHook:@"app.will-quit" error:&error];
   if (error) {
     NSLog(@"BabelChrome module lifecycle app.will-quit failed: %@", error.localizedDescription);
   }

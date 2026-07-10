@@ -4,7 +4,7 @@
 #import <Foundation/Foundation.h>
 
 /**
- * Classifies LocalServiceHost runtime URLs.
+ * Classifies tokenized module runtime URLs.
  */
 @interface BabelLocalServiceURLClassifier : NSObject
 
@@ -18,7 +18,7 @@
 - (BOOL)isLocalServiceModuleURLString:(NSString*)urlString;
 
 /**
- * Returns whether the URL string points to a tokenized LocalServiceHost runtime URL.
+ * Returns whether the URL string points to a tokenized module runtime URL.
  *
  * @param urlString The URL string to inspect.
  *

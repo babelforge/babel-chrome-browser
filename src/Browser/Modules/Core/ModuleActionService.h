@@ -194,6 +194,15 @@
 - (NSDictionary*)setupModuleWithIdentifier:(NSString*)moduleIdentifier error:(NSError**)error;
 
 /**
+ * Dispatches one application lifecycle hook to matching installed modules.
+ *
+ * @param hook The lifecycle hook name.
+ * @param error The optional error pointer.
+ * @return The lifecycle dispatch response, or nil on failure.
+ */
+- (NSDictionary*)dispatchModuleLifecycleHook:(NSString*)hook error:(NSError**)error;
+
+/**
  * Returns readiness diagnostics for one installed module.
  *
  * @param moduleIdentifier The module identifier.

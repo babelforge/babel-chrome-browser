@@ -40,8 +40,8 @@ typedef void (^BabelMetadataVoidHandler)(void);
  * @param compactTitleBlock The title compaction block.
  * @param stableServerPredicate The predicate for stable server URLs.
  * @param stableURLPredicate The predicate for stable BabelChrome URLs.
- * @param localServiceRuntimePredicate The predicate for LocalServiceHost runtime URLs.
- * @param localServiceModulePredicate The predicate for LocalServiceHost module URLs.
+ * @param localServiceRuntimePredicate The predicate for tokenized module runtime URLs.
+ * @param localServiceModulePredicate The predicate for tokenized module route URLs.
  * @param stableServerReloadURLProvider The stable server reload URL provider.
  * @param refreshURLStringsProvider The stable URL refresh provider.
  * @param reloadRequestedURLStringsHandler The callback used to reload matching tabs.

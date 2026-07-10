@@ -3,6 +3,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class BabelModuleActionService;
+
 typedef void (^BabelProjectLauncherImportLogHandler)(NSString* line);
 
 /**
@@ -13,10 +15,12 @@ typedef void (^BabelProjectLauncherImportLogHandler)(NSString* line);
 /**
  * Creates a Project Launcher JSON importer.
  *
+ * @param moduleActionService The module action service used to build the import URL.
  * @param logHandler The optional log handler used to report import decisions.
  * @return The initialized Project Launcher JSON importer.
  */
-- (instancetype)initWithLogHandler:(BabelProjectLauncherImportLogHandler)logHandler;
+- (instancetype)initWithModuleActionService:(BabelModuleActionService*)moduleActionService
+                                  logHandler:(BabelProjectLauncherImportLogHandler)logHandler;
 
 /**
  * Opens a native panel and returns a Project Launcher import URL when a valid JSON file is selected.

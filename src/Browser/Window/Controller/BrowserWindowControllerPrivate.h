@@ -116,7 +116,6 @@
 #import "Browser/Navigation/Viewer/ViewerSourceActionHandler.h"
 #import "Browser/State/Sessions/WindowStateStore.h"
 #import "Configuration/Configuration.h"
-#import "LocalServices/LocalServiceHost.h"
 
 #include <cmath>
 #include <vector>
