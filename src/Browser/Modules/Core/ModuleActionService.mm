@@ -73,15 +73,24 @@
     NSDictionary* readinessStatus = nil;
     NSDictionary* runtimeStatus = nil;
     if (moduleIdentifier.length > 0) {
-      readinessStatus =
+      NSDictionary* readinessResponse =
           [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:moduleIdentifier error:nil];
+      readinessStatus = [self moduleDiagnosticStatusFromResponse:readinessResponse
+                                                             key:@"readinessStatus"
+                                                    failureState:@"failed"
+                                                     booleanName:@"ready"];
     }
     if (nativeModule) {
       runtimeStatus = [nativeProcessRuntimeManager_ runtimeStatusForModule:nativeModule];
     }
     if (!runtimeStatus && moduleIdentifier.length > 0) {
-      runtimeStatus = [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier
-                                                                                       error:nil];
+      NSDictionary* runtimeResponse =
+          [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier
+                                                                           error:nil];
+      runtimeStatus = [self moduleDiagnosticStatusFromResponse:runtimeResponse
+                                                           key:@"runtimeStatus"
+                                                  failureState:@"unavailable"
+                                                   booleanName:@"running"];
     }
 
     enrichedModule[@"readinessStatus"] = readinessStatus ?: @{@"ready" : @NO, @"state" : @"unknown"};
@@ -92,6 +101,36 @@
   NSMutableDictionary* enrichedSnapshot = [snapshot mutableCopy];
   enrichedSnapshot[@"modules"] = enrichedModules;
   return enrichedSnapshot;
+}
+
+- (NSDictionary*)moduleDiagnosticStatusFromResponse:(NSDictionary*)response
+                                                key:(NSString*)key
+                                       failureState:(NSString*)failureState
+                                        booleanName:(NSString*)booleanName {
+  if (![response isKindOfClass:NSDictionary.class]) {
+    return nil;
+  }
+
+  NSDictionary* nestedStatus = [response[key] isKindOfClass:NSDictionary.class] ? response[key] : nil;
+  if (nestedStatus) {
+    return nestedStatus;
+  }
+
+  if ([response[@"state"] isKindOfClass:NSString.class] ||
+      [response[booleanName] isKindOfClass:NSNumber.class]) {
+    return response;
+  }
+
+  NSString* errorMessage = [response[@"error"] isKindOfClass:NSString.class] ? response[@"error"] : @"";
+  if (errorMessage.length > 0) {
+    return @{
+      booleanName : @NO,
+      @"state" : failureState ?: @"failed",
+      @"messages" : @[ errorMessage ]
+    };
+  }
+
+  return nil;
 }
 
 - (NSDictionary*)moduleRouteForBabelChromeComponents:(NSURLComponents*)components
