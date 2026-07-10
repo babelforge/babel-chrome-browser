@@ -8,11 +8,16 @@
 #import "Browser/Modules/Runtime/NativeModuleRuntimeStatusProvider.h"
 #import "Browser/Modules/Settings/NativeModuleRequiredSettingsService.h"
 
+#include <errno.h>
+#include <libproc.h>
 #include <signal.h>
+#include <string.h>
 #include <unistd.h>
 
 static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     @"fr.babelforge.babel-chrome.native-module-process-runtime-manager";
+static NSString* const kBabelNativeModuleProcessWebRuntimeRecordsFileName =
+    @"process-web-runtimes.json";
 
 @interface BabelNativeModuleProcessWebInstance : NSObject
 
@@ -26,6 +31,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 @property(nonatomic, readonly, copy) NSString* stopSignal;
 @property(nonatomic, readonly) NSInteger stopTimeoutMs;
 @property(nonatomic, readonly, copy) NSString* startPolicy;
+@property(nonatomic, readonly) pid_t processIdentifier;
 
 - (instancetype)initWithModuleIdentifier:(NSString*)moduleIdentifier
                                     port:(NSInteger)port
@@ -125,6 +131,10 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   return task_.running;
 }
 
+- (pid_t)processIdentifier {
+  return task_.processIdentifier;
+}
+
 - (void)stop {
   if ([self isRunning]) {
     kill(task_.processIdentifier, [self signalNumber:self.stopSignal]);
@@ -212,6 +222,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   BabelNativeModuleRuntimeStatusProvider* statusProvider_;
   BabelNativeModuleRequiredSettingsService* requiredSettingsService_;
   NSMutableDictionary<NSString*, BabelNativeModuleProcessWebInstance*>* processWebInstances_;
+  NSString* processWebRuntimeRecordsPath_;
 }
 
 - (instancetype)init {
@@ -226,6 +237,8 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     requiredSettingsService_ =
         requiredSettingsService ?: [[BabelNativeModuleRequiredSettingsService alloc] initWithUserDefaults:nil];
     processWebInstances_ = [NSMutableDictionary dictionary];
+    processWebRuntimeRecordsPath_ = [[[self class] processWebRuntimeRecordsDirectoryPath]
+        stringByAppendingPathComponent:kBabelNativeModuleProcessWebRuntimeRecordsFileName];
   }
 
   return self;
@@ -317,6 +330,12 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
                                                                    stdoutPipe:stdoutPipe
                                                                    stderrPipe:stderrPipe];
     [instance beginCapturingLogs];
+    NSString* moduleIdentifier = [module.moduleIdentifier copy];
+    __weak BabelNativeModuleProcessRuntimeManager* weakSelf = self;
+    task.terminationHandler = ^(NSTask* terminatedTask) {
+      [weakSelf processWebTaskDidTerminateForModuleIdentifier:moduleIdentifier
+                                            processIdentifier:terminatedTask.processIdentifier];
+    };
 
     NSError* launchError = nil;
     if (![task launchAndReturnError:&launchError]) {
@@ -327,9 +346,12 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
       return nil;
     }
 
+    [self persistProcessWebInstance:instance modulePath:module.path];
+
     if (![self waitUntilProcessWebInstanceIsReady:instance timeoutMs:module.processWeb.timeoutMs error:error]) {
       NSString* logs = [instance logs];
       [instance stop];
+      [self removePersistedProcessWebRuntimeForModuleIdentifier:module.moduleIdentifier];
       [self assignError:error
             description:[NSString stringWithFormat:@"Module \"%@\" process did not become ready at \"%@\".%@",
                                                    module.moduleIdentifier ?: @"",
@@ -542,12 +564,25 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 - (void)stopRuntimeForModuleIdentifier:(NSString*)moduleIdentifier {
   @synchronized(self) {
     BabelNativeModuleProcessWebInstance* instance = processWebInstances_[moduleIdentifier ?: @""];
-    if (!instance) {
-      return;
+    if (instance) {
+      [instance stop];
+      [processWebInstances_ removeObjectForKey:moduleIdentifier ?: @""];
     }
 
-    [instance stop];
-    [processWebInstances_ removeObjectForKey:moduleIdentifier ?: @""];
+    [self stopPersistedProcessWebRuntimeForModuleIdentifier:moduleIdentifier];
+  }
+}
+
+- (void)stopPersistedProcessWebRuntimes {
+  @synchronized(self) {
+    NSMutableDictionary* index = [[self persistedProcessWebRuntimeIndex] mutableCopy];
+    NSMutableDictionary* runtimes = [[self persistedProcessWebRuntimesFromIndex:index] mutableCopy];
+    for (NSString* moduleIdentifier in [runtimes.allKeys copy]) {
+      NSDictionary* record = [runtimes[moduleIdentifier] isKindOfClass:NSDictionary.class] ? runtimes[moduleIdentifier] : @{};
+      [self stopPersistedProcessWebRuntimeRecord:record moduleIdentifier:moduleIdentifier];
+      [runtimes removeObjectForKey:moduleIdentifier];
+    }
+    [self writePersistedProcessWebRuntimes:runtimes index:index];
   }
 }
 
@@ -557,6 +592,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     for (NSString* moduleIdentifier in moduleIdentifiers) {
       [self stopRuntimeForModuleIdentifier:moduleIdentifier];
     }
+    [self stopPersistedProcessWebRuntimes];
   }
 }
 
@@ -1023,6 +1059,189 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
   [session finishTasksAndInvalidate];
 
   return statusCode > 0 && statusCode < 500;
+}
+
++ (NSString*)processWebRuntimeRecordsDirectoryPath {
+  NSArray<NSURL*>* applicationSupportURLs =
+      [NSFileManager.defaultManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
+  NSURL* applicationSupportURL = applicationSupportURLs.firstObject;
+  if (!applicationSupportURL) {
+    return [NSTemporaryDirectory() stringByAppendingPathComponent:@"BabelChrome/NativeModuleRuntime"];
+  }
+
+  return [[applicationSupportURL URLByAppendingPathComponent:@"BabelForge/BabelChrome/NativeModuleRuntime"
+                                                 isDirectory:YES] path];
+}
+
+- (void)persistProcessWebInstance:(BabelNativeModuleProcessWebInstance*)instance
+                        modulePath:(NSString*)modulePath {
+  if (instance.moduleIdentifier.length == 0 || instance.processIdentifier <= 0) {
+    return;
+  }
+
+  NSMutableDictionary* index = [[self persistedProcessWebRuntimeIndex] mutableCopy];
+  NSMutableDictionary* runtimes = [[self persistedProcessWebRuntimesFromIndex:index] mutableCopy];
+  runtimes[instance.moduleIdentifier] = @{
+    @"pid" : @(instance.processIdentifier),
+    @"cwd" : [self standardizedPath:instance.cwd],
+    @"modulePath" : [self standardizedPath:modulePath ?: @""],
+    @"port" : @(instance.port),
+    @"startedAt" : @((NSInteger)NSDate.date.timeIntervalSince1970)
+  };
+  [self writePersistedProcessWebRuntimes:runtimes index:index];
+}
+
+- (void)stopPersistedProcessWebRuntimeForModuleIdentifier:(NSString*)moduleIdentifier {
+  if (moduleIdentifier.length == 0) {
+    return;
+  }
+
+  NSMutableDictionary* index = [[self persistedProcessWebRuntimeIndex] mutableCopy];
+  NSMutableDictionary* runtimes = [[self persistedProcessWebRuntimesFromIndex:index] mutableCopy];
+  NSDictionary* record = [runtimes[moduleIdentifier] isKindOfClass:NSDictionary.class] ? runtimes[moduleIdentifier] : @{};
+  [self stopPersistedProcessWebRuntimeRecord:record moduleIdentifier:moduleIdentifier];
+  [runtimes removeObjectForKey:moduleIdentifier];
+  [self writePersistedProcessWebRuntimes:runtimes index:index];
+}
+
+- (void)removePersistedProcessWebRuntimeForModuleIdentifier:(NSString*)moduleIdentifier {
+  [self removePersistedProcessWebRuntimeForModuleIdentifier:moduleIdentifier processIdentifier:0];
+}
+
+- (void)removePersistedProcessWebRuntimeForModuleIdentifier:(NSString*)moduleIdentifier
+                                          processIdentifier:(pid_t)processIdentifier {
+  if (moduleIdentifier.length == 0) {
+    return;
+  }
+
+  NSMutableDictionary* index = [[self persistedProcessWebRuntimeIndex] mutableCopy];
+  NSMutableDictionary* runtimes = [[self persistedProcessWebRuntimesFromIndex:index] mutableCopy];
+  NSDictionary* record = [runtimes[moduleIdentifier] isKindOfClass:NSDictionary.class] ? runtimes[moduleIdentifier] : @{};
+  NSNumber* recordedProcessIdentifier = [record[@"pid"] isKindOfClass:NSNumber.class] ? record[@"pid"] : nil;
+  if (processIdentifier > 0 && recordedProcessIdentifier && recordedProcessIdentifier.intValue != processIdentifier) {
+    return;
+  }
+
+  [runtimes removeObjectForKey:moduleIdentifier];
+  [self writePersistedProcessWebRuntimes:runtimes index:index];
+}
+
+- (void)processWebTaskDidTerminateForModuleIdentifier:(NSString*)moduleIdentifier
+                                    processIdentifier:(pid_t)processIdentifier {
+  if (moduleIdentifier.length == 0 || processIdentifier <= 0) {
+    return;
+  }
+
+  @synchronized(self) {
+    BabelNativeModuleProcessWebInstance* instance = processWebInstances_[moduleIdentifier ?: @""];
+    if (instance && instance.processIdentifier == processIdentifier) {
+      [processWebInstances_ removeObjectForKey:moduleIdentifier ?: @""];
+    }
+
+    [self removePersistedProcessWebRuntimeForModuleIdentifier:moduleIdentifier
+                                            processIdentifier:processIdentifier];
+  }
+}
+
+- (void)stopPersistedProcessWebRuntimeRecord:(NSDictionary*)record
+                            moduleIdentifier:(NSString*)moduleIdentifier {
+  NSNumber* pidNumber = [record[@"pid"] isKindOfClass:NSNumber.class] ? record[@"pid"] : nil;
+  NSString* expectedCwd = [record[@"cwd"] isKindOfClass:NSString.class] ? record[@"cwd"] : @"";
+  pid_t pid = pidNumber ? static_cast<pid_t>(pidNumber.intValue) : 0;
+  if (pid <= 0 || expectedCwd.length == 0 || ![self processIsAlive:pid]) {
+    return;
+  }
+
+  NSString* currentCwd = [self currentDirectoryForProcessIdentifier:pid];
+  if (currentCwd.length == 0 || ![[self standardizedPath:currentCwd] isEqualToString:[self standardizedPath:expectedCwd]]) {
+    return;
+  }
+
+  NSLog(@"Stopping orphan process-web runtime for module %@ pid=%d cwd=%@",
+        moduleIdentifier ?: @"",
+        pid,
+        currentCwd);
+  [self stopProcessIdentifier:pid timeoutMs:3000];
+}
+
+- (NSDictionary*)persistedProcessWebRuntimeIndex {
+  NSData* data = [NSData dataWithContentsOfFile:processWebRuntimeRecordsPath_];
+  if (!data) {
+    return @{@"version" : @1, @"runtimes" : @{}};
+  }
+
+  id decoded = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+  return [decoded isKindOfClass:NSDictionary.class] ? decoded : @{@"version" : @1, @"runtimes" : @{}};
+}
+
+- (NSDictionary*)persistedProcessWebRuntimesFromIndex:(NSDictionary*)index {
+  NSDictionary* runtimes = [index[@"runtimes"] isKindOfClass:NSDictionary.class] ? index[@"runtimes"] : @{};
+  return runtimes;
+}
+
+- (void)writePersistedProcessWebRuntimes:(NSDictionary*)runtimes
+                                   index:(NSDictionary*)index {
+  NSMutableDictionary* nextIndex = [index isKindOfClass:NSDictionary.class] ? [index mutableCopy] : [NSMutableDictionary dictionary];
+  nextIndex[@"version"] = @1;
+  nextIndex[@"runtimes"] = runtimes ?: @{};
+
+  NSString* directoryPath = processWebRuntimeRecordsPath_.stringByDeletingLastPathComponent;
+  [NSFileManager.defaultManager createDirectoryAtPath:directoryPath
+                          withIntermediateDirectories:YES
+                                           attributes:nil
+                                                error:nil];
+  NSData* data = [NSJSONSerialization dataWithJSONObject:nextIndex
+                                                 options:NSJSONWritingPrettyPrinted
+                                                   error:nil];
+  if (data) {
+    [data writeToFile:processWebRuntimeRecordsPath_ options:NSDataWritingAtomic error:nil];
+  }
+}
+
+- (BOOL)processIsAlive:(pid_t)pid {
+  if (pid <= 0) {
+    return NO;
+  }
+
+  int result = kill(pid, 0);
+  return result == 0 || errno == EPERM;
+}
+
+- (void)stopProcessIdentifier:(pid_t)pid timeoutMs:(NSInteger)timeoutMs {
+  if (![self processIsAlive:pid]) {
+    return;
+  }
+
+  kill(pid, SIGTERM);
+  NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:(timeoutMs > 0 ? timeoutMs : 3000) / 1000.0];
+  while ([self processIsAlive:pid] && [deadline timeIntervalSinceNow] > 0) {
+    usleep(50000);
+  }
+
+  if ([self processIsAlive:pid]) {
+    kill(pid, SIGKILL);
+  }
+}
+
+- (NSString*)currentDirectoryForProcessIdentifier:(pid_t)pid {
+  struct proc_vnodepathinfo vnodeInfo;
+  memset(&vnodeInfo, 0, sizeof(vnodeInfo));
+  int result = proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vnodeInfo, sizeof(vnodeInfo));
+  if (result <= 0 || vnodeInfo.pvi_cdir.vip_path[0] == '\0') {
+    return @"";
+  }
+
+  NSString* path = [NSFileManager.defaultManager stringWithFileSystemRepresentation:vnodeInfo.pvi_cdir.vip_path
+                                                                             length:strlen(vnodeInfo.pvi_cdir.vip_path)];
+  return [self standardizedPath:path ?: @""];
+}
+
+- (NSString*)standardizedPath:(NSString*)path {
+  if (path.length == 0) {
+    return @"";
+  }
+
+  return path.stringByStandardizingPath;
 }
 
 - (NSString*)interpolate:(NSString*)value

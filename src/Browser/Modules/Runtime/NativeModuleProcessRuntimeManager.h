@@ -106,6 +106,11 @@
 - (void)stopRuntimeForModuleIdentifier:(NSString*)moduleIdentifier;
 
 /**
+ * Stops process-web runtimes persisted by previous BabelChrome instances.
+ */
+- (void)stopPersistedProcessWebRuntimes;
+
+/**
  * Stops every native runtime process owned by this manager.
  */
 - (void)stopAllRuntimes;

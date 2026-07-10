@@ -4,6 +4,7 @@
 #include <string>
 
 #include "App/ApplicationDelegate.h"
+#include "Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h"
 #include "Configuration/Configuration.h"
 #include "Startup/ProfileExtensionStartupSynchronizer.h"
 #include "include/cef_application_mac.h"
@@ -144,6 +145,15 @@ static BOOL EnsureDirectoryExists(NSURL* directoryURL) {
 }
 
 /**
+ * Stops native module runtimes persisted by a previous BabelChrome process.
+ */
+static void StopPersistedNativeModuleRuntimes() {
+  BabelNativeModuleProcessRuntimeManager* runtimeManager =
+      [[BabelNativeModuleProcessRuntimeManager alloc] initWithRequiredSettingsService:nil];
+  [runtimeManager stopPersistedProcessWebRuntimes];
+}
+
+/**
  * Configures global CEF settings.
  *
  * @param settings The CEF settings structure to configure.
@@ -197,6 +207,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     [BabelProfileExtensionStartupSynchronizer applyProfileExtensionPackageState];
+    StopPersistedNativeModuleRuntimes();
 
     BabelApplicationDelegate* delegate = [[BabelApplicationDelegate alloc] init];
     NSApp.delegate = delegate;
