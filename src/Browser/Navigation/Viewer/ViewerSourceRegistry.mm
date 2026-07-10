@@ -79,10 +79,10 @@ static NSString* const kBabelViewerSourceRegistryErrorDomain =
                                            inDomains:NSUserDomainMask];
   NSURL* applicationSupportURL = applicationSupportURLs.firstObject;
   if (!applicationSupportURL) {
-    return [NSTemporaryDirectory() stringByAppendingPathComponent:@"BabelChrome/LocalServiceHost"];
+    return [NSTemporaryDirectory() stringByAppendingPathComponent:@"BabelChrome/NativeModuleHost"];
   }
 
-  return [[applicationSupportURL URLByAppendingPathComponent:@"BabelForge/BabelChrome/LocalServiceHost"
+  return [[applicationSupportURL URLByAppendingPathComponent:@"BabelForge/BabelChrome/NativeModuleHost"
                                                  isDirectory:YES] path];
 }
 

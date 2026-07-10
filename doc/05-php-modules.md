@@ -276,7 +276,7 @@ The host validates the envelope without interpreting the event. Compatible viewe
 
 ## Host Integration APIs
 
-BabelChrome exposes a small token-protected internal API from the native local HTTP host and the remaining transitional ExtensionHost. These endpoints are intended for installed modules and native host integration, not for arbitrary remote pages.
+BabelChrome exposes a small token-protected internal API from the native local HTTP host. These endpoints are intended for installed modules and native host integration, not for arbitrary remote pages.
 
 Installed module metadata:
 
@@ -400,13 +400,7 @@ This convention is currently implemented by BabelChrome's own generated internal
 From the browser workspace, low-level packaging is available for a single module directory:
 
 ```bash
-php tools/ship-php-module.php <module-directory> [target.zip]
-```
-
-From the browser workspace, all sibling workspace modules can be packaged with:
-
-```bash
-./tools/build-php-modules.sh
+php tools/ship-module.php <module-directory> [target.zip]
 ```
 
 From the meta workspace, prefer:

@@ -2,7 +2,7 @@
 
 BabelChrome is a dedicated macOS browser for BabelForge.
 
-It behaves like a separate Chrome-like application: it has its own profile, groups, tabs, extensions, local PHP extension host, and installable viewer modules. It does not use the personal Google Chrome profile.
+It behaves like a separate Chrome-like application: it has its own profile, groups, tabs, extensions, native local module host, and installable viewer modules. It does not use the personal Google Chrome profile.
 
 ## What It Does
 
@@ -21,9 +21,9 @@ It behaves like a separate Chrome-like application: it has its own profile, grou
 
 ## Core Versus Modules
 
-BabelChrome itself is the native browser shell: CEF, tabs, groups, address bar, profile isolation, extension management, internal pages, and the local ExtensionHost runtime.
+BabelChrome itself is the native browser shell: CEF, tabs, groups, address bar, profile isolation, extension management, internal pages, native module discovery, native module installation, and the native local module host.
 
-Document viewers are not built into the browser bundle. Markdown, Mermaid, OpenAPI, JSON, and project-launcher behavior come from installable modules. The current modules use the PHP runtimes implemented by ExtensionHost. A file type is handled only when a matching module is installed and enabled from `babelchrome://modules`.
+Document viewers are not built into the browser bundle. Markdown, Mermaid, OpenAPI, JSON, and project-launcher behavior come from installable modules. PHP-based modules run as module-owned `process-web` applications and declare their PHP executable through required settings. A file type is handled only when a matching module is installed and enabled from `babelchrome://modules`.
 
 When the browser repository is checked out through the `babel-chrome` meta workspace, common module sources live under the sibling `modules/` directory. Before installation, build production zip files from the meta workspace root:
 

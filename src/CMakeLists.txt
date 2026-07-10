@@ -289,8 +289,6 @@ set(BABEL_CHROME_SOURCES
   Browser/Window/Controller/BrowserWindowControllerPrivate.h
   Configuration/Configuration.h
   Configuration/Configuration.mm
-  LocalServices/LocalServiceHost.h
-  LocalServices/LocalServiceHost.mm
   Startup/ProfileExtensionStartupSynchronizer.h
   Startup/ProfileExtensionStartupSynchronizer.mm
   main_mac.mm
@@ -358,9 +356,6 @@ add_custom_command(
           "${BABEL_CHROME_APP}/Contents/Resources/ExtensionHost"
   COMMAND ${CMAKE_COMMAND} -E remove_directory
           "${BABEL_CHROME_APP}/Contents/Resources/Themes"
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-          "${CMAKE_CURRENT_SOURCE_DIR}/ExtensionHost"
-          "${BABEL_CHROME_APP}/Contents/Resources/ExtensionHost"
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Themes"
           "${BABEL_CHROME_APP}/Contents/Resources/Themes"

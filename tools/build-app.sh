@@ -8,11 +8,6 @@ cd "${PROJECT_DIR}"
 
 ./tools/prepare-cef.sh
 
-(
-  cd "${PROJECT_DIR}/src/ExtensionHost"
-  composer install
-)
-
 if [ -f build-xcode/CMakeCache.txt ] && \
   ! grep -F "CMAKE_HOME_DIRECTORY:INTERNAL=${PROJECT_DIR}" build-xcode/CMakeCache.txt >/dev/null 2>&1; then
   echo "Removing stale build-xcode cache generated from another source directory."

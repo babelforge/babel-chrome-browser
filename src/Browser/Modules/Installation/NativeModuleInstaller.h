@@ -4,7 +4,7 @@
 #import <Foundation/Foundation.h>
 
 /**
- * Installs, updates, enables, disables, and removes modules without using ExtensionHost.
+ * Installs, updates, enables, disables, and removes modules through the native host model.
  */
 @interface BabelNativeModuleInstaller : NSObject
 

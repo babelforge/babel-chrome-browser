@@ -6,7 +6,7 @@
 @class BabelNativeModuleManifest;
 
 /**
- * Discovers installed BabelChrome modules from manifest.json files without using ExtensionHost.
+ * Discovers installed BabelChrome modules from manifest.json files through the native host model.
  */
 @interface BabelNativeModuleRegistry : NSObject
 

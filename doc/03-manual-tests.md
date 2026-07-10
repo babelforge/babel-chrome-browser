@@ -103,7 +103,7 @@ Expected result:
 - Remote Markdown URLs such as `open -a BabelChrome "https://example.com/README.md"` open through the local viewer service.
 - Viewer tabs display and persist stable `babelchrome://viewer/...` or module-owned `babelchrome://<viewer>/...` URLs, not stale `127.0.0.1:<port>` URLs.
 - OpenAPI-like files such as `open -a BabelChrome ./openapi.yaml` open through the local OpenAPI viewer and render with bundled Swagger UI.
-- Multi-file OpenAPI examples under `src/ExtensionHost/resources/openapi-ref-sample/` render with their relative `$ref` schemas resolved.
+- Multi-file OpenAPI examples under the OpenAPI viewer module resources render with their relative `$ref` schemas resolved.
 - Editing a local OpenAPI `$ref` file refreshes the rendered OpenAPI page automatically after the viewer detects the referenced file timestamp change.
 
 ## Keyboard and Address Bar Validation

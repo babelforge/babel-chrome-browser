@@ -17,7 +17,6 @@ BabelChrome owns only the local browser shell for BabelForge. It does not own Ba
 - `BrowserViews` contains the reusable AppKit controls used by the browser shell, including tab items, group items, browser host views, resize handles, and hand-cursor buttons.
 - `BrowserClient` receives CEF callbacks for titles, address changes, browser creation, browser close, and load errors.
 - The native module registry and installer load installed manifests, validate module zips, update module enabled state, remove modules, and compute module metadata used by the browser UI.
-- `LocalServiceHost` starts and stops the transitional loopback extension service still used by source registration, viewer helper APIs, internal APIs, and runtime paths that have not yet moved to the native host.
 - `Configuration` centralizes application name and profile path.
 
 ## Profile
@@ -63,19 +62,17 @@ The main window state, left panel state, Developer Tools dock settings, tab open
 7. `babelchrome://command/group:...::|::url:...` compact command URLs provide a shell-friendly alternative for grouped openings.
 8. CEF browser child views are created immediately for explicit selected tabs, while keyboard tab cycling and adjacent-tab preloading are delayed and cancellable.
 
-## ExtensionHost And Viewers
+## Native Module Host And Viewers
 
 BabelChrome can route supported document URLs through a native viewer dispatcher instead of sending them directly to CEF. Viewer support comes from installed and enabled modules. The fresh module contract supports `static-web`, `process-web`, and `process-runtime`; current PHP-based viewers are packaged as `process-web` modules that start their own PHP front controller. The native app itself does not bundle Markdown, OpenAPI, JSON rendering logic, or module-specific server logic.
 
-The native module registry discovers installed manifests directly from the user modules directory. It also parses the `process-web` and `process-runtime` declarations so the browser can reason about commands, routes, runtime metadata, and fallback diagnostics without asking ExtensionHost first.
+The native module registry discovers installed manifests directly from the user modules directory. It also parses the `process-web` and `process-runtime` declarations so the browser can reason about commands, routes, runtime metadata, and diagnostics without a browser-level PHP host.
 
-The native module installer validates and extracts zip packages, preserves enabled state on update, updates enabled state, removes modules, and asks the native runtime manager plus the transitional runtime layer to stop a module process before update, disable, or removal.
+The native module installer validates and extracts zip packages, preserves enabled state on update, updates enabled state, removes modules, and asks the native runtime manager to stop a module process before update, disable, or removal.
 
-The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. The native local HTTP host now owns tokenized `process-web` module route proxying, module `public/` asset serving, viewer source registration, viewer source assets, viewer source status, Open With endpoints, message relay acknowledgement, and on-demand `process-runtime` route execution. Several non-viewer internal APIs still use the transitional ExtensionHost until those paths are migrated.
+The native process runtime manager owns `process-web` runtime diagnostics, restart, stop, local port allocation, command interpolation, environment preparation, readiness waiting, and log capture. The native local HTTP host owns tokenized `process-web` module route proxying, module `public/` asset serving, viewer source registration, viewer source assets, viewer source status, Open With endpoints, message relay acknowledgement, lifecycle dispatch, setup/readiness command execution, and on-demand `process-runtime` route execution.
 
-`LocalServiceHost` is the transitional runtime process manager. It starts the ExtensionHost on `127.0.0.1` with a random port and a per-process token. The ExtensionHost is a Symfony application copied into the application resources and served through PHP's built-in server. The native host and transitional host share a writable state directory under Application Support so cache, logs, source registrations, and runtime state are not written inside `/Applications/BabelChrome.app`.
-
-This Symfony ExtensionHost is a transitional browser implementation detail, not the public module contract. New modules must not declare `php-web` or `php-class`; PHP, if needed, is a module-owned process dependency declared through `requiredSettings` and used by the module's `process-web` command.
+There is no browser-level Symfony/PHP ExtensionHost in the application bundle. New modules must not declare `php-web` or `php-class`; PHP, if needed, is a module-owned process dependency declared through `requiredSettings` and used by the module's `process-web` command.
 
 For `process-web` modules, the native runtime manager allocates a module-local port, starts the module command from the installed module directory, and waits for the declared readiness URL. The native local HTTP host exposes the stable tokenized `/module/<module-id>/<route>` URL that Chromium loads, then proxies the request to the current runtime port. This keeps the user-facing `babelchrome://...` URL stable while allowing the process port to change on each app launch.
 
@@ -105,7 +102,7 @@ The same host serves token-protected module assets from:
 /internal/message-relay
 ```
 
-For on-demand `process-runtime` modules, the native runtime manager runs a module-owned command without allocating a port. The command receives a JSON payload on stdin and can return either plain stdout or JSON stdout. JSON stdout can define `statusCode`, `headers`, `contentType`, and `body`, which the native local HTTP host maps to the module route response. Long-running `process-runtime` support remains a transitional/runtime-planning path and is not yet native-owned.
+For on-demand `process-runtime` modules, the native runtime manager runs a module-owned command without allocating a port. The command receives a JSON payload on stdin and can return either plain stdout or JSON stdout. JSON stdout can define `statusCode`, `headers`, `contentType`, and `body`, which the native local HTTP host maps to the module route response.
 
 Viewer-backed tabs are represented by stable BabelChrome URLs. External integrations should prefer the generic viewer dispatcher:
 

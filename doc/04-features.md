@@ -101,15 +101,9 @@ OpenAPI rendering uses the Swagger UI frontend bundled inside the optional OpenA
 
 OpenAPI viewer tabs use stable app URLs such as `babelchrome://viewer/file/<encoded-path>`, `babelchrome://viewer/url/<encoded-url>`, or module-owned `babelchrome://openapi/...` routes. Local OpenAPI files auto-refresh when the source timestamp changes on disk, including local files loaded through relative `$ref` values.
 
-Example OpenAPI files are stored under:
-
-```text
-src/ExtensionHost/resources/
-```
-
 ## Modules
 
-BabelChrome includes a native module registry and installer, a native local HTTP host for `process-web` routes and viewer helper endpoints, and a transitional LocalServiceHost runtime for internal APIs plus runtime paths that have not yet moved fully native.
+BabelChrome includes a native module registry and installer plus a native local HTTP host for `process-web` routes, on-demand `process-runtime` routes, viewer helper endpoints, lifecycle hooks, setup/readiness command execution, and token-protected internal module APIs.
 
 No module is bundled into BabelChrome for now. A module becomes available only after installing a production zip into the user modules directory. Markdown and OpenAPI viewers are regular modules produced by the sibling `babel-chrome` workspace, then installed like any other module.
 
@@ -218,11 +212,11 @@ Each module owns its own Composer dependencies. BabelChrome does not share or me
 vendor/
 ```
 
-`tools/build-php-modules.sh` runs `composer install --no-dev --classmap-authoritative` inside each workspace module before packaging. The Markdown and OpenAPI modules therefore ship with real module-local Composer dependencies, not only a placeholder autoloader.
+`tools/dev2prod.sh` runs `composer install --no-dev --classmap-authoritative` inside each Composer-backed workspace module before packaging. The Markdown and OpenAPI modules therefore ship with real module-local Composer dependencies, not only a placeholder autoloader.
 
 Module source directories are development workspaces. They may contain `assets/`, `importmap.php`, `tests/`, `var/`, `ai/`, build files, and other development-only files. `ModulePackageShipper` excludes those development paths from production zips and keeps runtime files such as `manifest.json`, `composer.json`, `composer.lock`, `src/`, `templates/`, `vendor/`, and `public/`.
 
-The transitional LocalServiceHost exposes module runtime and integration metadata through its internal API for module pages and native/runtime bridges. The native local HTTP host exposes the viewer-facing helpers used by `process-web` viewer pages:
+The native local HTTP host exposes module runtime metadata, integration metadata, and viewer-facing helpers used by `process-web` module pages:
 
 ```text
 /internal/modules
@@ -316,7 +310,7 @@ The native Settings page links to the internal Modules page:
 babelchrome://modules
 ```
 
-From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed. These package and enabled-state mutations are native filesystem operations. BabelChrome stops native `process-web` instances directly before update, disable, or removal, then still asks LocalServiceHost to stop any transitional runtime process while the migration continues.
+From `babelchrome://modules`, modules can be installed from zip packages, updated by reinstalling a zip with the same module id, disabled, enabled, and removed. These package and enabled-state mutations are native filesystem operations. BabelChrome stops native `process-web` instances directly before update, disable, or removal.
 The page also displays module-declared `babelchrome://<host>` routes, file type badges, hook badges, installed versions, and a `Settings` action when the module manifest exposes a settings route.
 
 For `process-web` modules, BabelChrome owns native runtime diagnostics, restart, stop, port allocation, command interpolation, environment preparation, readiness waiting, log capture, tokenized route proxying, and tokenized module `public/` asset serving. For on-demand `process-runtime` modules, BabelChrome now executes route commands natively, passes a JSON payload on stdin, decodes plain or JSON stdout, and maps the result to the tokenized module route response.
@@ -327,7 +321,7 @@ Enabled modules that declare routes can also be opened from this page. `process-
 /module/<module-id>/<route>
 ```
 
-The native app creates the tokenized local URL internally. For `process-web`, it starts the module runtime if needed and proxies the request to the current module-owned process port. For on-demand `process-runtime`, it runs the route command directly and returns the command output as the HTTP response. Remaining non-native runtime paths still use LocalServiceHost during the migration.
+The native app creates the tokenized local URL internally. For `process-web`, it starts the module runtime if needed and proxies the request to the current module-owned process port. For on-demand `process-runtime`, it runs the route command directly and returns the command output as the HTTP response.
 
 Module-declared `babelchrome://<host>` URLs are also resolved natively. For example, the demo module declares `scheme=babelchrome`, `host=demo`, and `handler=index`, so it can be opened with:
 
@@ -340,20 +334,9 @@ The original URL is forwarded to the module route as `sourceUrl`.
 Enabled modules can also declare application lifecycle hooks. BabelChrome currently dispatches:
 
 - `app.did-start` after the native window and restored tabs have been rebuilt;
-- `app.will-quit` before the ExtensionHost process is stopped.
+- `app.will-quit` before BabelChrome stops native module runtimes.
 
 The Project Launcher module uses these hooks to snapshot running managed servers on quit, stop those servers before BabelChrome exits, and restart the same servers on the next BabelChrome launch. Restarted servers receive fresh manager-chosen ports, while user-facing stable URLs such as `babelchrome://server/<project-id>` remain unchanged.
-
-ExtensionHost-backed route handlers receive a `ModuleRequest` object with a runtime context. The context exposes the LocalServiceHost base URL, the current access token, the original `sourceUrl`, and helper methods for generating tokenized module asset and module route URLs:
-
-```text
-ModuleRequest.context.baseUrl
-ModuleRequest.context.token
-ModuleRequest.context.sourceUrl
-ModuleRequest.context.moduleAssetUrl(...)
-ModuleRequest.context.moduleRouteUrl(...)
-ModuleRequest.context.tokenizedUrl(...)
-```
 
 Modules can also serve static files from their own `public/` directory through:
 
@@ -365,7 +348,7 @@ The endpoint is token-protected and rejects paths that resolve outside the modul
 
 Native `process-web` module requests receive equivalent context through HTTP headers, including `X-BabelChrome-Module-Id`, `X-BabelChrome-Module-Route`, `X-BabelChrome-Source-Url`, `X-BabelChrome-Source-Id`, `X-BabelChrome-Local-Service-Base-Url`, `X-BabelChrome-Local-Service-Token`, `X-BabelChrome-Module-Asset-Base-Url`, `X-BabelChrome-Module-Asset-Token-Query`, and `X-BabelChrome-File-Types`. Stable values that are known before the process starts are also injected into the process environment, including `BABELCHROME_LOCAL_SERVICE_BASE_URL`, `BABELCHROME_LOCAL_SERVICE_TOKEN`, `BABELCHROME_VIEWER_STATE_DIR`, `BABELCHROME_VIEWER_TOKEN`, `BABELCHROME_MODULE_ASSET_BASE_URL`, `BABELCHROME_MODULE_ASSET_TOKEN_QUERY`, and `BABELCHROME_FILE_TYPES`.
 
-Native on-demand `process-runtime` commands receive the same core context through their stdin JSON payload and process environment. The stdin payload includes the module id, module name, module version, installed module path, route, hook name when relevant, original source URL, tokenized LocalServiceHost base URL/token for transitional helper APIs, request query parameters, and current `X-BabelChrome-File-Types` value.
+Native on-demand `process-runtime` commands receive the same core context through their stdin JSON payload and process environment. The stdin payload includes the module id, module name, module version, installed module path, route, hook name when relevant, original source URL, native local service base URL/token, request query parameters, and current `X-BabelChrome-File-Types` value.
 
 The native zip installer validates archives before extraction:
 
@@ -378,12 +361,12 @@ The native zip installer validates archives before extraction:
 External modules can be prepared with the low-level dev2prod shipper:
 
 ```bash
-php tools/ship-php-module.php <module-directory> [target.zip]
+php tools/ship-module.php <module-directory> [target.zip]
 ```
 
 Despite its historical filename, the shipper is runtime-aware. It expects a module directory containing `manifest.json`, then validates and packages the files needed by the declared runtime:
 
-- PHP runtimes keep Composer production dependencies and PHP application files;
+- Composer-backed modules keep Composer production dependencies and application files;
 - `static-web` runtimes keep the declared static document root and public assets;
 - `process-web` runtimes keep executable files and production dependencies needed to start a local HTTP process;
 - `process-runtime` runtimes keep executable files and production dependencies needed by non-web commands.
