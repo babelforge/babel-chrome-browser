@@ -31,7 +31,7 @@ final class ModuleAutoloadRegistrar
     {
         $registered = [];
         foreach ($this->moduleRegistry->enabled() as $module) {
-            if ($module->usesWebRuntime()) {
+            if (!$module->usesPhpClassRuntime()) {
                 continue;
             }
 

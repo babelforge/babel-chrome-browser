@@ -213,6 +213,16 @@ final readonly class ModuleManifest
     }
 
     /**
+     * Returns whether this module runs as an in-process PHP class.
+     *
+     * @return bool true when the module uses the PHP class runtime
+     */
+    public function usesPhpClassRuntime(): bool
+    {
+        return ModuleRuntimeType::isPhpClass($this->runtimeType);
+    }
+
+    /**
      * Returns whether this module web runtime should use a dedicated PHP process.
      *
      * @return bool true when the web runtime must be process-isolated

@@ -424,6 +424,36 @@ final class ModuleRegistryTest extends TestCase
     }
 
     /**
+     * Ensures process-owned module vendors are not loaded inside ExtensionHost.
+     */
+    public function testModuleAutoloadRegistrarSkipsProcessWebVendor(): void
+    {
+        $moduleDirectory = $this->workspaceDirectory.'/Modules/vendor.process-autoload-module';
+        self::assertTrue(mkdir($moduleDirectory.'/vendor', 0o775, true));
+        file_put_contents($moduleDirectory.'/vendor/autoload.php', '<?php class BabelChromeProcessWebAutoloadShouldNotLoad {}');
+        file_put_contents($moduleDirectory.'/manifest.json', json_encode([
+            'id' => 'vendor.process-autoload-module',
+            'name' => 'Process Autoload Module',
+            'version' => '1.0.0',
+            'runtime' => [
+                'type' => 'process-web',
+                'command' => 'php',
+                'args' => ['-S', '127.0.0.1:{{ port }}', '-t', 'public', 'public/index.php'],
+                'cwd' => '.',
+                'readyUrl' => 'http://127.0.0.1:{{ port }}/health',
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $registry = new ModuleRegistry($this->workspaceDirectory.'/Catalog', $this->workspaceDirectory.'/Modules');
+        $registrar = new ModuleAutoloadRegistrar($registry);
+
+        $registered = $registrar->registerEnabledModuleAutoloaders();
+
+        self::assertSame([], $registered);
+        self::assertFalse(class_exists('BabelChromeProcessWebAutoloadShouldNotLoad', false));
+    }
+
+    /**
      * Ensures manifests must declare a PHP version requirement.
      */
     public function testManifestWithoutPhpRequirementIsRejected(): void

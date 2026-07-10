@@ -44,7 +44,7 @@
   NSError* nativeError = nil;
   NSDictionary* nativeSnapshot = [nativeModuleRegistry_ modulesSnapshotWithError:&nativeError];
   if (nativeSnapshot) {
-    return nativeSnapshot;
+    return [self snapshotByAddingDiagnosticsToNativeSnapshot:nativeSnapshot];
   }
 
   NSError* hostError = nil;
@@ -57,6 +57,41 @@
     *error = nativeError ?: hostError;
   }
   return nil;
+}
+
+- (NSDictionary*)snapshotByAddingDiagnosticsToNativeSnapshot:(NSDictionary*)snapshot {
+  NSArray* modules = [snapshot[@"modules"] isKindOfClass:NSArray.class] ? snapshot[@"modules"] : @[];
+  NSMutableArray<NSDictionary*>* enrichedModules = [NSMutableArray arrayWithCapacity:modules.count];
+  for (NSDictionary* module in modules) {
+    if (![module isKindOfClass:NSDictionary.class]) {
+      continue;
+    }
+
+    NSMutableDictionary* enrichedModule = [module mutableCopy];
+    NSString* moduleIdentifier = [module[@"id"] isKindOfClass:NSString.class] ? module[@"id"] : @"";
+    BabelNativeModuleManifest* nativeModule = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier error:nil];
+    NSDictionary* readinessStatus = nil;
+    NSDictionary* runtimeStatus = nil;
+    if (moduleIdentifier.length > 0) {
+      readinessStatus =
+          [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:moduleIdentifier error:nil];
+    }
+    if (nativeModule) {
+      runtimeStatus = [nativeProcessRuntimeManager_ runtimeStatusForModule:nativeModule];
+    }
+    if (!runtimeStatus && moduleIdentifier.length > 0) {
+      runtimeStatus = [BabelLocalServiceHost.sharedHost runtimeStatusForModuleWithIdentifier:moduleIdentifier
+                                                                                       error:nil];
+    }
+
+    enrichedModule[@"readinessStatus"] = readinessStatus ?: @{@"ready" : @NO, @"state" : @"unknown"};
+    enrichedModule[@"runtimeStatus"] = runtimeStatus ?: @{@"running" : @NO, @"state" : @"unknown"};
+    [enrichedModules addObject:enrichedModule];
+  }
+
+  NSMutableDictionary* enrichedSnapshot = [snapshot mutableCopy];
+  enrichedSnapshot[@"modules"] = enrichedModules;
+  return enrichedSnapshot;
 }
 
 - (NSDictionary*)moduleRouteForBabelChromeComponents:(NSURLComponents*)components
