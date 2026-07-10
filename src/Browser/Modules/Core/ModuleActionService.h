@@ -27,6 +27,14 @@
                                                error:(NSError**)error;
 
 /**
+ * Returns the module identifier matching BabelChrome URL components.
+ *
+ * @param components The BabelChrome URL components.
+ * @return The module identifier, or nil when no module route matches.
+ */
+- (NSString*)moduleIdentifierForBabelChromeComponents:(NSURLComponents*)components;
+
+/**
  * Returns a local runtime URL for one installed module route.
  *
  * @param moduleIdentifier The module identifier.
@@ -55,6 +63,14 @@
  * @return The viewer kind, or nil when unsupported.
  */
 - (NSString*)viewerKindForURL:(NSURL*)url;
+
+/**
+ * Returns the enabled viewer module identifier for a source URL.
+ *
+ * @param url The source URL.
+ * @return The module identifier, or nil when no viewer handles the URL.
+ */
+- (NSString*)viewerModuleIdentifierForURL:(NSURL*)url;
 
 /**
  * Returns a local runtime URL for the viewer that handles a source URL.
@@ -91,6 +107,31 @@
  * @return The default group name, or nil when no group is declared.
  */
 - (NSString*)defaultGroupNameForModuleIdentifier:(NSString*)moduleIdentifier;
+
+/**
+ * Returns whether the module declares a prewarm runtime start policy.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @return YES when the module should prewarm.
+ */
+- (BOOL)moduleWithIdentifierUsesPrewarmStartPolicy:(NSString*)moduleIdentifier;
+
+/**
+ * Prewarms one module when its manifest requests prewarm.
+ *
+ * @param moduleIdentifier The module identifier.
+ * @param error The optional error pointer.
+ * @return The runtime status after prewarm, or nil when no prewarm was needed or failed.
+ */
+- (NSDictionary*)prewarmModuleWithIdentifierIfNeeded:(NSString*)moduleIdentifier
+                                               error:(NSError**)error;
+
+/**
+ * Schedules background prewarm for enabled modules that request it.
+ *
+ * @param excludedIdentifiers The module identifiers already handled by priority prewarm.
+ */
+- (void)schedulePrewarmModulesExcludingIdentifiers:(NSSet<NSString*>*)excludedIdentifiers;
 
 /**
  * Installs or updates a module zip.

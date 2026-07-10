@@ -125,6 +125,7 @@ BabelChrome supports a framework-agnostic `process-web` module contract. A PHP w
 {
   "runtime": {
     "type": "process-web",
+    "startPolicy": "lazy",
     "command": "php",
     "args": ["-S", "127.0.0.1:{{ port }}", "-t", "public", "public/index.php"],
     "cwd": ".",
@@ -135,6 +136,8 @@ BabelChrome supports a framework-agnostic `process-web` module contract. A PHP w
 ```
 
 The front controller belongs to the module. It may be plain PHP, Symfony, Laravel, or another PHP project layout. BabelChrome does not use framework-specific adapters and does not embed PHP as a module runtime. The module starts its own process, validates required executables through `readiness`, and receives BabelChrome context through headers and environment values.
+
+The optional `runtime.startPolicy` field controls when a `process-web` runtime starts. The default `lazy` policy waits for first route access. The `prewarm` policy lets BabelChrome start selected module runtimes during session restore: the active restored tab is handled first, and the remaining enabled prewarm modules are started in a background serial queue.
 
 Important runtime variables include:
 

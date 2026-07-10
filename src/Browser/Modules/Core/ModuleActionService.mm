@@ -4,7 +4,9 @@
 #import "Browser/Modules/Registry/NativeModuleManifest.h"
 #import "Browser/Modules/Registry/NativeModuleRegistry.h"
 #import "Browser/Modules/Runtime/NativeModuleHTTPHost.h"
+#import "Browser/Modules/Runtime/NativeModulePrewarmCoordinator.h"
 #import "Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h"
+#import "Browser/Modules/Runtime/NativeModuleProcessWebDefinition.h"
 #import "Browser/Navigation/StableURLs/StableViewerURLResolver.h"
 #import "Browser/Navigation/Viewer/ViewerSourceRegistry.h"
 #import "LocalServices/LocalServiceHost.h"
@@ -13,6 +15,7 @@
   BabelNativeModuleRegistry* nativeModuleRegistry_;
   BabelNativeModuleInstaller* nativeModuleInstaller_;
   BabelNativeModuleProcessRuntimeManager* nativeProcessRuntimeManager_;
+  BabelNativeModulePrewarmCoordinator* nativePrewarmCoordinator_;
   BabelNativeModuleHTTPHost* nativeModuleHTTPHost_;
   BabelViewerSourceRegistry* viewerSourceRegistry_;
   BabelStableViewerURLResolver* stableViewerURLResolver_;
@@ -25,6 +28,8 @@
     nativeModuleInstaller_ =
         [[BabelNativeModuleInstaller alloc] initWithModulesDirectoryPath:nativeModuleRegistry_.modulesDirectoryPath];
     nativeProcessRuntimeManager_ = [[BabelNativeModuleProcessRuntimeManager alloc] init];
+    nativePrewarmCoordinator_ =
+        [[BabelNativeModulePrewarmCoordinator alloc] initWithRuntimeManager:nativeProcessRuntimeManager_];
     viewerSourceRegistry_ = [[BabelViewerSourceRegistry alloc] init];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
     nativeModuleHTTPHost_ = [[BabelNativeModuleHTTPHost alloc] initWithModuleRegistry:nativeModuleRegistry_
@@ -82,6 +87,8 @@
     }
     if (nativeModule) {
       runtimeStatus = [nativeProcessRuntimeManager_ runtimeStatusForModule:nativeModule];
+      runtimeStatus = [self runtimeStatusByAddingPrewarmStatus:runtimeStatus
+                                              moduleIdentifier:moduleIdentifier];
     }
     if (!runtimeStatus && moduleIdentifier.length > 0) {
       NSDictionary* runtimeResponse =
@@ -133,6 +140,19 @@
   return nil;
 }
 
+- (NSDictionary*)runtimeStatusByAddingPrewarmStatus:(NSDictionary*)runtimeStatus
+                                   moduleIdentifier:(NSString*)moduleIdentifier {
+  NSDictionary* prewarmStatus =
+      [nativePrewarmCoordinator_ prewarmStatusForModuleIdentifier:moduleIdentifier];
+  if (!prewarmStatus || runtimeStatus.count == 0) {
+    return runtimeStatus;
+  }
+
+  NSMutableDictionary* enrichedStatus = [runtimeStatus mutableCopy];
+  enrichedStatus[@"prewarmStatus"] = prewarmStatus;
+  return enrichedStatus;
+}
+
 - (NSDictionary*)moduleRouteForBabelChromeComponents:(NSURLComponents*)components
                                                error:(NSError**)error {
   NSError* nativeError = nil;
@@ -176,6 +196,23 @@
   return nil;
 }
 
+- (NSString*)moduleIdentifierForBabelChromeComponents:(NSURLComponents*)components {
+  if (![components.scheme isEqualToString:@"babelchrome"] || components.host.length == 0) {
+    return nil;
+  }
+
+  if ([components.host isEqualToString:@"modules"]) {
+    NSArray<NSString*>* pathComponents = [components.path pathComponents];
+    if (pathComponents.count >= 3) {
+      return pathComponents[1];
+    }
+  }
+
+  NSError* error = nil;
+  NSDictionary* route = [self moduleRouteForBabelChromeComponents:components error:&error];
+  return [route[@"moduleIdentifier"] isKindOfClass:NSString.class] ? route[@"moduleIdentifier"] : nil;
+}
+
 - (NSURL*)moduleURLForIdentifier:(NSString*)moduleIdentifier
                            route:(NSString*)route
                  sourceURLString:(NSString*)sourceURLString
@@ -204,6 +241,11 @@
 - (NSString*)viewerKindForURL:(NSURL*)url {
   NSDictionary* route = [nativeModuleRegistry_ viewerRouteForURL:url error:nil];
   return [route[@"viewerKind"] isKindOfClass:NSString.class] ? route[@"viewerKind"] : nil;
+}
+
+- (NSString*)viewerModuleIdentifierForURL:(NSURL*)url {
+  NSDictionary* route = [nativeModuleRegistry_ viewerRouteForURL:url error:nil];
+  return [route[@"moduleIdentifier"] isKindOfClass:NSString.class] ? route[@"moduleIdentifier"] : nil;
 }
 
 - (NSURL*)viewerURLForURL:(NSURL*)url
@@ -306,6 +348,76 @@
   }
 
   return nil;
+}
+
+- (BOOL)moduleWithIdentifierUsesPrewarmStartPolicy:(NSString*)moduleIdentifier {
+  NSError* error = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&error];
+  return [self moduleUsesPrewarmStartPolicy:module];
+}
+
+- (NSDictionary*)prewarmModuleWithIdentifierIfNeeded:(NSString*)moduleIdentifier
+                                               error:(NSError**)error {
+  NSError* nativeError = nil;
+  BabelNativeModuleManifest* module = [nativeModuleRegistry_ moduleWithIdentifier:moduleIdentifier
+                                                                            error:&nativeError];
+  if (!module || ![self moduleUsesPrewarmStartPolicy:module]) {
+    if (error && nativeError) {
+      *error = nativeError;
+    }
+    return nil;
+  }
+
+  return [nativePrewarmCoordinator_ prewarmModule:module error:error];
+}
+
+- (void)schedulePrewarmModulesExcludingIdentifiers:(NSSet<NSString*>*)excludedIdentifiers {
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+    NSError* error = nil;
+    NSArray<BabelNativeModuleManifest*>* modules = [nativeModuleRegistry_ enabledModulesWithError:&error];
+    if (!modules) {
+      if (error) {
+        NSLog(@"BabelChrome module prewarm discovery failed: %@", error.localizedDescription);
+      }
+      return;
+    }
+
+    NSMutableArray<BabelNativeModuleManifest*>* eligibleModules = [NSMutableArray array];
+    for (BabelNativeModuleManifest* module in modules) {
+      if (![self moduleUsesPrewarmStartPolicy:module] ||
+          ![self moduleReadinessAllowsPrewarm:module]) {
+        continue;
+      }
+
+      [eligibleModules addObject:module];
+    }
+
+    [nativePrewarmCoordinator_ schedulePrewarmModules:eligibleModules
+                                 excludingIdentifiers:excludedIdentifiers ?: [NSSet set]];
+  });
+}
+
+- (BOOL)moduleUsesPrewarmStartPolicy:(BabelNativeModuleManifest*)module {
+  return module.enabled &&
+         [module.runtimeType isEqualToString:@"process-web"] &&
+         [module.processWeb.startPolicy isEqualToString:@"prewarm"];
+}
+
+- (BOOL)moduleReadinessAllowsPrewarm:(BabelNativeModuleManifest*)module {
+  if (module.readiness.count == 0) {
+    return YES;
+  }
+
+  NSDictionary* readinessResponse =
+      [BabelLocalServiceHost.sharedHost readinessStatusForModuleWithIdentifier:module.moduleIdentifier
+                                                                         error:nil];
+  NSDictionary* readinessStatus = [self moduleDiagnosticStatusFromResponse:readinessResponse
+                                                                       key:@"readinessStatus"
+                                                              failureState:@"failed"
+                                                               booleanName:@"ready"];
+  NSNumber* ready = [readinessStatus[@"ready"] isKindOfClass:NSNumber.class] ? readinessStatus[@"ready"] : nil;
+  return ready ? [ready boolValue] : NO;
 }
 
 - (BOOL)installModuleZipAtPath:(NSString*)zipPath error:(NSError**)error {

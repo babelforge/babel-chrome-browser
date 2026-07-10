@@ -16,6 +16,7 @@
 @property(nonatomic, readonly) NSInteger timeoutMs;
 @property(nonatomic, readonly, copy) NSString* stopSignal;
 @property(nonatomic, readonly) NSInteger stopTimeoutMs;
+@property(nonatomic, readonly, copy) NSString* startPolicy;
 
 /**
  * Creates a process-web definition from decoded manifest runtime data.
@@ -36,6 +37,7 @@
  * @param timeoutMs The readiness timeout in milliseconds.
  * @param stopSignal The graceful stop signal name.
  * @param stopTimeoutMs The graceful stop timeout in milliseconds.
+ * @param startPolicy The startup policy, either lazy or prewarm.
  * @return The process-web definition.
  */
 - (instancetype)initWithCommand:(NSString*)command
@@ -45,7 +47,8 @@
                        readyUrl:(NSString*)readyUrl
                       timeoutMs:(NSInteger)timeoutMs
                      stopSignal:(NSString*)stopSignal
-                  stopTimeoutMs:(NSInteger)stopTimeoutMs;
+                  stopTimeoutMs:(NSInteger)stopTimeoutMs
+                     startPolicy:(NSString*)startPolicy;
 
 /**
  * Returns the executable command and arguments as one command line array.

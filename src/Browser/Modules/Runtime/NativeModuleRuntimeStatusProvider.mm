@@ -50,6 +50,7 @@
     @"command" : [definition commandLine],
     @"cwd" : definition.cwd,
     @"readyUrl" : definition.readyUrl,
+    @"startPolicy" : definition.startPolicy,
     @"logs" : @"",
     @"source" : @"native"
   };

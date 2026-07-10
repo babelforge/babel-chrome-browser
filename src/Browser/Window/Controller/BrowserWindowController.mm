@@ -389,6 +389,11 @@ enforceLiveBrowserLimitHandler:^{
                       return [weakSelf navigationURLStringForStableBabelChromeURLString:stableURLString];
                     }];
     stableViewerURLResolver_ = [[BabelStableViewerURLResolver alloc] init];
+    restoredTabModuleDependencyResolver_ =
+        [[BabelRestoredTabModuleDependencyResolver alloc]
+            initWithModuleActionService:moduleActionService_
+                 stableViewerURLResolver:stableViewerURLResolver_
+                 stableServerURLResolver:stableServerURLResolver_];
     viewerNavigationURLResolver_ =
         [[BabelViewerNavigationURLResolver alloc] initWithStableViewerURLResolver:stableViewerURLResolver_
                                                               moduleActionService:moduleActionService_

@@ -76,6 +76,7 @@
 #import "Browser/InternalPages/Modules/ModuleInternalPageHTMLBuilder.h"
 #import "Browser/Modules/Lifecycle/ModuleLifecycleDispatcher.h"
 #import "Browser/Modules/Navigation/ModuleNavigationURLResolver.h"
+#import "Browser/Modules/Navigation/RestoredTabModuleDependencyResolver.h"
 #import "Browser/InternalPages/Modules/ModulePageRenderer.h"
 #import "Browser/InternalPages/Modules/ModuleSettingsPageRenderer.h"
 #import "Browser/Modules/Navigation/ModuleSettingsRouteResolver.h"
@@ -301,6 +302,7 @@ static const NSUInteger kMaximumLivePageBrowsers = 8;
   BabelModuleLifecycleDispatcher* moduleLifecycleDispatcher_;
   BabelModuleNavigationURLResolver* moduleNavigationURLResolver_;
   BabelModulePageRenderer* modulePageRenderer_;
+  BabelRestoredTabModuleDependencyResolver* restoredTabModuleDependencyResolver_;
   BabelModuleSettingsPageRenderer* moduleSettingsPageRenderer_;
   BabelModuleSettingsRouteResolver* moduleSettingsRouteResolver_;
   BabelModuleUpdateService* moduleUpdateService_;
@@ -796,6 +798,10 @@ doCommandBySelector:(SEL)commandSelector;
 - (void)restoreSessionInitialBrowsers;
 
 - (void)restoreSessionModulesLifecycle;
+
+- (NSString*)prewarmSelectedRestoredTabRuntimeIfNeeded;
+
+- (void)scheduleBackgroundModulePrewarmExcludingIdentifiers:(NSSet<NSString*>*)excludedIdentifiers;
 
 - (void)maximizeWindowToVisibleFrame:(id)sender;
 

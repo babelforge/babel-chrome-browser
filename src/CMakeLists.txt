@@ -154,6 +154,8 @@ set(BABEL_CHROME_SOURCES
   Browser/Modules/Registry/NativeModuleRegistry.mm
   Browser/Modules/Runtime/NativeModuleHTTPHost.h
   Browser/Modules/Runtime/NativeModuleHTTPHost.mm
+  Browser/Modules/Runtime/NativeModulePrewarmCoordinator.h
+  Browser/Modules/Runtime/NativeModulePrewarmCoordinator.mm
   Browser/Modules/Runtime/NativeModuleProcessRuntimeDefinition.h
   Browser/Modules/Runtime/NativeModuleProcessRuntimeDefinition.mm
   Browser/Modules/Runtime/NativeModuleProcessRuntimeManager.h
@@ -172,6 +174,8 @@ set(BABEL_CHROME_SOURCES
   Browser/Modules/Lifecycle/ModuleLifecycleDispatcher.mm
   Browser/Modules/Navigation/ModuleNavigationURLResolver.h
   Browser/Modules/Navigation/ModuleNavigationURLResolver.mm
+  Browser/Modules/Navigation/RestoredTabModuleDependencyResolver.h
+  Browser/Modules/Navigation/RestoredTabModuleDependencyResolver.mm
   Browser/InternalPages/Modules/ModulePageRenderer.h
   Browser/InternalPages/Modules/ModulePageRenderer.mm
   Browser/InternalPages/Modules/ModuleSettingsPageRenderer.h

@@ -24,6 +24,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 @property(nonatomic, readonly, copy) NSString* readyURL;
 @property(nonatomic, readonly, copy) NSString* stopSignal;
 @property(nonatomic, readonly) NSInteger stopTimeoutMs;
+@property(nonatomic, readonly, copy) NSString* startPolicy;
 
 - (instancetype)initWithModuleIdentifier:(NSString*)moduleIdentifier
                                     port:(NSInteger)port
@@ -34,6 +35,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
                                 readyURL:(NSString*)readyURL
                               stopSignal:(NSString*)stopSignal
                            stopTimeoutMs:(NSInteger)stopTimeoutMs
+                              startPolicy:(NSString*)startPolicy
                                     task:(NSTask*)task
                               stdoutPipe:(NSPipe*)stdoutPipe
                               stderrPipe:(NSPipe*)stderrPipe;
@@ -61,6 +63,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 @synthesize readyURL = _readyURL;
 @synthesize stopSignal = _stopSignal;
 @synthesize stopTimeoutMs = _stopTimeoutMs;
+@synthesize startPolicy = _startPolicy;
 
 - (instancetype)initWithModuleIdentifier:(NSString*)moduleIdentifier
                                     port:(NSInteger)port
@@ -71,6 +74,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
                                 readyURL:(NSString*)readyURL
                               stopSignal:(NSString*)stopSignal
                            stopTimeoutMs:(NSInteger)stopTimeoutMs
+                              startPolicy:(NSString*)startPolicy
                                     task:(NSTask*)task
                               stdoutPipe:(NSPipe*)stdoutPipe
                               stderrPipe:(NSPipe*)stderrPipe {
@@ -85,6 +89,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     _readyURL = [readyURL copy];
     _stopSignal = [stopSignal copy];
     _stopTimeoutMs = stopTimeoutMs > 0 ? stopTimeoutMs : 3000;
+    _startPolicy = [startPolicy copy];
     task_ = task;
     stdoutPipe_ = stdoutPipe;
     stderrPipe_ = stderrPipe;
@@ -219,14 +224,16 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 }
 
 - (NSDictionary*)runtimeStatusForModule:(BabelNativeModuleManifest*)module {
-  if ([module.runtimeType isEqualToString:@"process-web"]) {
-    BabelNativeModuleProcessWebInstance* instance = processWebInstances_[module.moduleIdentifier ?: @""];
-    if (instance) {
-      return [self processWebStatusForInstance:instance];
+  @synchronized(self) {
+    if ([module.runtimeType isEqualToString:@"process-web"]) {
+      BabelNativeModuleProcessWebInstance* instance = processWebInstances_[module.moduleIdentifier ?: @""];
+      if (instance) {
+        return [self processWebStatusForInstance:instance];
+      }
     }
-  }
 
-  return [statusProvider_ runtimeStatusForModule:module];
+    return [statusProvider_ runtimeStatusForModule:module];
+  }
 }
 
 - (NSDictionary*)restartProcessWebRuntimeForModule:(BabelNativeModuleManifest*)module
@@ -237,88 +244,91 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 - (NSDictionary*)restartProcessWebRuntimeForModule:(BabelNativeModuleManifest*)module
                             additionalEnvironment:(NSDictionary<NSString*, NSString*>*)additionalEnvironment
                                             error:(NSError**)error {
-  if (![module.runtimeType isEqualToString:@"process-web"] || !module.processWeb) {
-    [self assignError:error
-          description:[NSString stringWithFormat:@"Module \"%@\" does not declare a process-web runtime.",
-                                                 module.moduleIdentifier ?: @""]];
-    return nil;
+  @synchronized(self) {
+    if (![module.runtimeType isEqualToString:@"process-web"] || !module.processWeb) {
+      [self assignError:error
+            description:[NSString stringWithFormat:@"Module \"%@\" does not declare a process-web runtime.",
+                                                   module.moduleIdentifier ?: @""]];
+      return nil;
+    }
+
+    [self stopRuntimeForModuleIdentifier:module.moduleIdentifier];
+
+    NSNumber* portNumber = [self allocateProcessWebPortWithError:error];
+    if (!portNumber) {
+      return nil;
+    }
+
+    NSInteger port = portNumber.integerValue;
+    NSString* cwd = [self resolvedWorkingDirectoryForModule:module cwd:module.processWeb.cwd error:error];
+    if (cwd.length == 0) {
+      return nil;
+    }
+
+    NSArray<NSString*>* commandLine = [self resolvedProcessWebCommandForModule:module port:port];
+    if (commandLine.count == 0) {
+      [self assignError:error
+            description:[NSString stringWithFormat:@"Module \"%@\" process-web command is empty.",
+                                                   module.moduleIdentifier ?: @""]];
+      return nil;
+    }
+
+    NSString* readyURL = [self resolvedProcessWebReadyURLForModule:module port:port];
+    NSString* baseURL = [NSString stringWithFormat:@"http://127.0.0.1:%ld", static_cast<long>(port)];
+    NSDictionary<NSString*, NSString*>* environment = [self resolvedProcessWebEnvironmentForModule:module
+                                                                                              port:port
+                                                                             additionalEnvironment:additionalEnvironment];
+
+    NSTask* task = [[NSTask alloc] init];
+    task.executableURL = [NSURL fileURLWithPath:@"/usr/bin/env"];
+    task.arguments = commandLine;
+    task.currentDirectoryURL = [NSURL fileURLWithPath:cwd isDirectory:YES];
+    task.environment = environment;
+
+    NSPipe* stdoutPipe = [NSPipe pipe];
+    NSPipe* stderrPipe = [NSPipe pipe];
+    task.standardOutput = stdoutPipe;
+    task.standardError = stderrPipe;
+
+    BabelNativeModuleProcessWebInstance* instance =
+        [[BabelNativeModuleProcessWebInstance alloc] initWithModuleIdentifier:module.moduleIdentifier
+                                                                         port:port
+                                                                      baseURL:baseURL
+                                                                      command:commandLine
+                                                                          cwd:cwd
+                                                                  environment:environment
+                                                                     readyURL:readyURL
+                                                                   stopSignal:module.processWeb.stopSignal
+                                                                stopTimeoutMs:module.processWeb.stopTimeoutMs
+                                                                  startPolicy:module.processWeb.startPolicy
+                                                                         task:task
+                                                                   stdoutPipe:stdoutPipe
+                                                                   stderrPipe:stderrPipe];
+    [instance beginCapturingLogs];
+
+    NSError* launchError = nil;
+    if (![task launchAndReturnError:&launchError]) {
+      [self assignError:error
+            description:[NSString stringWithFormat:@"Module \"%@\" process could not be started: %@",
+                                                   module.moduleIdentifier ?: @"",
+                                                   launchError.localizedDescription ?: @"unknown error"]];
+      return nil;
+    }
+
+    if (![self waitUntilProcessWebInstanceIsReady:instance timeoutMs:module.processWeb.timeoutMs error:error]) {
+      NSString* logs = [instance logs];
+      [instance stop];
+      [self assignError:error
+            description:[NSString stringWithFormat:@"Module \"%@\" process did not become ready at \"%@\".%@",
+                                                   module.moduleIdentifier ?: @"",
+                                                   readyURL,
+                                                   logs.length > 0 ? [@"\nProcess log:\n" stringByAppendingString:logs] : @""]];
+      return nil;
+    }
+
+    processWebInstances_[module.moduleIdentifier ?: @""] = instance;
+    return [self processWebStatusForInstance:instance];
   }
-
-  [self stopRuntimeForModuleIdentifier:module.moduleIdentifier];
-
-  NSNumber* portNumber = [self allocateProcessWebPortWithError:error];
-  if (!portNumber) {
-    return nil;
-  }
-
-  NSInteger port = portNumber.integerValue;
-  NSString* cwd = [self resolvedWorkingDirectoryForModule:module cwd:module.processWeb.cwd error:error];
-  if (cwd.length == 0) {
-    return nil;
-  }
-
-  NSArray<NSString*>* commandLine = [self resolvedProcessWebCommandForModule:module port:port];
-  if (commandLine.count == 0) {
-    [self assignError:error
-          description:[NSString stringWithFormat:@"Module \"%@\" process-web command is empty.",
-                                                 module.moduleIdentifier ?: @""]];
-    return nil;
-  }
-
-  NSString* readyURL = [self resolvedProcessWebReadyURLForModule:module port:port];
-  NSString* baseURL = [NSString stringWithFormat:@"http://127.0.0.1:%ld", static_cast<long>(port)];
-  NSDictionary<NSString*, NSString*>* environment = [self resolvedProcessWebEnvironmentForModule:module
-                                                                                            port:port
-                                                                           additionalEnvironment:additionalEnvironment];
-
-  NSTask* task = [[NSTask alloc] init];
-  task.executableURL = [NSURL fileURLWithPath:@"/usr/bin/env"];
-  task.arguments = commandLine;
-  task.currentDirectoryURL = [NSURL fileURLWithPath:cwd isDirectory:YES];
-  task.environment = environment;
-
-  NSPipe* stdoutPipe = [NSPipe pipe];
-  NSPipe* stderrPipe = [NSPipe pipe];
-  task.standardOutput = stdoutPipe;
-  task.standardError = stderrPipe;
-
-  BabelNativeModuleProcessWebInstance* instance =
-      [[BabelNativeModuleProcessWebInstance alloc] initWithModuleIdentifier:module.moduleIdentifier
-                                                                       port:port
-                                                                    baseURL:baseURL
-                                                                    command:commandLine
-                                                                        cwd:cwd
-                                                                environment:environment
-                                                                   readyURL:readyURL
-                                                                 stopSignal:module.processWeb.stopSignal
-                                                              stopTimeoutMs:module.processWeb.stopTimeoutMs
-                                                                       task:task
-                                                                 stdoutPipe:stdoutPipe
-                                                                 stderrPipe:stderrPipe];
-  [instance beginCapturingLogs];
-
-  NSError* launchError = nil;
-  if (![task launchAndReturnError:&launchError]) {
-    [self assignError:error
-          description:[NSString stringWithFormat:@"Module \"%@\" process could not be started: %@",
-                                                 module.moduleIdentifier ?: @"",
-                                                 launchError.localizedDescription ?: @"unknown error"]];
-    return nil;
-  }
-
-  if (![self waitUntilProcessWebInstanceIsReady:instance timeoutMs:module.processWeb.timeoutMs error:error]) {
-    NSString* logs = [instance logs];
-    [instance stop];
-    [self assignError:error
-          description:[NSString stringWithFormat:@"Module \"%@\" process did not become ready at \"%@\".%@",
-                                                 module.moduleIdentifier ?: @"",
-                                                 readyURL,
-                                                 logs.length > 0 ? [@"\nProcess log:\n" stringByAppendingString:logs] : @""]];
-    return nil;
-  }
-
-  processWebInstances_[module.moduleIdentifier ?: @""] = instance;
-  return [self processWebStatusForInstance:instance];
 }
 
 - (NSDictionary*)startProcessWebRuntimeIfNeededForModule:(BabelNativeModuleManifest*)module
@@ -329,29 +339,31 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 - (NSDictionary*)startProcessWebRuntimeIfNeededForModule:(BabelNativeModuleManifest*)module
                                    additionalEnvironment:(NSDictionary<NSString*, NSString*>*)additionalEnvironment
                                                    error:(NSError**)error {
-  BabelNativeModuleProcessWebInstance* instance = processWebInstances_[module.moduleIdentifier ?: @""];
-  if (instance && [instance isRunning]) {
-    BOOL environmentMatches = YES;
-    for (NSString* key in additionalEnvironment ?: @{}) {
-      NSString* expected = additionalEnvironment[key] ?: @"";
-      NSString* current = instance.environment[key] ?: @"";
-      if (![current isEqualToString:expected]) {
-        environmentMatches = NO;
-        break;
+  @synchronized(self) {
+    BabelNativeModuleProcessWebInstance* instance = processWebInstances_[module.moduleIdentifier ?: @""];
+    if (instance && [instance isRunning]) {
+      BOOL environmentMatches = YES;
+      for (NSString* key in additionalEnvironment ?: @{}) {
+        NSString* expected = additionalEnvironment[key] ?: @"";
+        NSString* current = instance.environment[key] ?: @"";
+        if (![current isEqualToString:expected]) {
+          environmentMatches = NO;
+          break;
+        }
+      }
+
+      if (environmentMatches) {
+        return [self processWebStatusForInstance:instance];
       }
     }
 
-    if (environmentMatches) {
-      return [self processWebStatusForInstance:instance];
+    if (instance) {
+      [instance stop];
+      [processWebInstances_ removeObjectForKey:module.moduleIdentifier ?: @""];
     }
-  }
 
-  if (instance) {
-    [instance stop];
-    [processWebInstances_ removeObjectForKey:module.moduleIdentifier ?: @""];
+    return [self restartProcessWebRuntimeForModule:module additionalEnvironment:additionalEnvironment ?: @{} error:error];
   }
-
-  return [self restartProcessWebRuntimeForModule:module additionalEnvironment:additionalEnvironment ?: @{} error:error];
 }
 
 - (NSDictionary*)executeProcessRuntimeForModule:(BabelNativeModuleManifest*)module
@@ -448,36 +460,42 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
 
 - (NSDictionary*)stopRuntimeForModule:(BabelNativeModuleManifest*)module
                                 error:(NSError**)error {
-  if ([module.runtimeType isEqualToString:@"process-web"]) {
-    [self stopRuntimeForModuleIdentifier:module.moduleIdentifier];
-    return [statusProvider_ runtimeStatusForModule:module];
-  }
+  @synchronized(self) {
+    if ([module.runtimeType isEqualToString:@"process-web"]) {
+      [self stopRuntimeForModuleIdentifier:module.moduleIdentifier];
+      return [statusProvider_ runtimeStatusForModule:module];
+    }
 
-  if ([module.runtimeType isEqualToString:@"process-runtime"]) {
-    return [statusProvider_ runtimeStatusForModule:module];
-  }
+    if ([module.runtimeType isEqualToString:@"process-runtime"]) {
+      return [statusProvider_ runtimeStatusForModule:module];
+    }
 
-  [self assignError:error
-        description:[NSString stringWithFormat:@"Module \"%@\" runtime \"%@\" cannot be stopped natively yet.",
-                                               module.moduleIdentifier ?: @"",
-                                               module.runtimeType ?: @""]];
-  return nil;
+    [self assignError:error
+          description:[NSString stringWithFormat:@"Module \"%@\" runtime \"%@\" cannot be stopped natively yet.",
+                                                 module.moduleIdentifier ?: @"",
+                                                 module.runtimeType ?: @""]];
+    return nil;
+  }
 }
 
 - (void)stopRuntimeForModuleIdentifier:(NSString*)moduleIdentifier {
-  BabelNativeModuleProcessWebInstance* instance = processWebInstances_[moduleIdentifier ?: @""];
-  if (!instance) {
-    return;
-  }
+  @synchronized(self) {
+    BabelNativeModuleProcessWebInstance* instance = processWebInstances_[moduleIdentifier ?: @""];
+    if (!instance) {
+      return;
+    }
 
-  [instance stop];
-  [processWebInstances_ removeObjectForKey:moduleIdentifier ?: @""];
+    [instance stop];
+    [processWebInstances_ removeObjectForKey:moduleIdentifier ?: @""];
+  }
 }
 
 - (void)stopAllRuntimes {
-  NSArray<NSString*>* moduleIdentifiers = [processWebInstances_.allKeys copy];
-  for (NSString* moduleIdentifier in moduleIdentifiers) {
-    [self stopRuntimeForModuleIdentifier:moduleIdentifier];
+  @synchronized(self) {
+    NSArray<NSString*>* moduleIdentifiers = [processWebInstances_.allKeys copy];
+    for (NSString* moduleIdentifier in moduleIdentifiers) {
+      [self stopRuntimeForModuleIdentifier:moduleIdentifier];
+    }
   }
 }
 
@@ -844,6 +862,7 @@ static NSString* const kBabelNativeModuleProcessRuntimeManagerErrorDomain =
     @"command" : instance.command,
     @"cwd" : instance.cwd,
     @"readyUrl" : instance.readyURL,
+    @"startPolicy" : instance.startPolicy ?: @"lazy",
     @"logs" : [instance logs],
     @"source" : @"native"
   };

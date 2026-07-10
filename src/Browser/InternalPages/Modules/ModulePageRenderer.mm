@@ -305,6 +305,10 @@
   NSString* readyURL = [runtimeStatus[@"readyUrl"] isKindOfClass:NSString.class] ? runtimeStatus[@"readyUrl"] : @"";
   NSString* cwd = [runtimeStatus[@"cwd"] isKindOfClass:NSString.class] ? runtimeStatus[@"cwd"] : @"";
   NSString* logs = [runtimeStatus[@"logs"] isKindOfClass:NSString.class] ? runtimeStatus[@"logs"] : @"";
+  NSString* startPolicy =
+      [runtimeStatus[@"startPolicy"] isKindOfClass:NSString.class] ? runtimeStatus[@"startPolicy"] : @"";
+  NSDictionary* prewarmStatus =
+      [runtimeStatus[@"prewarmStatus"] isKindOfClass:NSDictionary.class] ? runtimeStatus[@"prewarmStatus"] : @{};
   NSNumber* port = [runtimeStatus[@"port"] isKindOfClass:NSNumber.class] ? runtimeStatus[@"port"] : nil;
   BOOL restartable = [runtimeStatus[@"restartable"] boolValue] && moduleIdentifier.length > 0;
   NSNumber* runningValue = [runtimeStatus[@"running"] isKindOfClass:NSNumber.class] ? runtimeStatus[@"running"] : nil;
@@ -316,6 +320,20 @@
   [detailsHTML appendFormat:@"<dt>State</dt><dd>%@</dd>", [self htmlEscapedString:state]];
   if (mode.length > 0) {
     [detailsHTML appendFormat:@"<dt>Mode</dt><dd><code>%@</code></dd>", [self htmlEscapedString:mode]];
+  }
+  if (startPolicy.length > 0) {
+    [detailsHTML appendFormat:@"<dt>Start policy</dt><dd><code>%@</code></dd>",
+                              [self htmlEscapedString:startPolicy]];
+  }
+  NSString* prewarmState =
+      [prewarmStatus[@"state"] isKindOfClass:NSString.class] ? prewarmStatus[@"state"] : @"";
+  if (prewarmState.length > 0) {
+    NSString* prewarmMessage =
+        [prewarmStatus[@"message"] isKindOfClass:NSString.class] ? prewarmStatus[@"message"] : @"";
+    NSString* prewarmLabel = prewarmMessage.length > 0
+        ? [NSString stringWithFormat:@"%@ - %@", prewarmState, prewarmMessage]
+        : prewarmState;
+    [detailsHTML appendFormat:@"<dt>Prewarm</dt><dd>%@</dd>", [self htmlEscapedString:prewarmLabel]];
   }
   if (port) {
     [detailsHTML appendFormat:@"<dt>Port</dt><dd>%@</dd>", port];

@@ -25,8 +25,13 @@
   [owner_ restoreSessionGroupsFromState:state];
   owner_->isRestoringSession_ = NO;
 
+  NSString* prewarmedModuleIdentifier = [owner_ prewarmSelectedRestoredTabRuntimeIfNeeded];
   [owner_ restoreSessionInitialBrowsers];
   [owner_ restoreSessionModulesLifecycle];
+  NSSet<NSString*>* excludedModuleIdentifiers = prewarmedModuleIdentifier.length > 0
+      ? [NSSet setWithObject:prewarmedModuleIdentifier]
+      : [NSSet set];
+  [owner_ scheduleBackgroundModulePrewarmExcludingIdentifiers:excludedModuleIdentifiers];
 }
 
 - (void)restoreSessionPositionState {
@@ -78,6 +83,33 @@
 
 - (void)restoreSessionModulesLifecycle {
   [owner_ dispatchApplicationDidStartModuleLifecycleHook];
+}
+
+- (NSString*)prewarmSelectedRestoredTabRuntimeIfNeeded {
+  BabelBrowserTab* selectedTab = owner_->selectedTab_;
+  NSString* requestedURLString = selectedTab.requestedURLString.length > 0
+      ? selectedTab.requestedURLString
+      : selectedTab.urlString;
+  NSString* moduleIdentifier =
+      [owner_->restoredTabModuleDependencyResolver_ moduleIdentifierForRestoredURLString:requestedURLString];
+  if (moduleIdentifier.length == 0 ||
+      ![owner_->moduleActionService_ moduleWithIdentifierUsesPrewarmStartPolicy:moduleIdentifier]) {
+    return nil;
+  }
+
+  NSError* error = nil;
+  [owner_->moduleActionService_ prewarmModuleWithIdentifierIfNeeded:moduleIdentifier error:&error];
+  if (error) {
+    NSLog(@"BabelChrome startup prewarm failed for module %@: %@",
+          moduleIdentifier,
+          error.localizedDescription);
+  }
+
+  return moduleIdentifier;
+}
+
+- (void)scheduleBackgroundModulePrewarmExcludingIdentifiers:(NSSet<NSString*>*)excludedIdentifiers {
+  [owner_->moduleActionService_ schedulePrewarmModulesExcludingIdentifiers:excludedIdentifiers ?: [NSSet set]];
 }
 
 - (void)maximizeWindowToVisibleFrame:(id)sender {

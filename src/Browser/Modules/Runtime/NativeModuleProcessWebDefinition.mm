@@ -1,5 +1,8 @@
 #import "Browser/Modules/Runtime/NativeModuleProcessWebDefinition.h"
 
+static NSString* const kBabelNativeModuleProcessWebStartPolicyLazy = @"lazy";
+static NSString* const kBabelNativeModuleProcessWebStartPolicyPrewarm = @"prewarm";
+
 @implementation BabelNativeModuleProcessWebDefinition
 
 @synthesize command = _command;
@@ -10,6 +13,7 @@
 @synthesize timeoutMs = _timeoutMs;
 @synthesize stopSignal = _stopSignal;
 @synthesize stopTimeoutMs = _stopTimeoutMs;
+@synthesize startPolicy = _startPolicy;
 
 + (instancetype)definitionWithRuntimeDictionary:(NSDictionary*)runtime {
   if (![runtime isKindOfClass:NSDictionary.class]) {
@@ -30,7 +34,8 @@
                                                           fallback:@"http://127.0.0.1:{{ port }}"]
                              timeoutMs:[self positiveIntegerFromValue:runtime[@"timeoutMs"] fallback:10000]
                             stopSignal:[self trimmedStringFromValue:stop[@"signal"] fallback:@"TERM"]
-                         stopTimeoutMs:[self positiveIntegerFromValue:stop[@"timeoutMs"] fallback:3000]];
+                         stopTimeoutMs:[self positiveIntegerFromValue:stop[@"timeoutMs"] fallback:3000]
+                            startPolicy:[self normalizedStartPolicyFromValue:runtime[@"startPolicy"]]];
 }
 
 - (instancetype)initWithCommand:(NSString*)command
@@ -40,7 +45,8 @@
                        readyUrl:(NSString*)readyUrl
                       timeoutMs:(NSInteger)timeoutMs
                      stopSignal:(NSString*)stopSignal
-                  stopTimeoutMs:(NSInteger)stopTimeoutMs {
+                  stopTimeoutMs:(NSInteger)stopTimeoutMs
+                     startPolicy:(NSString*)startPolicy {
   self = [super init];
   if (self) {
     _command = [command copy];
@@ -51,6 +57,7 @@
     _timeoutMs = timeoutMs > 0 ? timeoutMs : 10000;
     _stopSignal = stopSignal.length > 0 ? [stopSignal copy] : @"TERM";
     _stopTimeoutMs = stopTimeoutMs > 0 ? stopTimeoutMs : 3000;
+    _startPolicy = [[self class] normalizedStartPolicyFromValue:startPolicy];
   }
 
   return self;
@@ -70,11 +77,21 @@
     @"env" : self.env,
     @"readyUrl" : self.readyUrl,
     @"timeoutMs" : @(self.timeoutMs),
+    @"startPolicy" : self.startPolicy,
     @"stop" : @{
       @"signal" : self.stopSignal,
       @"timeoutMs" : @(self.stopTimeoutMs)
     }
   };
+}
+
++ (NSString*)normalizedStartPolicyFromValue:(id)value {
+  NSString* candidate = [self trimmedStringFromValue:value fallback:kBabelNativeModuleProcessWebStartPolicyLazy];
+  if ([candidate isEqualToString:kBabelNativeModuleProcessWebStartPolicyPrewarm]) {
+    return kBabelNativeModuleProcessWebStartPolicyPrewarm;
+  }
+
+  return kBabelNativeModuleProcessWebStartPolicyLazy;
 }
 
 + (NSString*)trimmedStringFromValue:(id)value fallback:(NSString*)fallback {

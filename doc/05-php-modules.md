@@ -123,6 +123,7 @@ A process web module declares a command that starts a local HTTP server:
 {
   "runtime": {
     "type": "process-web",
+    "startPolicy": "lazy",
     "command": "node",
     "args": ["server/index.js", "--port={{ port }}"],
     "cwd": ".",
@@ -138,9 +139,11 @@ A process web module declares a command that starts a local HTTP server:
 
 `process-web` modules do not need a browser-owned PHP adapter, `requirements.php`, `composer.json`, or a Composer `vendor/` directory. BabelChrome assigns a local port, starts the process on first route access, waits for `readyUrl`, then proxies declared module routes to the process. Supported placeholders in `command`, `args`, `env`, and `readyUrl` are `{{ port }}`, `{{ moduleId }}`, and `{{ moduleDir }}`.
 
-The assigned port is never a stable browser URL. Users and integrations keep opening declared `babelchrome://` routes, and the ExtensionHost rebuilds the process URL after app restart. Running process-web instances are stopped when the module is disabled, removed, updated, or when BabelChrome dispatches `app.will-quit`.
+`runtime.startPolicy` is optional and defaults to `lazy`. A `prewarm` value asks BabelChrome to start the module process ahead of first use when possible. During session restore, the module needed by the active restored tab is started before the first browser view is created. Other enabled `prewarm` modules are then started in the background with a serial queue.
 
-The modules page shows compact status badges for enabled state, readiness, and runtime state. The module details page exposes runtime diagnostics for process modules. For `process-web`, the diagnostics include the current state, assigned port, process base URL, readiness URL, command, working directory, and captured logs. `process-web` modules also expose `Start runtime`, `Restart runtime`, and `Stop runtime` actions when those actions match the current process state. The restart action stops any running instance, starts a new process, waits for readiness, and then refreshes the details page. `process-runtime` diagnostics report the mode, state, command, working directory, and captured logs for long-running instances; on-demand runtimes are normally shown as idle because they do not keep a process alive between requests. Modules that declare readiness expose a `Check readiness` action on their details page.
+The assigned port is never a stable browser URL. Users and integrations keep opening declared `babelchrome://` routes, and the native host rebuilds the process URL after app restart. Running process-web instances are stopped when the module is disabled, removed, updated, or when BabelChrome dispatches `app.will-quit`.
+
+The modules page shows compact status badges for enabled state, readiness, and runtime state. The module details page exposes runtime diagnostics for process modules. For `process-web`, the diagnostics include the current state, start policy, prewarm status when available, assigned port, process base URL, readiness URL, command, working directory, and captured logs. `process-web` modules also expose `Start runtime`, `Restart runtime`, and `Stop runtime` actions when those actions match the current process state. The restart action stops any running instance, starts a new process, waits for readiness, and then refreshes the details page. `process-runtime` diagnostics report the mode, state, command, working directory, and captured logs for long-running instances; on-demand runtimes are normally shown as idle because they do not keep a process alive between requests. Modules that declare readiness expose a `Check readiness` action on their details page.
 
 A process runtime module declares a command without implying an HTTP server:
 
