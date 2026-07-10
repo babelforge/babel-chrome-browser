@@ -9,7 +9,7 @@
 @class BabelStableViewerURLResolver;
 
 /**
- * Resolves stable viewer URLs to current LocalServiceHost navigation URLs.
+ * Resolves stable viewer URLs to current module runtime navigation URLs.
  */
 @interface BabelViewerNavigationURLResolver : NSObject
 
@@ -28,7 +28,7 @@
                              htmlDataURLBuilder:(BabelHTMLDataURLBuilder*)htmlDataURLBuilder;
 
 /**
- * Converts a supported source URL into a stable BabelChrome viewer URL.
+ * Converts a supported source URL into a stable generic BabelChrome viewer URL.
  *
  * @param urlString The source URL string.
  * @return The stable viewer URL, or nil when no viewer supports the source.
@@ -40,7 +40,7 @@
  *
  * @param urlString The stable viewer URL.
  * @param markdownTheme The selected Markdown theme.
- * @param error The startup error when the LocalServiceHost cannot start.
+ * @param error The startup error when the module runtime cannot start.
  * @return The runtime navigation URL, or nil when the viewer is unsupported or cannot start.
  */
 - (NSString*)navigationURLStringForStableViewerURLString:(NSString*)urlString

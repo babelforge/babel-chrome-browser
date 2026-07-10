@@ -36,11 +36,6 @@
     return nil;
   }
 
-  NSString* viewerKind = [moduleActionService_ viewerKindForURL:url];
-  if (viewerKind.length == 0) {
-    return nil;
-  }
-
   BOOL isRemoteURL = [url.scheme isEqualToString:@"http"] || [url.scheme isEqualToString:@"https"];
   NSString* sourceKind = isRemoteURL ? @"url" : @"file";
   NSString* sourceValue = isRemoteURL ? url.absoluteString : url.path;
@@ -49,8 +44,7 @@
     return nil;
   }
 
-  return [NSString stringWithFormat:@"babelchrome://%@/%@/%@",
-                                    viewerKind,
+  return [NSString stringWithFormat:@"babelchrome://viewer/%@/%@",
                                     sourceKind,
                                     encodedSourceValue];
 }
@@ -63,7 +57,11 @@
     return nil;
   }
 
-  NSURL* viewerURL = [moduleActionService_ viewerURLForURL:url markdownTheme:markdownTheme error:error];
+  NSString* preferredViewerKind = [stableViewerURLResolver_ resolvedViewerKindForStableViewerURLString:urlString];
+  NSURL* viewerURL = [moduleActionService_ viewerURLForURL:url
+                                       preferredViewerKind:preferredViewerKind
+                                             markdownTheme:markdownTheme
+                                                     error:error];
 
   NSString* viewerURLString = viewerURL.absoluteString;
   NSString* fragment = [stableViewerURLResolver_ fragmentForStableViewerURLString:urlString];

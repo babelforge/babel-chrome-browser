@@ -88,6 +88,18 @@
 - (NSDictionary*)viewerRouteForURL:(NSURL*)url error:(NSError**)error;
 
 /**
+ * Returns the enabled viewer route that should handle a source URL, optionally constrained to one viewer kind.
+ *
+ * @param url The source URL.
+ * @param preferredViewerKind The requested viewer route host, or nil for generic viewer resolution.
+ * @param error The optional error pointer.
+ * @return A viewer route dictionary, or nil when no enabled viewer handles the URL.
+ */
+- (NSDictionary*)viewerRouteForURL:(NSURL*)url
+               preferredViewerKind:(NSString*)preferredViewerKind
+                              error:(NSError**)error;
+
+/**
  * Returns the address badge metadata for a source URL handled by a viewer.
  *
  * @param url The source URL.

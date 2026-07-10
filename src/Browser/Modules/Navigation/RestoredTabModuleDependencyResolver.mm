@@ -32,7 +32,8 @@ static NSString* const kBabelProjectLauncherModuleIdentifier = @"babelforge.proj
 
   if ([stableViewerURLResolver_ isStableViewerURLString:urlString]) {
     NSURL* sourceURL = [stableViewerURLResolver_ sourceURLForViewerURLString:urlString];
-    return [moduleActionService_ viewerModuleIdentifierForURL:sourceURL];
+    NSString* preferredViewerKind = [stableViewerURLResolver_ resolvedViewerKindForStableViewerURLString:urlString];
+    return [moduleActionService_ viewerModuleIdentifierForURL:sourceURL preferredViewerKind:preferredViewerKind];
   }
 
   if ([stableServerURLResolver_ isStableServerURLString:urlString]) {

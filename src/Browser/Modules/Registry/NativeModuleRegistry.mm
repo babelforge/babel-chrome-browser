@@ -143,7 +143,15 @@ static NSString* const kBabelNativeModuleRegistryErrorDomain = @"fr.babelforge.b
 }
 
 - (NSDictionary*)viewerRouteForURL:(NSURL*)url error:(NSError**)error {
-  BabelNativeModuleManifest* module = [self viewerModuleForURL:url error:error];
+  return [self viewerRouteForURL:url preferredViewerKind:nil error:error];
+}
+
+- (NSDictionary*)viewerRouteForURL:(NSURL*)url
+               preferredViewerKind:(NSString*)preferredViewerKind
+                              error:(NSError**)error {
+  BabelNativeModuleManifest* module = [self viewerModuleForURL:url
+                                           preferredViewerKind:preferredViewerKind
+                                                        error:error];
   if (!module) {
     return nil;
   }
@@ -214,7 +222,9 @@ static NSString* const kBabelNativeModuleRegistryErrorDomain = @"fr.babelforge.b
   return [manifestPaths sortedArrayUsingSelector:@selector(compare:)];
 }
 
-- (BabelNativeModuleManifest*)viewerModuleForURL:(NSURL*)url error:(NSError**)error {
+- (BabelNativeModuleManifest*)viewerModuleForURL:(NSURL*)url
+                             preferredViewerKind:(NSString*)preferredViewerKind
+                                          error:(NSError**)error {
   if (![self canResolveViewerURL:url]) {
     return nil;
   }
@@ -227,6 +237,10 @@ static NSString* const kBabelNativeModuleRegistryErrorDomain = @"fr.babelforge.b
   BabelNativeModuleManifest* bestModule = nil;
   NSInteger bestScore = 0;
   for (BabelNativeModuleManifest* module in modules) {
+    if (![self module:module matchesPreferredViewerKind:preferredViewerKind]) {
+      continue;
+    }
+
     NSInteger score = [self viewerScoreForModule:module URL:url];
     if (score > bestScore) {
       bestScore = score;
@@ -235,6 +249,22 @@ static NSString* const kBabelNativeModuleRegistryErrorDomain = @"fr.babelforge.b
   }
 
   return bestModule;
+}
+
+- (BabelNativeModuleManifest*)viewerModuleForURL:(NSURL*)url error:(NSError**)error {
+  return [self viewerModuleForURL:url preferredViewerKind:nil error:error];
+}
+
+- (BOOL)module:(BabelNativeModuleManifest*)module matchesPreferredViewerKind:(NSString*)preferredViewerKind {
+  NSString* normalizedViewerKind =
+      [preferredViewerKind stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  if (normalizedViewerKind.length == 0 || [normalizedViewerKind isEqualToString:@"viewer"]) {
+    return YES;
+  }
+
+  NSDictionary* route = [self firstBabelChromeRouteForModule:module];
+  NSString* host = [route[@"host"] isKindOfClass:NSString.class] ? route[@"host"] : @"";
+  return [host isEqualToString:normalizedViewerKind];
 }
 
 - (BOOL)canResolveViewerURL:(NSURL*)url {

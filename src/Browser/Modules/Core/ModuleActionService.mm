@@ -260,10 +260,26 @@
   return [route[@"moduleIdentifier"] isKindOfClass:NSString.class] ? route[@"moduleIdentifier"] : nil;
 }
 
+- (NSString*)viewerModuleIdentifierForURL:(NSURL*)url preferredViewerKind:(NSString*)preferredViewerKind {
+  NSDictionary* route = [nativeModuleRegistry_ viewerRouteForURL:url
+                                             preferredViewerKind:preferredViewerKind
+                                                          error:nil];
+  return [route[@"moduleIdentifier"] isKindOfClass:NSString.class] ? route[@"moduleIdentifier"] : nil;
+}
+
 - (NSURL*)viewerURLForURL:(NSURL*)url
             markdownTheme:(NSString*)markdownTheme
                     error:(NSError**)error {
-  NSDictionary* route = [nativeModuleRegistry_ viewerRouteForURL:url error:error];
+  return [self viewerURLForURL:url preferredViewerKind:nil markdownTheme:markdownTheme error:error];
+}
+
+- (NSURL*)viewerURLForURL:(NSURL*)url
+      preferredViewerKind:(NSString*)preferredViewerKind
+            markdownTheme:(NSString*)markdownTheme
+                    error:(NSError**)error {
+  NSDictionary* route = [nativeModuleRegistry_ viewerRouteForURL:url
+                                             preferredViewerKind:preferredViewerKind
+                                                          error:error];
   NSString* moduleIdentifier = [route[@"moduleIdentifier"] isKindOfClass:NSString.class]
       ? route[@"moduleIdentifier"]
       : @"";

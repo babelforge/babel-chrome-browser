@@ -73,6 +73,15 @@
 - (NSString*)viewerModuleIdentifierForURL:(NSURL*)url;
 
 /**
+ * Returns the enabled viewer module identifier for a source URL and preferred viewer kind.
+ *
+ * @param url The source URL.
+ * @param preferredViewerKind The requested viewer route host, or nil for generic viewer resolution.
+ * @return The module identifier, or nil when no viewer handles the URL.
+ */
+- (NSString*)viewerModuleIdentifierForURL:(NSURL*)url preferredViewerKind:(NSString*)preferredViewerKind;
+
+/**
  * Returns a local runtime URL for the viewer that handles a source URL.
  *
  * @param url The source URL.
@@ -81,6 +90,20 @@
  * @return The local runtime URL, or nil when unsupported.
  */
 - (NSURL*)viewerURLForURL:(NSURL*)url
+            markdownTheme:(NSString*)markdownTheme
+                    error:(NSError**)error;
+
+/**
+ * Returns a local runtime URL for the requested viewer kind that handles a source URL.
+ *
+ * @param url The source URL.
+ * @param preferredViewerKind The requested viewer route host, or nil for generic viewer resolution.
+ * @param markdownTheme The Markdown theme query value.
+ * @param error The optional error pointer.
+ * @return The local runtime URL, or nil when unsupported.
+ */
+- (NSURL*)viewerURLForURL:(NSURL*)url
+      preferredViewerKind:(NSString*)preferredViewerKind
             markdownTheme:(NSString*)markdownTheme
                     error:(NSError**)error;
 
